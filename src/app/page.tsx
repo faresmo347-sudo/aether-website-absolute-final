@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Menu, X } from 'lucide-react'
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { useAetherStore } from '@/store/aether-store'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { getProfile, fetchMemories, fetchCollections } from '@/lib/supabase/data'
 import { initOfflineDB, getCachedMemories, getCachedCollections, getSyncQueueCount } from '@/lib/offline-db'
 import { syncAll, onSyncStatus, onSyncComplete } from '@/lib/sync-engine'
@@ -1035,7 +1035,6 @@ export default function Home() {
     darkMode,
     isAuthenticated,
     isSessionLoading,
-    setIsSessionLoading,
     setUser,
     setProfile,
     setMemories,
@@ -1144,10 +1143,14 @@ export default function Home() {
   }, [setUser, setProfile, setMemories, setCollections, setIsLoadingMemories])
 
   // Check auth state on mount and listen for changes.
-  // Strategy: Call getSession() immediately for fast session restoration,
-  // then subscribe to onAuthStateChange for ongoing lifecycle events.
+  // Strategy:
+  // 1. If Supabase isn't configured → skip auth, show landing immediately
+  // 2. Start a 3-second timeout — if auth check doesn't resolve, show landing page
+  // 3. Call getSession() (reads from cookies, fast) then getUser() (validates with server)
+  // 4. If a valid session is found → redirect to dashboard
+  // 5. Subscribe to onAuthStateChange for ongoing lifecycle events
   useEffect(() => {
-    // Initialize offline IndexedDB
+    // Initialize offline IndexedDB (non-blocking)
     initOfflineDB().catch((err) => console.warn('Failed to init offline DB:', err))
 
     // Listen for sync events
@@ -1168,32 +1171,75 @@ export default function Home() {
     }) as EventListener
     window.addEventListener('aether:memory-synced', handleMemorySynced)
 
+    // ─── If Supabase isn't configured, skip auth entirely ───
+    if (!isSupabaseConfigured()) {
+      console.info('[Aether] Supabase not configured — showing landing page. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to enable auth.')
+      // Check if URL points to a specific view, otherwise show landing
+      const urlView = navigateFromUrl()
+      if (urlView) {
+        setCurrentView(urlView)
+      }
+      return () => {
+        unsubStatus()
+        unsubComplete()
+        window.removeEventListener('aether:memory-synced', handleMemorySynced)
+      }
+    }
+
     const supabase = createClient()
     let mounted = true
+    let authResolved = false
 
-    // Immediately check for existing session — this is the fastest way
-    // to restore a session when opening in a new tab or from a link.
-    // getSession() reads from local cookie storage (no network request),
-    // so it returns instantly.
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!mounted) return
-      if (session?.user) {
-        await loadUserData(session.user.id)
-        // Check URL for deep-link navigation, otherwise go to dashboard
+    // ─── 3-second timeout: force landing page if auth hangs ───
+    const timeoutId = setTimeout(() => {
+      if (!authResolved && mounted) {
+        console.warn('[Aether] Auth check timed out after 3 seconds — showing landing page')
+        authResolved = true
+        // Check URL for deep-link, otherwise landing
         const urlView = navigateFromUrl()
-        setCurrentView(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
-      } else {
-        // No session in cookies — try getUser() which validates with
-        // Supabase's server (handles expired tokens that need refresh)
+        if (urlView === 'signup' || urlView === 'signin' || urlView === 'forgot-password') {
+          setCurrentView(urlView)
+        } else if (!urlView) {
+          setCurrentView('landing')
+        }
+      }
+    }, 3000)
+
+    // ─── Main auth check: getSession (fast cookie read) → getUser (server validation) ───
+    const checkAuth = async () => {
+      try {
+        // Step 1: getSession() reads from local cookie storage (no network request)
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (!mounted) return
+
+        if (session?.user) {
+          // Found session in cookies — restore it
+          authResolved = true
+          clearTimeout(timeoutId)
+          await loadUserData(session.user.id)
+          const urlView = navigateFromUrl()
+          setCurrentView(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
+          return
+        }
+
+        // Step 2: No cookie session — try getUser() which validates with Supabase server
+        // (handles expired tokens that need refresh)
         try {
           const { data: { user } } = await supabase.auth.getUser()
-          if (user && mounted) {
+
+          if (!mounted) return
+
+          if (user) {
+            authResolved = true
+            clearTimeout(timeoutId)
             await loadUserData(user.id)
-            // Check URL for deep-link navigation, otherwise go to dashboard
             const urlView = navigateFromUrl()
             setCurrentView(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
-          } else if (mounted) {
-            // Not authenticated — check if URL indicates an auth view
+          } else {
+            // Not authenticated — show landing or auth view from URL
+            authResolved = true
+            clearTimeout(timeoutId)
             const urlView = navigateFromUrl()
             if (urlView === 'signup' || urlView === 'signin' || urlView === 'forgot-password') {
               setCurrentView(urlView)
@@ -1202,19 +1248,29 @@ export default function Home() {
             }
           }
         } catch {
-          if (mounted) setCurrentView('landing')
+          // getUser() threw — network error or invalid config
+          if (!mounted) return
+          authResolved = true
+          clearTimeout(timeoutId)
+          const urlView = navigateFromUrl()
+          if (urlView === 'signup' || urlView === 'signin' || urlView === 'forgot-password') {
+            setCurrentView(urlView)
+          } else {
+            setCurrentView('landing')
+          }
         }
-      }
-      if (mounted) setIsSessionLoading(false)
-    }).catch(async () => {
-      if (mounted) {
+      } catch {
+        // getSession() itself threw — should rarely happen
+        if (!mounted) return
+        authResolved = true
+        clearTimeout(timeoutId)
         setCurrentView('landing')
-        setIsSessionLoading(false)
       }
-    })
+    }
 
-    // Also subscribe to auth state changes for ongoing events
-    // (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED)
+    checkAuth()
+
+    // ─── Subscribe to auth state changes for ongoing events ───
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
@@ -1239,12 +1295,13 @@ export default function Home() {
 
     return () => {
       mounted = false
+      clearTimeout(timeoutId)
       subscription.unsubscribe()
       unsubStatus()
       unsubComplete()
       window.removeEventListener('aether:memory-synced', handleMemorySynced)
     }
-  }, [loadUserData, setUser, setProfile, setMemories, setCollections, setCurrentView, setIsSessionLoading, setIsSyncing, setPendingSyncCount, setLastSyncedAt, updateMemory, navigateFromUrl])
+  }, [loadUserData, setUser, setProfile, setMemories, setCollections, setCurrentView, setIsSyncing, setPendingSyncCount, setLastSyncedAt, updateMemory, navigateFromUrl])
 
   // "Enter Aether" on the landing page should go to signup for new users
   const handleEnterApp = useCallback(() => {
@@ -1269,8 +1326,9 @@ export default function Home() {
     // No additional action needed here.
   }, [])
 
-  // Show loading splash while session is being checked
-  if (isSessionLoading) {
+  // Show loading splash only during explicit session transitions (never on initial load)
+  // On initial load, the landing page shows immediately while auth checks run in the background.
+  if (isSessionLoading && isAuthenticated) {
     return <LoadingSplash />
   }
 

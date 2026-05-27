@@ -106,7 +106,7 @@ export const useAetherStore = create<AetherState>((set) => ({
   isAuthenticated: false,
   authScreen: 'signin',
   setAuthScreen: (screen) => set({ authScreen: screen }),
-  isSessionLoading: true,
+  isSessionLoading: false, // Start false — landing page shows immediately, auth check runs in background
   setIsSessionLoading: (v) => set({ isSessionLoading: v }),
 
   // Navigation
