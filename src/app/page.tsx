@@ -1010,7 +1010,7 @@ function AppContent() {
    ═══════════════════════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════════════
-   LOADING SPLASH — Shown while session is being checked
+   LOADING SPLASH — Only shown during session transitions, NEVER on initial load
    ═══════════════════════════════════════════════════════════════ */
 function LoadingSplash() {
   return (
@@ -1034,7 +1034,6 @@ export default function Home() {
     setCurrentView,
     darkMode,
     isAuthenticated,
-    isSessionLoading,
     setUser,
     setProfile,
     setMemories,
@@ -1142,13 +1141,13 @@ export default function Home() {
     }
   }, [setUser, setProfile, setMemories, setCollections, setIsLoadingMemories])
 
-  // Check auth state on mount and listen for changes.
-  // Strategy:
-  // 1. If Supabase isn't configured → skip auth, show landing immediately
-  // 2. Start a 3-second timeout — if auth check doesn't resolve, show landing page
-  // 3. Call getSession() (reads from cookies, fast) then getUser() (validates with server)
-  // 4. If a valid session is found → redirect to dashboard
-  // 5. Subscribe to onAuthStateChange for ongoing lifecycle events
+  // ═══════════════════════════════════════════════════════════════════
+  // AUTH INITIALIZATION
+  // ═══════════════════════════════════════════════════════════════════
+  // CRITICAL DESIGN: The landing page MUST render immediately on first load.
+  // Auth checks run in the background and only redirect if a session is found.
+  // There is NO loading screen gate on initial load — ever.
+  // ═══════════════════════════════════════════════════════════════════
   useEffect(() => {
     // Initialize offline IndexedDB (non-blocking)
     initOfflineDB().catch((err) => console.warn('Failed to init offline DB:', err))
@@ -1174,7 +1173,7 @@ export default function Home() {
     // ─── If Supabase isn't configured, skip auth entirely ───
     if (!isSupabaseConfigured()) {
       console.info('[Aether] Supabase not configured — showing landing page. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to enable auth.')
-      // Check if URL points to a specific view, otherwise show landing
+      // Check if URL points to a specific view, otherwise landing is already showing
       const urlView = navigateFromUrl()
       if (urlView) {
         setCurrentView(urlView)
@@ -1186,85 +1185,78 @@ export default function Home() {
       }
     }
 
+    // ─── Supabase is configured — check auth in background ───
     const supabase = createClient()
     let mounted = true
     let authResolved = false
 
-    // ─── 3-second timeout: force landing page if auth hangs ───
+    // Helper: resolve auth to a view (prevents double-redirects)
+    const resolveAuth = (view: AppView) => {
+      if (!mounted || authResolved) return
+      authResolved = true
+      clearTimeout(timeoutId)
+      setCurrentView(view)
+    }
+
+    // ─── 3-SECOND HARD TIMEOUT: force landing page if auth hangs ───
+    // This is the ultimate failsafe — no matter what happens with Supabase,
+    // the user will NEVER be stuck on a blank/loading screen for more than 3 seconds.
     const timeoutId = setTimeout(() => {
       if (!authResolved && mounted) {
-        console.warn('[Aether] Auth check timed out after 3 seconds — showing landing page')
+        console.warn('[Aether] Auth check timed out after 3s — showing landing page')
         authResolved = true
-        // Check URL for deep-link, otherwise landing
         const urlView = navigateFromUrl()
         if (urlView === 'signup' || urlView === 'signin' || urlView === 'forgot-password') {
           setCurrentView(urlView)
-        } else if (!urlView) {
+        } else {
           setCurrentView('landing')
         }
       }
     }, 3000)
 
-    // ─── Main auth check: getSession (fast cookie read) → getUser (server validation) ───
+    // ─── Background auth check ───
     const checkAuth = async () => {
       try {
         // Step 1: getSession() reads from local cookie storage (no network request)
+        // This should resolve almost instantly
         const { data: { session } } = await supabase.auth.getSession()
 
-        if (!mounted) return
+        if (!mounted || authResolved) return
 
         if (session?.user) {
           // Found session in cookies — restore it
-          authResolved = true
-          clearTimeout(timeoutId)
           await loadUserData(session.user.id)
           const urlView = navigateFromUrl()
-          setCurrentView(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
+          resolveAuth(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
           return
         }
 
-        // Step 2: No cookie session — try getUser() which validates with Supabase server
-        // (handles expired tokens that need refresh)
-        try {
-          const { data: { user } } = await supabase.auth.getUser()
+        // Step 2: No cookie session — try getUser() which validates with server
+        // This can be slow or hang if Supabase is unreachable
+        const { data: { user } } = await supabase.auth.getUser()
 
-          if (!mounted) return
+        if (!mounted || authResolved) return
 
-          if (user) {
-            authResolved = true
-            clearTimeout(timeoutId)
-            await loadUserData(user.id)
-            const urlView = navigateFromUrl()
-            setCurrentView(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
-          } else {
-            // Not authenticated — show landing or auth view from URL
-            authResolved = true
-            clearTimeout(timeoutId)
-            const urlView = navigateFromUrl()
-            if (urlView === 'signup' || urlView === 'signin' || urlView === 'forgot-password') {
-              setCurrentView(urlView)
-            } else {
-              setCurrentView('landing')
-            }
-          }
-        } catch {
-          // getUser() threw — network error or invalid config
-          if (!mounted) return
-          authResolved = true
-          clearTimeout(timeoutId)
+        if (user) {
+          await loadUserData(user.id)
+          const urlView = navigateFromUrl()
+          resolveAuth(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
+        } else {
+          // Not authenticated — landing page is already showing
           const urlView = navigateFromUrl()
           if (urlView === 'signup' || urlView === 'signin' || urlView === 'forgot-password') {
-            setCurrentView(urlView)
-          } else {
-            setCurrentView('landing')
+            resolveAuth(urlView)
           }
+          // If no URL view override, landing page stays (already the default)
+          authResolved = true
+          clearTimeout(timeoutId)
         }
       } catch {
-        // getSession() itself threw — should rarely happen
-        if (!mounted) return
+        // Any error — ensure landing page is showing
+        if (!mounted || authResolved) return
         authResolved = true
         clearTimeout(timeoutId)
-        setCurrentView('landing')
+        // Don't change view — landing page is already the default
       }
     }
 
@@ -1275,7 +1267,7 @@ export default function Home() {
       async (event, session) => {
         if (!mounted) return
 
-        // Skip INITIAL_SESSION — we already handled it above with getSession()
+        // Skip INITIAL_SESSION — handled above
         if (event === 'INITIAL_SESSION') return
 
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
@@ -1326,11 +1318,13 @@ export default function Home() {
     // No additional action needed here.
   }, [])
 
-  // Show loading splash only during explicit session transitions (never on initial load)
-  // On initial load, the landing page shows immediately while auth checks run in the background.
-  if (isSessionLoading && isAuthenticated) {
-    return <LoadingSplash />
-  }
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER LOGIC
+  // ═══════════════════════════════════════════════════════════════
+  // IMPORTANT: There is NO loading screen gate on initial load.
+  // The landing page renders immediately. Auth checks happen in the
+  // background and redirect to dashboard only if a session is found.
+  // ═══════════════════════════════════════════════════════════════
 
   // Render auth screens
   if (currentView === 'signup') {
