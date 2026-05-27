@@ -1,0 +1,81 @@
+# dependencies
+node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — DO NOT commit secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+local-*
+.claude
+.z-ai-config
+*.log
+dev.log
+dev.out.log
+test
+prompt
+server.log
+
+# Skills directory (development only)
+/skills/
+
+# Agent context (development only)
+/agent-ctx/
+
+# Upload directory (development only)
+/upload/
+
+# Examples (development only)
+/examples/
+
+# Mini services (not needed for Vercel)
+/mini-services/
+
+# Database files (SQLite not used on Vercel)
+/db/
+
+# Screenshots
+*.screenshot.png
+aether-screenshot.png
+
+# Dev-only files (not needed on Vercel)
+.zscripts/
+download/
+start-dev.sh
+Caddyfile
+worklog.md

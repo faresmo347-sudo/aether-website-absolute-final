@@ -1,0 +1,69 @@
+import type { Metadata } from "next";
+import { Inter, Playfair_Display } from "next/font/google";
+import "./globals.css";
+import { Toaster } from "@/components/ui/toaster";
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: "Aether — Your AI-Powered Second Brain",
+  description:
+    "Aether remembers everything—so you don't have to. Capture ideas, voice notes, links, and more. Retrieve any memory instantly with natural language AI search.",
+  keywords: [
+    "Aether",
+    "second brain",
+    "AI memory",
+    "note-taking",
+    "voice notes",
+    "semantic search",
+    "productivity",
+  ],
+  authors: [{ name: "Aether" }],
+  icons: {
+    icon: [
+      { url: "/aether-icon.svg", type: "image/svg+xml" },
+      { url: "/aether-logo.png", type: "image/png", sizes: "1024x1024" },
+    ],
+    apple: "/aether-logo.png",
+  },
+  openGraph: {
+    title: "Aether — Your AI-Powered Second Brain",
+    description:
+      "Forget forgetting. Aether remembers everything—so you don't have to.",
+    type: "website",
+    siteName: "Aether",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Aether — Your AI-Powered Second Brain",
+    description:
+      "Forget forgetting. Aether remembers everything—so you don't have to.",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${inter.variable} ${playfair.variable} antialiased bg-[#FFFAF5] text-[#1a1a2e]`}
+      >
+        {children}
+        <Toaster />
+      </body>
+    </html>
+  );
+}
