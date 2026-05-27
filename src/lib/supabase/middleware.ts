@@ -4,12 +4,26 @@ import { NextResponse, type NextRequest } from 'next/server'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
+// Auth cookie names used by Supabase — checked to skip getUser() when no session exists
+const AUTH_COOKIE_NAMES = ['sb-access-token', 'sb-refresh-token']
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   // If Supabase is not configured, skip session refresh
-  // This prevents crashes when env vars are missing
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return supabaseResponse
+  }
+
+  // Performance optimization: if there are no auth cookies at all,
+  // skip the Supabase getUser() call entirely. This avoids a network
+  // request to Supabase on every page load for unauthenticated users,
+  // making the landing page and auth pages load significantly faster.
+  const hasAuthCookies = AUTH_COOKIE_NAMES.some((name) =>
+    request.cookies.get(name)?.value
+  )
+
+  if (!hasAuthCookies) {
     return supabaseResponse
   }
 
@@ -33,8 +47,6 @@ export async function updateSession(request: NextRequest) {
             ...options,
             sameSite: 'lax',
             path: '/',
-            // Set a long max-age so sessions persist across browser restarts.
-            // Supabase manages the actual token expiry independently.
             maxAge: options.maxAge ?? 60 * 60 * 24 * 365, // 1 year default
           })
         )
@@ -42,18 +54,9 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
-  // This will refresh the user's session if it's expired
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  // Session refresh is handled above via getUser().
-  // All app views are managed client-side via Zustand state,
-  // so no server-side route protection is needed here.
+  // This will refresh the user's session if it's expired.
+  // Only runs when auth cookies are present (checked above).
+  await supabase.auth.getUser()
 
   return supabaseResponse
 }

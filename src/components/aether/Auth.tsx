@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Mail, Lock, User, ArrowLeft, Check, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Mail, Lock, User, ArrowLeft, Check, Loader2, Wifi, WifiOff } from 'lucide-react'
 import { AetherLogo } from '@/components/aether/AetherLogo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +32,28 @@ function getPasswordStrength(password: string): {
   if (score <= 1) return { score: 1, label: 'Weak', color: '#ef4444' }
   if (score <= 3) return { score: 2, label: 'Medium', color: '#f59e0b' }
   return { score: 3, label: 'Strong', color: '#22c55e' }
+}
+
+/* ─────────── Progressive Loading Message Hook ─────────── */
+function useProgressiveLoading(loading: boolean) {
+  const [message, setMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!loading) return
+
+    // After 3 seconds: "Still working..."
+    const t1 = setTimeout(() => setMessage('Still working...'), 3000)
+    // After 6 seconds: connection warning
+    const t2 = setTimeout(() => setMessage('This is taking longer than usual. Check your connection.'), 6000)
+
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      setMessage(null)
+    }
+  }, [loading])
+
+  return message
 }
 
 /* ─────────── Animated Background Orbs ─────────── */
@@ -126,6 +148,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
   const [error, setError] = useState<string | null>(null)
   const [confirmationSent, setConfirmationSent] = useState(false)
 
+  const progressiveMsg = useProgressiveLoading(loading)
   const strength = getPasswordStrength(password)
 
   async function handleSubmit(e: React.FormEvent) {
@@ -148,6 +171,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
         return
       }
 
+      // Show confirmation screen INSTANTLY — no additional processing
       setConfirmationSent(true)
       onSuccess?.()
     } catch {
@@ -226,6 +250,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
+                  disabled={loading}
                   className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
                 />
               </div>
@@ -247,6 +272,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={loading}
                   className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
                 />
               </div>
@@ -269,6 +295,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
+                  disabled={loading}
                   className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
                 />
               </div>
@@ -308,7 +335,18 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
               style={{ border: 'none' }}
             >
               {loading ? (
-                <Loader2 size={18} className="animate-spin" />
+                <span className="flex flex-col items-center gap-1">
+                  <span className="flex items-center gap-2">
+                    <Loader2 size={18} className="animate-spin" />
+                    Creating account...
+                  </span>
+                  {progressiveMsg && (
+                    <span className="text-xs opacity-70 flex items-center gap-1">
+                      {progressiveMsg.includes('Check your connection') ? <WifiOff size={12} /> : <Wifi size={12} />}
+                      {progressiveMsg}
+                    </span>
+                  )}
+                </span>
               ) : (
                 'Start Your Free Brain'
               )}
@@ -333,13 +371,15 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
 }
 
 /* ═══════════════════════════════════════════════════
-   SIGN IN COMPONENT
+   SIGN IN COMPONENT — OPTIMIZED FOR SPEED
    ═══════════════════════════════════════════════════ */
 export function SignIn({ onSwitch, onSuccess }: AuthProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const progressiveMsg = useProgressiveLoading(loading)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -348,6 +388,8 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
 
     try {
       const supabase = createClient()
+
+      // SINGLE CALL: authenticate with Supabase — nothing else
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -358,6 +400,9 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
         return
       }
 
+      // IMMEDIATELY call onSuccess — this navigates to dashboard INSTANTLY.
+      // Data loading (profile, memories, collections) happens in the background
+      // AFTER the user sees the dashboard with skeleton loading states.
       onSuccess?.()
     } catch {
       setError('An unexpected error occurred. Please try again.')
@@ -405,6 +450,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={loading}
                   className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
                 />
               </div>
@@ -435,6 +481,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={loading}
                   className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
                 />
               </div>
@@ -448,7 +495,18 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
               style={{ border: 'none' }}
             >
               {loading ? (
-                <Loader2 size={18} className="animate-spin" />
+                <span className="flex flex-col items-center gap-1">
+                  <span className="flex items-center gap-2">
+                    <Loader2 size={18} className="animate-spin" />
+                    Signing in...
+                  </span>
+                  {progressiveMsg && (
+                    <span className="text-xs opacity-70 flex items-center gap-1">
+                      {progressiveMsg.includes('Check your connection') ? <WifiOff size={12} /> : <Wifi size={12} />}
+                      {progressiveMsg}
+                    </span>
+                  )}
+                </span>
               ) : (
                 'Sign In'
               )}
@@ -480,6 +538,8 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+
+  const progressiveMsg = useProgressiveLoading(loading)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -577,6 +637,7 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={loading}
                   className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
                 />
               </div>
@@ -590,7 +651,18 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
               style={{ border: 'none' }}
             >
               {loading ? (
-                <Loader2 size={18} className="animate-spin" />
+                <span className="flex flex-col items-center gap-1">
+                  <span className="flex items-center gap-2">
+                    <Loader2 size={18} className="animate-spin" />
+                    Sending link...
+                  </span>
+                  {progressiveMsg && (
+                    <span className="text-xs opacity-70 flex items-center gap-1">
+                      {progressiveMsg.includes('Check your connection') ? <WifiOff size={12} /> : <Wifi size={12} />}
+                      {progressiveMsg}
+                    </span>
+                  )}
+                </span>
               ) : (
                 'Send Reset Link'
               )}

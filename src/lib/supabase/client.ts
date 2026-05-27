@@ -65,6 +65,11 @@ export function createClient() {
         })
       },
     },
+    // Disable realtime — we don't use any realtime subscriptions and this
+    // eliminates the overhead of maintaining a WebSocket connection on auth pages.
+    realtime: {
+      transport: undefined as any, // Prevents WebSocket connection
+    },
   })
 
   return client

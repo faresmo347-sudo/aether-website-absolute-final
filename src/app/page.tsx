@@ -1224,23 +1224,30 @@ export default function Home() {
         if (!mounted || authResolved) return
 
         if (session?.user) {
-          // Found session in cookies — restore it
-          await loadUserData(session.user.id)
+          // Found session in cookies — navigate to dashboard INSTANTLY,
+          // then load data in the background.
           const urlView = navigateFromUrl()
           resolveAuth(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
+          // Fire-and-forget data loading — dashboard shows skeletons while loading
+          loadUserData(session.user.id).catch((err) =>
+            console.warn('[Aether] Background data load failed:', err)
+          )
           return
         }
 
         // Step 2: No cookie session — try getUser() which validates with server
-        // This can be slow or hang if Supabase is unreachable
+        // This can be slow or hang if Supabase is unreachable.
+        // Don't await loadUserData — navigate first, load in background.
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!mounted || authResolved) return
 
         if (user) {
-          await loadUserData(user.id)
           const urlView = navigateFromUrl()
           resolveAuth(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
+          loadUserData(user.id).catch((err) =>
+            console.warn('[Aether] Background data load failed:', err)
+          )
         } else {
           // Not authenticated — landing page is already showing
           const urlView = navigateFromUrl()
@@ -1272,8 +1279,15 @@ export default function Home() {
 
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
           dataLoadedRef.current = false
-          await loadUserData(session.user.id)
+          // Load data in the background — don't block navigation.
+          // The dashboard is already showing via handleAuthSuccess.
+          // If handleAuthSuccess hasn't fired yet (e.g. token refresh),
+          // navigate to dashboard first.
           setCurrentView('dashboard')
+          // Fire-and-forget data loading
+          loadUserData(session.user.id).catch((err) =>
+            console.warn('[Aether] Background data load failed:', err)
+          )
         } else if (event === 'SIGNED_OUT') {
           dataLoadedRef.current = false
           setUser(null)
@@ -1310,13 +1324,16 @@ export default function Home() {
     setCurrentView(screen === 'forgot' ? 'forgot-password' : screen)
   }, [setAuthScreen, setCurrentView])
 
-  // After auth success — the onAuthStateChange listener handles data loading + navigation.
-  // This callback exists as a safety net for cases where onAuthStateChange fires
-  // before the Auth component's onSuccess prop is called.
+  // After auth success — IMMEDIATELY navigate to dashboard.
+  // This is the critical speed optimization: we navigate FIRST, then load data in background.
+  // The onAuthStateChange listener handles data loading when it fires.
   const handleAuthSuccess = useCallback(() => {
-    // The SIGNED_IN event in onAuthStateChange handles everything.
-    // No additional action needed here.
-  }, [])
+    // Navigate to dashboard IMMEDIATELY — don't wait for any data loading.
+    // Data (profile, memories, collections) loads in the background via
+    // the onAuthStateChange SIGNED_IN handler, which runs after this.
+    // The dashboard shows skeleton loading states while data loads.
+    setCurrentView('dashboard')
+  }, [setCurrentView])
 
   // ═══════════════════════════════════════════════════════════════
   // RENDER LOGIC
