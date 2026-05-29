@@ -131,10 +131,10 @@ export function Collections() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-32 md:pb-8">
+    <div className="bg-background flex-1 min-h-0 overflow-y-auto ios-scroll">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-28 md:pb-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
           <div>
             <h1
               className="text-2xl sm:text-3xl font-bold text-foreground"
@@ -159,7 +159,7 @@ export function Collections() {
 
         {/* Collections Grid - 2 cols mobile, 3 cols desktop */}
         {collections.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="flex flex-col items-center justify-center py-10 sm:py-16 text-center">
             <div className="size-16 rounded-2xl flex items-center justify-center mb-4 bg-[#9D8BA7]/12">
               <FolderOpen className="size-8" style={{ color: '#9D8BA7' }} />
             </div>
@@ -194,10 +194,10 @@ export function Collections() {
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => handleCollectionClick(collection)}
-              className="tap-feedback bg-card rounded-2xl p-4 sm:p-5 shadow-sm border border-border hover:shadow-md hover:border-[#9D8BA7]/15 transition-all cursor-pointer group flex flex-col items-center text-center"
+              className="tap-feedback bg-card rounded-2xl p-3 sm:p-5 shadow-sm border border-border hover:shadow-md hover:border-[#9D8BA7]/15 transition-all cursor-pointer group flex flex-col items-center text-center"
             >
               <div
-                className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl flex items-center justify-center mb-3 transition-colors duration-300 group-hover:scale-110"
+                className="h-10 w-10 sm:h-14 sm:w-14 rounded-xl flex items-center justify-center mb-3 transition-colors duration-300 group-hover:scale-110"
                 style={{ backgroundColor: `${collection.color}15` }}
               >
                 <CollectionIcon
@@ -219,7 +219,7 @@ export function Collections() {
         {/* Tag Cloud Section */}
         <div>
           <h2
-            className="text-xl sm:text-2xl font-bold mb-4 text-foreground"
+            className="text-lg sm:text-2xl font-bold mb-3 sm:mb-4 text-foreground"
             style={{ fontFamily: "'Playfair Display', serif" }}
           >
             Your Tags

@@ -12,7 +12,7 @@ import { getSyncQueueCount } from '@/lib/offline-db'
 /* ─────────── Navigation Configuration ─────────── */
 interface NavItem {
   label: string
-  icon: React.ComponentType<{ size?: number; className?: string }>
+  icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>
   view: AppView
   isCapture?: boolean
 }
@@ -31,6 +31,22 @@ const mobileNavItems: NavItem[] = [
   { label: 'Collections', icon: FolderOpen, view: 'collections' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
+
+/* SVG icon map for reliable mobile bottom nav rendering */
+const navIconSvgs: Record<string, (isActive: boolean) => React.ReactNode> = {
+  dashboard: (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+  ),
+  'ask-aether': (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/></svg>
+  ),
+  collections: (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+  ),
+  settings: (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+  ),
+}
 
 /* ─────────── Sidebar Nav Item (Desktop) ─────────── */
 const SidebarNavItem = memo(function SidebarNavItem({
@@ -83,7 +99,8 @@ const BottomNavItem = memo(function BottomNavItem({
   isActive: boolean
   onClick: () => void
 }) {
-  const Icon = item.icon
+  // Use reliable inline SVGs for mobile bottom nav
+  const svgIcon = navIconSvgs[item.view]
 
   return (
     <button
@@ -97,9 +114,10 @@ const BottomNavItem = memo(function BottomNavItem({
             : 'text-muted-foreground active:text-foreground'
         }
       `}
+      aria-label={item.label}
     >
-      <Icon size={22} className="transition-colors duration-150" />
-      <span className="text-[10px] font-medium leading-tight">{item.label}</span>
+      {svgIcon ? svgIcon(isActive) : <item.icon size={22} className="transition-colors duration-150" />}
+      <span className={`text-[10px] font-medium leading-tight ${isActive ? 'text-[#9D8BA7]' : ''}`}>{item.label}</span>
     </button>
   )
 })
@@ -164,7 +182,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, [currentView])
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div className="h-dvh bg-background text-foreground flex overflow-hidden">
       {/* Left Sidebar (Desktop) */}
       <aside className="hidden md:flex md:flex-col md:w-64 bg-card border-r border-border fixed inset-y-0 left-0 z-40">
         {/* Logo */}
@@ -201,12 +219,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 md:pl-64 flex flex-col min-h-screen">
+      <div className="flex-1 md:pl-64 flex flex-col h-dvh overflow-hidden">
         {/* Offline/Sync Banner */}
         <OfflineBanner />
 
         {/* Top Header - Mobile (simplified) */}
-        <header className="md:hidden sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border">
+        <header className="md:hidden shrink-0 z-30 bg-background/80 backdrop-blur-md border-b border-border">
           <div className="flex items-center gap-3 px-4 h-12 safe-area-top">
             {/* Brain logo */}
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -228,7 +246,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Top Header - Desktop */}
-        <header className="hidden md:block sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
+        <header className="hidden md:block shrink-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border">
           <div className="flex items-center gap-4 px-6 h-14">
             {/* Search Bar */}
             <button
@@ -255,7 +273,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 pb-24 md:pb-6">
+        <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {children}
         </main>
       </div>
@@ -270,7 +288,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </button>
 
       {/* Bottom Navigation Bar (Mobile) */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/85 backdrop-blur-lg border-t border-border/60 mobile-gpu">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-lg border-t border-border/60 mobile-gpu safe-area-bottom">
         <div className="relative flex items-end justify-around px-1 pt-1.5" style={{ height: 'calc(64px + env(safe-area-inset-bottom, 0px))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {mobileNavItems.map((item, index) => {
             // Center Capture button - raised and prominent
@@ -280,10 +298,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   key={item.view}
                   onClick={() => setCaptureModalOpen(true)}
                   className="tap-feedback relative flex flex-col items-center justify-center -mt-5 z-10"
+                  aria-label="Quick capture"
                 >
                   {/* Raised circular lavender button */}
                   <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#9D8BA7] to-[#7A6B85] flex items-center justify-center shadow-lg shadow-[#9D8BA7]/40 ring-4 ring-background/80 transition-all duration-200 hover:shadow-xl hover:shadow-[#9D8BA7]/50 active:scale-95">
-                    <Plus size={26} className="stroke-[2.5] text-white" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                   </div>
                   <span className="text-[10px] font-medium text-[#9D8BA7] mt-1 leading-tight">Capture</span>
                 </button>

@@ -1,14 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
-
-let zaiInstance: InstanceType<typeof ZAI> | null = null
-
-async function getZAI() {
-  if (!zaiInstance) {
-    zaiInstance = await ZAI.create()
-  }
-  return zaiInstance
-}
+import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
 
 // Forbidden generic tags that should almost never appear
 const GENERIC_TAGS = new Set([
@@ -90,7 +81,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     }
 
-    const zai = await getZAI()
+    const groq = getGroqClient()
 
     const systemPrompt = buildSystemPrompt(type || 'text')
 
@@ -117,12 +108,14 @@ ${contextBlock}
 
 Return only a JSON array of tag strings with # symbols. Example: ["#cafe", "#food", "#places"]`
 
-    const completion = await zai.chat.completions.create({
+    const completion = await groq.chat.completions.create({
+      model: GROQ_MODEL,
       messages: [
-        { role: 'assistant', content: systemPrompt },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      thinking: { type: 'disabled' },
+      temperature: 0.3,
+      max_tokens: 150,
     })
 
     const responseText = completion.choices[0]?.message?.content || ''
@@ -146,7 +139,6 @@ Return only a JSON array of tag strings with # symbols. Example: ["#cafe", "#foo
 
     // If we filtered everything out, try to extract meaningful tags from content
     if (tags.length === 0) {
-      // Last resort: use the LLM one more time with even more explicit instructions
       const fallbackTags = extractFallbackTags(content, type)
       tags = fallbackTags.length > 0 ? fallbackTags : ['#memory']
     }

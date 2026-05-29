@@ -80,13 +80,14 @@ export function Settings() {
 
   // ──── Dark mode: sync class on mount AND read from localStorage ────
   useEffect(() => {
-    const saved = localStorage.getItem('aether-dark-mode') === 'true'
-    if (saved) {
+    const saved = localStorage.getItem('aether-dark-mode')
+    if (saved === 'true') {
       document.documentElement.classList.add('dark')
-      // Also sync the store state if it's out of sync
-      if (!darkMode) {
-        setDarkMode(true)
-      }
+      document.documentElement.classList.remove('light')
+      if (!darkMode) setDarkMode(true)
+    } else {
+      document.documentElement.classList.remove('dark')
+      document.documentElement.classList.add('light')
     }
   }, []) // Only on mount
 
@@ -201,8 +202,8 @@ export function Settings() {
   }, [setCurrentView])
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-2xl mx-auto px-0 sm:px-6 py-6 sm:py-8 pb-32 md:pb-8">
+    <div className="bg-background text-foreground flex-1 min-h-0 overflow-y-auto ios-scroll">
+      <div className="max-w-2xl mx-auto px-0 sm:px-6 py-6 sm:py-8 pb-28 md:pb-8">
         {/* Header */}
         <div className="px-4 sm:px-0 mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>

@@ -227,10 +227,10 @@ export function Recaps() {
   }, [memories])
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-32 md:pb-8">
+    <div className="bg-background flex-1 min-h-0 overflow-y-auto ios-scroll">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-28 md:pb-8">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <h1
             className="text-2xl sm:text-3xl font-bold text-foreground"
             style={{ fontFamily: "'Playfair Display', serif" }}
@@ -243,7 +243,7 @@ export function Recaps() {
         </div>
 
         {/* Daily/Weekly Toggle - Full width segmented control on mobile */}
-        <div className="flex w-full rounded-full p-1 bg-[#9D8BA7]/10 mb-6 mx-auto max-w-xs sm:max-w-sm">
+        <div className="flex w-full rounded-full p-1 bg-[#9D8BA7]/10 mb-4 sm:mb-6 mx-auto max-w-xs sm:max-w-sm">
           <button
             onClick={() => setRecapView('daily')}
             className={`tap-feedback flex-1 py-2.5 rounded-full text-sm font-medium transition-all min-h-[44px] ${
@@ -272,10 +272,10 @@ export function Recaps() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="space-y-5"
+            className="space-y-3 sm:space-y-5"
           >
             {/* Today's Brief Card */}
-            <div className="bg-card rounded-2xl px-4 sm:px-6 py-5 shadow-sm border border-border">
+            <div className="bg-card rounded-2xl px-3 sm:px-6 py-4 sm:py-5 shadow-sm border border-border">
               <div className="flex items-center gap-3 mb-1">
                 <Calendar className="size-5" style={{ color: '#9D8BA7' }} />
                 <h2
@@ -296,7 +296,7 @@ export function Recaps() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="flex flex-col items-center justify-center py-16 text-center"
+                className="flex flex-col items-center justify-center py-10 sm:py-16 text-center"
               >
                 <div className="size-16 rounded-2xl flex items-center justify-center mb-4 bg-[#9D8BA7]/12">
                   <Brain className="size-8" style={{ color: '#9D8BA7' }} />
@@ -324,7 +324,7 @@ export function Recaps() {
                 {recentMemories.length > 0 && (
                   <div>
                     <h3
-                      className="text-base sm:text-lg font-bold mb-3 text-foreground"
+                      className="text-sm sm:text-lg font-bold mb-2 sm:mb-3 text-foreground"
                       style={{ fontFamily: "'Playfair Display', serif" }}
                     >
                       Key Memories
@@ -336,7 +336,7 @@ export function Recaps() {
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.08, duration: 0.25 }}
-                          className="bg-card rounded-2xl px-4 sm:px-5 py-4 shadow-sm border border-border"
+                          className="bg-card rounded-2xl px-3 sm:px-5 py-4 shadow-sm border border-border"
                         >
                           <div className="flex items-start gap-3">
                             <div
@@ -367,12 +367,12 @@ export function Recaps() {
                 {displayTasks.length > 0 && (
                   <div>
                     <h3
-                      className="text-base sm:text-lg font-bold mb-3 text-foreground"
+                      className="text-sm sm:text-lg font-bold mb-2 sm:mb-3 text-foreground"
                       style={{ fontFamily: "'Playfair Display', serif" }}
                     >
                       Tasks Extracted
                     </h3>
-                    <div className="bg-card rounded-2xl px-4 sm:px-6 py-5 shadow-sm border border-border space-y-3">
+                    <div className="bg-card rounded-2xl px-3 sm:px-6 py-4 sm:py-5 shadow-sm border border-border space-y-3">
                       {displayTasks.map((task, index) => (
                         <motion.div
                           key={task.id}
@@ -404,7 +404,7 @@ export function Recaps() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3, duration: 0.3 }}
-                  className="bg-card rounded-2xl px-4 sm:px-6 py-5 shadow-sm border-l-4"
+                  className="bg-card rounded-2xl px-3 sm:px-6 py-4 sm:py-5 shadow-sm border-l-4"
                   style={{ borderLeftColor: '#9D8BA7' }}
                 >
                   <div className="flex items-start gap-3">
@@ -435,7 +435,7 @@ export function Recaps() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="space-y-5"
+            className="space-y-3 sm:space-y-5"
           >
             {/* Empty state for weekly view */}
             {isWeeklyEmpty ? (
@@ -443,7 +443,7 @@ export function Recaps() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="flex flex-col items-center justify-center py-16 text-center"
+                className="flex flex-col items-center justify-center py-10 sm:py-16 text-center"
               >
                 <div className="size-16 rounded-2xl flex items-center justify-center mb-4 bg-[#9D8BA7]/12">
                   <Brain className="size-8" style={{ color: '#9D8BA7' }} />
@@ -468,9 +468,9 @@ export function Recaps() {
             ) : (
               <>
                 {/* Week Overview Timeline */}
-                <div className="bg-card rounded-2xl px-4 sm:px-6 py-5 shadow-sm border border-border">
+                <div className="bg-card rounded-2xl px-3 sm:px-6 py-4 sm:py-5 shadow-sm border border-border">
                   <h2
-                    className="text-base sm:text-lg font-bold mb-4 text-foreground"
+                    className="text-sm sm:text-lg font-bold mb-2 sm:mb-3 text-foreground"
                     style={{ fontFamily: "'Playfair Display', serif" }}
                   >
                     Week Overview
@@ -509,7 +509,7 @@ export function Recaps() {
                 {topThemes.length > 0 && (
                   <div>
                     <h3
-                      className="text-base sm:text-lg font-bold mb-3 text-foreground"
+                      className="text-sm sm:text-lg font-bold mb-2 sm:mb-3 text-foreground"
                       style={{ fontFamily: "'Playfair Display', serif" }}
                     >
                       Top Themes
@@ -533,7 +533,7 @@ export function Recaps() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15, duration: 0.3 }}
-                  className="bg-card rounded-2xl px-4 sm:px-6 py-5 shadow-sm border border-border"
+                  className="bg-card rounded-2xl px-3 sm:px-6 py-4 sm:py-5 shadow-sm border border-border"
                 >
                   <div className="flex items-start gap-3">
                     <div
@@ -561,7 +561,7 @@ export function Recaps() {
                 {memoryLaneItems.length > 0 && (
                   <div>
                     <h3
-                      className="text-base sm:text-lg font-bold mb-3 text-foreground"
+                      className="text-sm sm:text-lg font-bold mb-2 sm:mb-3 text-foreground"
                       style={{ fontFamily: "'Playfair Display', serif" }}
                     >
                       <Sparkles className="inline size-5 mr-1.5 -mt-0.5" style={{ color: '#9D8BA7' }} />

@@ -1,14 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
-
-let zaiInstance: InstanceType<typeof ZAI> | null = null
-
-async function getZAI() {
-  if (!zaiInstance) {
-    zaiInstance = await ZAI.create()
-  }
-  return zaiInstance
-}
+import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
 
 function buildSystemPrompt(): string {
   return `You are Aether, an AI insight companion for a personal memory app. Your job is to generate warm, conversational insights about a user's saved memory.
@@ -45,7 +36,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     }
 
-    const zai = await getZAI()
+    const groq = getGroqClient()
 
     const systemPrompt = buildSystemPrompt()
 
@@ -69,12 +60,14 @@ export async function POST(req: NextRequest) {
 
 ${contextBlock}`
 
-    const completion = await zai.chat.completions.create({
+    const completion = await groq.chat.completions.create({
+      model: GROQ_MODEL,
       messages: [
-        { role: 'assistant', content: systemPrompt },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      thinking: { type: 'disabled' },
+      temperature: 0.5,
+      max_tokens: 512,
     })
 
     const insight = completion.choices[0]?.message?.content?.trim() || ''

@@ -170,7 +170,7 @@ export const useAetherStore = create<AetherState>((set) => ({
   setAutoTagging: (v) => set({ autoTagging: v }),
   defaultCapture: 'text',
   setDefaultCapture: (v) => set({ defaultCapture: v }),
-  darkMode: typeof window !== 'undefined' ? localStorage.getItem('aether-dark-mode') === 'true' : false,
+  darkMode: false,
   setDarkMode: (v) => {
     if (typeof window !== 'undefined') localStorage.setItem('aether-dark-mode', String(v))
     set({ darkMode: v })

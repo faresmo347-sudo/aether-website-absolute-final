@@ -272,14 +272,14 @@ function HeroSection({ onEnterApp }: { onEnterApp: () => void }) {
   const opacity = useTransform(scrollY, [0, 400], [1, 0])
 
   return (
-    <motion.section style={{ y, opacity }} className="relative min-h-screen flex items-center justify-center pt-16">
+    <motion.section style={{ y, opacity }} className="relative min-h-screen flex items-center justify-center pt-12 sm:pt-16">
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
         {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-sm border border-[#9D8BA7]/15 rounded-full px-4 py-1.5 mb-8 shadow-sm"
+          className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-sm border border-[#9D8BA7]/15 rounded-full px-4 py-1.5 mb-4 sm:mb-8 shadow-sm"
         >
           <span className="h-2 w-2 rounded-full bg-[#9D8BA7] animate-pulse" />
           <span className="text-xs font-medium text-[#1a1a2e]/70">Your AI-powered second brain</span>
@@ -290,7 +290,7 @@ function HeroSection({ onEnterApp }: { onEnterApp: () => void }) {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.8 }}
-          className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[#1a1a2e] leading-[1.05] tracking-tight mb-6"
+          className="font-serif text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[#1a1a2e] leading-[1.05] tracking-tight mb-3 sm:mb-6"
         >
           Forget{' '}
           <span className="bg-gradient-to-r from-[#9D8BA7] via-[#B8A8C4] to-[#9D8BA7] bg-clip-text text-transparent animate-gradient">
@@ -304,7 +304,7 @@ function HeroSection({ onEnterApp }: { onEnterApp: () => void }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.6 }}
-          className="text-base sm:text-lg md:text-xl text-[#1a1a2e]/50 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed"
+          className="text-base sm:text-lg md:text-xl text-[#1a1a2e]/50 max-w-2xl mx-auto mb-4 sm:mb-8 leading-relaxed"
         >
           Aether remembers everything — so you don&apos;t have to. Capture ideas, voice notes, links, and more. 
           Retrieve any memory instantly with natural language AI search.
@@ -338,7 +338,7 @@ function HeroSection({ onEnterApp }: { onEnterApp: () => void }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2, duration: 0.8 }}
-          className="mt-10 sm:mt-12 flex items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-[#1a1a2e]/30"
+          className="mt-6 sm:mt-12 flex items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-[#1a1a2e]/30"
         >
           <div className="hidden xs:flex -space-x-2">
             {['A', 'S', 'M', 'J'].map((initial, i) => (
@@ -409,7 +409,7 @@ const features = [
 
 function FeaturesSection() {
   return (
-    <section id="features" className="relative py-24 sm:py-32">
+    <section id="features" className="relative py-12 sm:py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
         <motion.div
@@ -417,7 +417,7 @@ function FeaturesSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px' }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12 sm:mb-16"
+          className="text-center mb-6 sm:mb-12"
         >
           <span className="inline-block text-xs font-semibold text-[#9D8BA7] uppercase tracking-widest mb-3">Features</span>
           <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
@@ -429,7 +429,7 @@ function FeaturesSection() {
         </motion.div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {features.map((feature, i) => (
             <motion.div
               key={feature.title}
@@ -491,7 +491,7 @@ const stepIconMap: Record<string, React.ReactNode> = {
 
 function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="relative py-24 sm:py-32 bg-white/40">
+    <section id="how-it-works" className="relative py-12 sm:py-24 bg-white/40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
         <motion.div
@@ -499,7 +499,7 @@ function HowItWorksSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px' }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12 sm:mb-16"
+          className="text-center mb-6 sm:mb-12"
         >
           <span className="inline-block text-xs font-semibold text-[#9D8BA7] uppercase tracking-widest mb-3">How It Works</span>
           <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-[#1a1a2e] mb-4">
@@ -508,7 +508,7 @@ function HowItWorksSection() {
         </motion.div>
 
         {/* Steps */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12">
           {steps.map((step, i) => (
             <motion.div
               key={step.step}
@@ -525,7 +525,7 @@ function HowItWorksSection() {
 
               {/* Step number + icon */}
               <div className="relative inline-flex items-center justify-center mb-6">
-                <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/10 to-[#9D8BA7]/5 flex items-center justify-center">
+                <div className="h-16 w-16 sm:h-24 sm:w-24 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/10 to-[#9D8BA7]/5 flex items-center justify-center">
                   {stepIconMap[step.icon]}
                 </div>
                 <span className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-[#9D8BA7] text-white text-xs font-bold flex items-center justify-center shadow-lg shadow-[#9D8BA7]/30">
@@ -573,7 +573,7 @@ function AiChatDemo() {
   }, [messages.length, isTyping])
 
   return (
-    <section className="relative py-24 sm:py-32">
+    <section className="relative py-12 sm:py-24">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -613,7 +613,7 @@ function AiChatDemo() {
           </div>
 
           {/* Chat messages area */}
-          <div className="p-4 sm:p-6 min-h-[240px] sm:min-h-[280px] max-h-[400px] overflow-y-auto space-y-4">
+          <div className="p-4 sm:p-6 min-h-[180px] sm:min-h-[280px] max-h-[400px] overflow-y-auto space-y-4">
             {messages.length === 0 && !isTyping && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <p className="text-[#1a1a2e]/30 text-sm mb-4">Click to see Aether in action</p>
@@ -718,14 +718,14 @@ const testimonials = [
 
 function TestimonialsSection() {
   return (
-    <section className="relative py-24 sm:py-32 bg-white/40">
+    <section className="relative py-12 sm:py-24 bg-white/40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px' }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12 sm:mb-16"
+          className="text-center mb-6 sm:mb-12"
         >
           <span className="inline-block text-xs font-semibold text-[#9D8BA7] uppercase tracking-widest mb-3">Testimonials</span>
           <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
@@ -750,7 +750,7 @@ function TestimonialsSection() {
                 ))}
               </div>
 
-              <p className="text-sm text-[#1a1a2e]/70 leading-relaxed mb-6 italic">
+              <p className="text-sm text-[#1a1a2e]/70 leading-relaxed mb-3 sm:mb-6 italic">
                 &ldquo;{t.quote}&rdquo;
               </p>
 
@@ -777,14 +777,14 @@ function TestimonialsSection() {
 
 function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
   return (
-    <section id="pricing" className="relative py-24 sm:py-32">
+    <section id="pricing" className="relative py-12 sm:py-24">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px' }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12 sm:mb-16"
+          className="text-center mb-6 sm:mb-12"
         >
           <span className="inline-block text-xs font-semibold text-[#9D8BA7] uppercase tracking-widest mb-3">Pricing</span>
           <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
@@ -802,7 +802,7 @@ function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-50px' }}
             transition={{ duration: 0.5 }}
-            className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-[#1a1a2e]/5 shadow-sm"
+            className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#1a1a2e]/5 shadow-sm"
           >
             <div className="mb-6">
               <h3 className="font-serif text-2xl font-bold text-[#1a1a2e] mb-1">Seed</h3>
@@ -834,7 +834,7 @@ function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-50px' }}
             transition={{ delay: 0.15, duration: 0.5 }}
-            className="relative bg-gradient-to-br from-[#9D8BA7]/10 to-[#9D8BA7]/5 rounded-2xl sm:rounded-3xl p-6 sm:p-8 border-2 border-[#9D8BA7]/20 shadow-xl shadow-[#9D8BA7]/10"
+            className="relative bg-gradient-to-br from-[#9D8BA7]/10 to-[#9D8BA7]/5 rounded-2xl sm:rounded-3xl p-4 sm:p-8 border-2 border-[#9D8BA7]/20 shadow-xl shadow-[#9D8BA7]/10"
           >
             {/* Popular badge */}
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#9D8BA7] text-white text-xs font-semibold px-4 py-1 rounded-full shadow-lg shadow-[#9D8BA7]/30">
@@ -876,14 +876,14 @@ function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
 
 function CtaSection({ onEnterApp }: { onEnterApp: () => void }) {
   return (
-    <section className="relative py-24 sm:py-32">
+    <section className="relative py-12 sm:py-24">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px' }}
           transition={{ duration: 0.6 }}
-          className="text-center bg-gradient-to-br from-[#9D8BA7]/10 via-[#9D8BA7]/5 to-[#E0F2F1]/20 rounded-2xl sm:rounded-3xl p-8 sm:p-12 md:p-16 border border-[#9D8BA7]/10"
+          className="text-center bg-gradient-to-br from-[#9D8BA7]/10 via-[#9D8BA7]/5 to-[#E0F2F1]/20 rounded-2xl sm:rounded-3xl p-6 sm:p-12 md:p-16 border border-[#9D8BA7]/10"
         >
           <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
             Ready to never forget again?

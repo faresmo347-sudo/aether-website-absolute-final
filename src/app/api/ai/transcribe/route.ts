@@ -1,14 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
-
-let zaiInstance: InstanceType<typeof ZAI> | null = null
-
-async function getZAI() {
-  if (!zaiInstance) {
-    zaiInstance = await ZAI.create()
-  }
-  return zaiInstance
-}
+import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,38 +9,44 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Audio base64 is required' }, { status: 400 })
     }
 
-    const zai = await getZAI()
+    // Step 1: Transcribe the audio using Groq Whisper API
+    const groq = getGroqClient()
+    const audioBuffer = Buffer.from(audio, 'base64')
+    const file = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' })
 
-    // Transcribe the audio using ASR
-    const response = await zai.audio.asr.create({
-      file_base64: audio,
+    const transcription = await groq.audio.transcriptions.create({
+      model: 'whisper-large-v3-turbo',
+      file: file,
+      response_format: 'json',
     })
 
-    const transcription = response.text || ''
+    const transcribedText = transcription.text || ''
 
-    if (!transcription.trim()) {
+    if (!transcribedText.trim()) {
       return NextResponse.json({ transcription: '', summary: '' })
     }
 
-    // Generate a summary of the transcription
-    const summaryCompletion = await zai.chat.completions.create({
+    // Step 2: Generate a summary using Groq LLM
+    const summaryCompletion = await groq.chat.completions.create({
+      model: GROQ_MODEL,
       messages: [
         {
-          role: 'assistant',
+          role: 'system',
           content:
             'You are a helpful assistant that summarizes voice notes. Given a transcription of a voice memo, provide a concise 1-2 sentence summary. Return ONLY the summary text, nothing else.',
         },
         {
           role: 'user',
-          content: `Summarize this voice note in 1-2 sentences:\n\n${transcription}`,
+          content: `Summarize this voice note in 1-2 sentences:\n\n${transcribedText}`,
         },
       ],
-      thinking: { type: 'disabled' },
+      temperature: 0.3,
+      max_tokens: 128,
     })
 
     const summary = summaryCompletion.choices[0]?.message?.content || ''
 
-    return NextResponse.json({ transcription, summary })
+    return NextResponse.json({ transcription: transcribedText, summary })
   } catch (error) {
     console.error('Transcription error:', error)
     return NextResponse.json(

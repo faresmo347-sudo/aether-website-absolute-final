@@ -57,9 +57,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="light" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            var saved = localStorage.getItem('aether-dark-mode');
+            if (saved !== 'true') {
+              document.documentElement.classList.remove('dark');
+              document.documentElement.classList.add('light');
+            }
+          })();
+        `}} />
+      </head>
       <body
-        className={`${inter.variable} ${playfair.variable} antialiased bg-[#FFFAF5] text-[#1a1a2e]`}
+        className={`${inter.variable} ${playfair.variable} antialiased`}
       >
         {children}
         <Toaster />

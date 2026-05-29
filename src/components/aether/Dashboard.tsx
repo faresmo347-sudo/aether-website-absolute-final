@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, memo, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, ArrowLeft, FolderOpen, Loader2, Eye, Sparkles, Search, ClipboardPaste, CheckSquare, Square } from 'lucide-react'
+import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, ArrowLeft, FolderOpen, Loader2, Eye, Sparkles, ClipboardPaste, CheckSquare, Square, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAetherStore } from '@/store/aether-store'
@@ -65,7 +65,7 @@ const MemoryCard = memo(function MemoryCard({ memory, onClick }: { memory: Memor
           <h3 className="font-bold text-foreground text-sm leading-snug truncate group-hover:text-[#9D8BA7] transition-colors">
             {memory.title}
           </h3>
-          <p className="text-muted-foreground text-xs mt-1 line-clamp-2 leading-relaxed">
+          <p className="text-muted-foreground text-xs mt-1 line-clamp-2 leading-relaxed overflow-hidden" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {memory.content}
           </p>
           <div className="flex items-center justify-between mt-3 gap-2">
@@ -118,7 +118,7 @@ const EmptyState = memo(function EmptyState({ collectionName }: { collectionName
   const { setCaptureModalOpen } = useAetherStore()
 
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-4 sm:px-6 text-center">
+    <div className="flex flex-col items-center justify-center py-12 sm:py-20 px-4 sm:px-6 text-center">
       {/* Animated brain icon with pulse ring */}
       <div className="relative mb-6">
         <div className="absolute inset-0 rounded-full bg-[#9D8BA7]/20 animate-ping opacity-20" />
@@ -186,7 +186,7 @@ const FilterBar = memo(function FilterBar() {
   }
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto flex-nowrap scrollbar-none pb-1 -mx-4 px-4 md:mx-0 md:px-0">
+    <div className="flex items-center gap-2 overflow-x-auto flex-nowrap scrollbar-none pb-1">
       {FILTERS.map((f) => (
         <button
           key={f}
@@ -775,7 +775,7 @@ function QuickCaptureModal() {
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 pb-2 shrink-0">
+          <div className="flex items-center justify-between px-4 pb-2 shrink-0">
             <h2 className="font-serif text-lg font-semibold text-foreground">
               Quick Capture
             </h2>
@@ -788,7 +788,7 @@ function QuickCaptureModal() {
           </div>
 
           {/* Tabs — touch-friendly with larger targets */}
-          <div className="flex items-center gap-1 px-5 pb-3 shrink-0">
+          <div className="flex items-center gap-1 px-4 pb-3 shrink-0">
             {captureTabs.map((tab) => (
               <button
                 key={tab.key}
@@ -806,7 +806,7 @@ function QuickCaptureModal() {
           </div>
 
           {/* Tab content — scrollable, takes remaining space */}
-          <div className="flex-1 overflow-y-auto ios-scroll px-5 pb-4 min-h-0">
+          <div className="flex-1 overflow-y-auto ios-scroll px-4 pb-4 min-h-0">
             {/* Text */}
             {activeCaptureTab === 'text' && (
               <textarea
@@ -940,28 +940,48 @@ function QuickCaptureModal() {
             {activeCaptureTab === 'image' && (
               <div>
                 {!imagePreview ? (
-                  <label className="tap-feedback flex flex-col items-center justify-center min-h-[200px] rounded-xl border-2 border-dashed border-border bg-background cursor-pointer hover:border-[#9D8BA7]/40 transition-colors active:scale-[0.98]">
-                    <Upload className="size-8 text-[#9D8BA7]/50 mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Tap to upload or take a photo
-                    </p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">
-                      Camera or photo library
-                    </p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (file) {
-                          handleImageUpload(file)
-                        }
-                      }}
-                    />
-                  </label>
+                  <div className="flex flex-col items-center justify-center gap-3 py-4">
+                    {/* Gallery button - opens native photo picker */}
+                    <label className="tap-feedback w-full flex items-center justify-center gap-3 min-h-[56px] rounded-xl border-2 border-dashed border-border bg-background cursor-pointer hover:border-[#9D8BA7]/40 transition-colors active:scale-[0.98]">
+                      <Upload className="size-5 text-[#9D8BA7]/70" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Choose from Gallery</p>
+                        <p className="text-xs text-muted-foreground">Select a photo from your library</p>
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            handleImageUpload(file)
+                          }
+                        }}
+                      />
+                    </label>
+                    {/* Camera button - opens camera directly */}
+                    <label className="tap-feedback w-full flex items-center justify-center gap-3 min-h-[56px] rounded-xl bg-[#9D8BA7]/10 border border-[#9D8BA7]/20 cursor-pointer hover:bg-[#9D8BA7]/15 transition-colors active:scale-[0.98]">
+                      <Camera className="size-5 text-[#9D8BA7]" />
+                      <div>
+                        <p className="text-sm font-medium text-[#9D8BA7]">Take a Photo</p>
+                        <p className="text-xs text-[#9D8BA7]/60">Open camera to capture</p>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            handleImageUpload(file)
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
                 ) : (
                   <div className="relative">
                     {/* Full width image preview */}
@@ -1021,7 +1041,7 @@ function QuickCaptureModal() {
           </div>
 
           {/* Save button — always visible, full width, min 48px */}
-          <div className="shrink-0 px-5 pb-5 pt-2 border-t border-border/50 bg-card">
+          <div className="shrink-0 px-4 pb-5 pt-2 border-t border-border/50 bg-card">
             <Button
               onClick={handleSave}
               disabled={isSaving || isAnalyzingImage}
@@ -1105,7 +1125,7 @@ function QuickCaptureModal() {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-5 pb-2">
+          <div className="flex items-center justify-between px-4 pt-5 pb-2">
             <h2 className="font-serif text-lg font-semibold text-foreground">
               Quick Capture
             </h2>
@@ -1118,7 +1138,7 @@ function QuickCaptureModal() {
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center gap-1 px-5 pb-3">
+          <div className="flex items-center gap-1 px-4 pb-3">
             {captureTabs.map((tab) => (
               <button
                 key={tab.key}
@@ -1136,7 +1156,7 @@ function QuickCaptureModal() {
           </div>
 
           {/* Tab content */}
-          <div className="px-5 pb-4 min-h-[220px]">
+          <div className="px-4 pb-4 min-h-[220px]">
             {/* Text */}
             {activeCaptureTab === 'text' && (
               <textarea
@@ -1342,7 +1362,7 @@ function QuickCaptureModal() {
           </div>
 
           {/* Save button */}
-          <div className="px-5 pb-5">
+          <div className="px-4 pb-5">
             <Button
               onClick={handleSave}
               disabled={isSaving || isAnalyzingImage}
@@ -1437,7 +1457,7 @@ function getSmartFallbackTags(content: string, type: string): string[] {
 // ---------- main Dashboard ----------
 
 export default function Dashboard() {
-  const { memories, activeFilter, collectionFilter, setSelectedMemoryId, setCurrentView, collections, searchQuery, setSearchQuery, isLoadingMemories } = useAetherStore()
+  const { memories, activeFilter, collectionFilter, setSelectedMemoryId, setCurrentView, collections, isLoadingMemories } = useAetherStore()
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set())
 
   const activeCollection = useMemo(
@@ -1503,20 +1523,10 @@ export default function Dashboard() {
       filtered = filtered.filter((m) => m.collectionId === collectionFilter)
     }
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (m) =>
-          m.title.toLowerCase().includes(q) ||
-          m.content.toLowerCase().includes(q) ||
-          m.tags.some((t) => t.toLowerCase().includes(q))
-      )
-    }
-
     return [...filtered].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
-  }, [memories, activeFilter, collectionFilter, searchQuery])
+  }, [memories, activeFilter, collectionFilter])
 
   const handleMemoryClick = useCallback((id: string) => {
     setSelectedMemoryId(id)
@@ -1524,37 +1534,15 @@ export default function Dashboard() {
   }, [setSelectedMemoryId, setCurrentView])
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Search Bar — full width, min 44px height */}
-      <div className="shrink-0 mb-3 px-0 md:px-0">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search memories..."
-            className="w-full bg-card border border-border rounded-xl pl-9 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#9D8BA7]/30 focus:ring-2 focus:ring-[#9D8BA7]/10 transition-all min-h-[44px]"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center"
-            >
-              <X className="size-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Filter Bar — horizontally scrollable on mobile */}
-      <div className="shrink-0 pb-4">
+      <div className="shrink-0 pb-3 px-4 sm:px-6">
         <FilterBar />
       </div>
 
       {/* Extracted Tasks Section — mobile-friendly touch targets */}
       {extractedTasks.length > 0 && (
-        <div className="shrink-0 mb-4">
+        <div className="shrink-0 mb-4 px-4 sm:px-6">
           <div className="bg-card rounded-2xl p-4 shadow-sm border border-border">
             <div className="flex items-center gap-2 mb-3">
               <CheckSquare className="size-4 text-[#9D8BA7]" />
@@ -1589,9 +1577,9 @@ export default function Dashboard() {
       )}
 
       {/* Memory Feed — iOS-style scroll, mobile gap */}
-      <div className="flex-1 overflow-y-auto min-h-0 ios-scroll">
+      <div className="flex-1 overflow-y-auto min-h-0 ios-scroll px-4 sm:px-6 pb-24 md:pb-6">
         {isLoadingMemories ? (
-          <div className="flex flex-col gap-3 pb-4">
+          <div className="flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="bg-card rounded-2xl p-4 shadow-sm border border-border">
                 <div className="flex items-start gap-3">
@@ -1613,7 +1601,7 @@ export default function Dashboard() {
             ))}
           </div>
         ) : sortedMemories.length > 0 ? (
-          <div className="flex flex-col gap-3 pb-4">
+          <div className="flex flex-col gap-3">
             {sortedMemories.map((memory) => (
               <MemoryCard
                 key={memory.id}

@@ -55,6 +55,7 @@ CRITICAL RULES:
 5. Your response must always reference the actual content of the memories you found
 6. Rank results by relevance to the exact question asked
 7. When you reference a memory, include its ID in your referencedIds list
+8. IMPORTANT: Image memories contain full OCR text extracted from images. When a user asks about text, lists, menus, documents, or any content that might have been in a screenshot or photo, you MUST search through the content of image-type memories as well — their content field contains the full extracted text from the image. Do NOT skip image memories when searching for text-based information.
 
 You must respond with a JSON object with these fields:
 - "answer": A natural language response answering the user's question based on their memories. Be specific and reference the actual content.
@@ -63,13 +64,13 @@ You must respond with a JSON object with these fields:
 
 If no memories are relevant, set referencedIds to [] and sourcesCount to 0, and say you couldn't find anything relevant.`
 
-    const userPrompt = `Here are all my saved memories:
+    const userPrompt = `Here are all my saved memories (note: image-type memories contain full OCR-extracted text from photos and screenshots):
 
 ${memoriesContext}
 
 My question: ${question}
 
-Search through my memories and answer based on what you find. Remember: only reference memories that are actually relevant. If nothing matches, say so honestly.`
+Search through ALL my memories including image-type memories (which contain extracted text) and answer based on what you find. Remember: only reference memories that are actually relevant. If nothing matches, say so honestly.`
 
     const completion = await groq.chat.completions.create({
       model: GROQ_MODEL,
@@ -114,7 +115,7 @@ Search through my memories and answer based on what you find. Remember: only ref
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error('AI search error:', error)
+    console.error('AI ask error:', error)
     return NextResponse.json({
       answer: 'Sorry, I had trouble searching your memories. Please try again.',
       referencedIds: [],

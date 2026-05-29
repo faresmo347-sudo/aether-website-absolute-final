@@ -223,8 +223,8 @@ export function AskAether() {
     }
 
     try {
-      // Call the AI search API
-      const res = await fetch('/api/ai/search', {
+      // Call the AI ask API (Groq-powered)
+      const res = await fetch('/api/ai/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -268,9 +268,9 @@ export function AskAether() {
   }, [processMessage])
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-background">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-background">
       {/* Header — compact on mobile */}
-      <div className="flex-shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b border-border bg-background/80 backdrop-blur-sm">
+      <div className="flex-shrink-0 px-4 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-4 border-b border-border bg-background/80 backdrop-blur-sm">
         <div className="md:max-w-3xl md:mx-auto">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-2xl bg-gradient-to-br from-[#9D8BA7] to-[#6D597A] flex items-center justify-center shadow-lg shadow-[#9D8BA7]/20">
@@ -287,20 +287,20 @@ export function AskAether() {
         </div>
       </div>
 
-      {/* Suggested Questions — horizontally scrollable chips */}
+      {/* Suggested Questions — wraps on mobile, scrollable horizontal on desktop */}
       {memories.length > 0 && chatMessages.length === 0 && (
-        <div className="flex-shrink-0 py-3 border-b border-border/50 bg-background/60">
-          <div className="overflow-x-auto scrollbar-none -mx-4 px-4">
-            <div className="flex gap-2">
+        <div className="flex-shrink-0 py-2.5 px-4 border-b border-border/50 bg-background/60">
+          <div className="md:max-w-3xl md:mx-auto">
+            <div className="flex flex-wrap gap-2">
               {starterQuestions.map((question) => (
                 <button
                   key={question}
                   onClick={() => handleStarterClick(question)}
-                  className="whitespace-nowrap min-w-fit px-4 py-2.5 rounded-2xl border border-[#9D8BA7]/15 bg-card text-sm text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/30 transition-all duration-300 shadow-sm"
+                  className="px-3.5 py-2 rounded-2xl border border-[#9D8BA7]/15 bg-card text-sm text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/30 transition-all duration-300 shadow-sm min-h-[40px]"
                 >
-                  <span className="text-[#9D8BA7] mr-1">&ldquo;</span>
+                  <span className="text-[#9D8BA7] mr-0.5">&ldquo;</span>
                   {question.replace(/^"|"$/g, '')}
-                  <span className="text-[#9D8BA7] ml-1">&rdquo;</span>
+                  <span className="text-[#9D8BA7] ml-0.5">&rdquo;</span>
                 </button>
               ))}
             </div>
@@ -311,25 +311,22 @@ export function AskAether() {
       {/* Chat Area — fills remaining space */}
       <div
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto ios-scroll px-4 sm:px-6 py-4 sm:py-6"
+        className="flex-1 min-h-0 overflow-y-auto ios-scroll px-4 sm:px-6 py-4 sm:py-6"
       >
         <div className="md:max-w-3xl md:mx-auto space-y-3 sm:space-y-4">
           {/* Empty state — no memories yet */}
           {memories.length === 0 && chatMessages.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4 text-center">
-              <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-5 sm:mb-6 shadow-sm">
-                <Brain size={28} className="text-[#9D8BA7] sm:size-9" />
+            <div className="flex flex-col items-center justify-center px-4 text-center" style={{ minHeight: 'calc(100vh - 280px)' }}>
+              <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-6 shadow-sm">
+                <Brain size={36} className="text-[#9D8BA7]" />
               </div>
-              <h2 className="text-lg sm:text-xl font-bold text-foreground mb-2">No memories yet</h2>
-              <p className="text-sm text-muted-foreground max-w-xs mb-5 sm:mb-6 leading-relaxed">
-                Save something first and then ask me about it
+              <h2 className="text-xl font-bold text-foreground mb-3">Ask Aether</h2>
+              <p className="text-sm text-muted-foreground max-w-xs mb-6 leading-relaxed">
+                Your AI-powered memory assistant. Save some memories and then ask me anything about them.
               </p>
               <Button
-                onClick={() => {
-                  setCurrentView('dashboard')
-                  setCaptureModalOpen(true)
-                }}
-                className="w-full sm:w-auto rounded-full px-5 shadow-lg shadow-[#9D8BA7]/20 min-h-[48px]"
+                onClick={() => { setCurrentView('dashboard'); setCaptureModalOpen(true); }}
+                className="w-full sm:w-auto rounded-full px-6 shadow-lg shadow-[#9D8BA7]/20 min-h-[48px]"
                 style={{ backgroundColor: '#9D8BA7', color: '#fff', border: 'none' }}
               >
                 <Plus className="size-4 mr-1.5" />
@@ -338,9 +335,17 @@ export function AskAether() {
             </div>
           )}
 
-          {/* Starter questions label — only on desktop when user has memories but hasn't chatted */}
+          {/* Empty state — has memories but no chat messages */}
           {memories.length > 0 && chatMessages.length === 0 && (
-            <p className="hidden sm:block text-center text-sm text-muted-foreground mb-2">Try asking...</p>
+            <div className="flex flex-col items-center justify-center px-4 text-center" style={{ minHeight: 'calc(100vh - 320px)' }}>
+              <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-5 shadow-sm">
+                <Brain size={32} className="text-[#9D8BA7]/70" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">What would you like to know?</h3>
+              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+                Ask a question about your memories and I&apos;ll search through everything you&apos;ve saved.
+              </p>
+            </div>
           )}
 
           {/* Chat messages */}
@@ -355,9 +360,9 @@ export function AskAether() {
         </div>
       </div>
 
-      {/* Input Bar — fixed above bottom nav on mobile, sticky on desktop */}
-      <div className="fixed bottom-[calc(64px+env(safe-area-inset-bottom,0px))] left-0 right-0 md:static z-30 bg-card/95 backdrop-blur-sm border-t border-border md:bg-card/80">
-        <div className="md:max-w-3xl md:mx-auto px-4 sm:px-6 py-3 sm:py-4">
+      {/* Input Bar — fixed above bottom nav on mobile */}
+      <div className="shrink-0 z-30 bg-card/95 backdrop-blur-sm border-t border-border pb-16 md:pb-2">
+        <div className="md:max-w-3xl md:mx-auto px-4 sm:px-6 py-2.5 sm:py-4">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex-1 relative">
               <input
@@ -373,7 +378,7 @@ export function AskAether() {
                 placeholder="Ask Aether anything..."
                 disabled={isChatThinking}
                 aria-label="Ask Aether a question"
-                className="w-full bg-background rounded-2xl border border-border px-4 sm:px-5 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/30 focus:ring-2 focus:ring-[#9D8BA7]/10 transition-all duration-300 disabled:opacity-50 shadow-sm min-h-[48px] resize-none"
+                className="w-full bg-background rounded-2xl border border-border px-4 sm:px-5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/30 focus:ring-2 focus:ring-[#9D8BA7]/10 transition-all duration-300 disabled:opacity-50 shadow-sm min-h-[44px] resize-none"
               />
               {/* Microphone button inside input */}
               <button
@@ -388,7 +393,7 @@ export function AskAether() {
               disabled={!input.trim() || isChatThinking}
               size="icon"
               aria-label="Send message"
-              className="h-12 w-12 sm:h-11 sm:w-11 rounded-2xl bg-[#9D8BA7] hover:bg-[#6D597A] text-white shadow-lg shadow-[#9D8BA7]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[#9D8BA7]/30 disabled:opacity-40 disabled:shadow-none flex-shrink-0"
+              className="h-11 w-11 sm:h-11 sm:w-11 rounded-2xl bg-[#9D8BA7] hover:bg-[#6D597A] text-white shadow-lg shadow-[#9D8BA7]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[#9D8BA7]/30 disabled:opacity-40 disabled:shadow-none flex-shrink-0"
             >
               {isChatThinking ? (
                 <Loader2 size={18} className="animate-spin" />
@@ -399,9 +404,6 @@ export function AskAether() {
           </div>
         </div>
       </div>
-
-      {/* Spacer on mobile so content doesn't hide behind the fixed input bar + bottom nav */}
-      <div className="md:hidden h-32 flex-shrink-0" />
     </div>
   )
 }

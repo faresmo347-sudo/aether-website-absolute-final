@@ -302,10 +302,10 @@ export function MemoryDetail() {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -40 }}
       transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="min-h-screen bg-background pb-28 md:pb-6"
+      className="bg-background flex-1 min-h-0 overflow-y-auto ios-scroll pb-28 md:pb-6"
     >
       {/* Full width on mobile, centered on larger screens */}
-      <div className="md:max-w-3xl md:mx-auto px-4 sm:px-6 py-4 sm:py-10">
+      <div className="md:max-w-3xl md:mx-auto px-3 sm:px-6 py-3 sm:py-10">
         {/* ── Back Button ── */}
         <button
           onClick={handleBack}
@@ -326,7 +326,7 @@ export function MemoryDetail() {
               <TypeIcon size={20} className="text-[#9D8BA7] sm:size-[22px]" />
             </div>
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-3xl font-bold text-foreground leading-tight">
+              <h1 className="text-lg sm:text-3xl font-bold text-foreground leading-tight">
                 {memory.title}
               </h1>
             </div>
@@ -353,7 +353,7 @@ export function MemoryDetail() {
                 className="flex items-center gap-1.5 text-xs text-[#9D8BA7] hover:text-[#6D597A] transition-colors duration-300 group"
               >
                 <Link2 size={12} />
-                <span className="truncate max-w-[140px] sm:max-w-[200px]">{memory.source.replace(/^https?:\/\//, '')}</span>
+                <span className="truncate max-w-[140px] sm:max-w-[200px] inline-block align-bottom">{memory.source.replace(/^https?:\/\//, '')}</span>
                 <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </a>
             )}
@@ -367,7 +367,7 @@ export function MemoryDetail() {
           transition={{ delay: 0.12, duration: 0.4 }}
           className="mb-4 sm:mb-6"
         >
-          <div className="rounded-2xl bg-card border border-border p-4 sm:p-6 shadow-sm border-l-4 border-l-[#9D8BA7]">
+          <div className="rounded-2xl bg-card border border-border p-3 sm:p-6 shadow-sm border-l-4 border-l-[#9D8BA7]">
             <div className="flex items-center gap-2 mb-3">
               <Brain size={16} className="text-[#9D8BA7]" />
               <span className="text-xs font-semibold text-[#9D8BA7] uppercase tracking-wider">
@@ -463,7 +463,7 @@ export function MemoryDetail() {
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
             className="mb-4 sm:mb-6 overflow-hidden"
           >
-            <div className="rounded-2xl bg-card border border-border p-4 sm:p-6 shadow-sm">
+            <div className="rounded-2xl bg-card border border-border p-3 sm:p-6 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Your original memory
@@ -503,20 +503,20 @@ export function MemoryDetail() {
 
               {/* Link memories: show original URL */}
               {memory.type === 'link' && (
-                <div className="space-y-3">
+                <div className="space-y-3 overflow-hidden">
                   {memory.source && (
                     <a
                       href={memory.source}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-[#9D8BA7] hover:text-[#6D597A] underline underline-offset-2 transition-colors duration-300 break-all"
+                      className="inline-flex items-center gap-2 text-sm text-[#9D8BA7] hover:text-[#6D597A] underline underline-offset-2 transition-colors duration-300 break-all max-w-full overflow-hidden"
                     >
-                      <Link2 size={14} />
-                      {memory.source}
-                      <ExternalLink size={12} />
+                      <Link2 size={14} className="shrink-0" />
+                      <span className="break-all">{memory.source}</span>
+                      <ExternalLink size={12} className="shrink-0" />
                     </a>
                   )}
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-all overflow-hidden">
                     {memory.content}
                   </p>
                 </div>
@@ -567,7 +567,7 @@ export function MemoryDetail() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-card border border-border p-4 sm:p-6 shadow-sm">
+            <div className="rounded-2xl bg-card border border-border p-3 sm:p-6 shadow-sm">
               <p className="text-foreground text-base leading-relaxed whitespace-pre-wrap">
                 {memory.content}
               </p>
@@ -653,7 +653,7 @@ export function MemoryDetail() {
             transition={{ delay: 0.25, duration: 0.4 }}
             className="mb-6 sm:mb-8"
           >
-            <div className="rounded-2xl bg-card border border-border p-4 sm:p-6 shadow-sm border-l-4 border-l-[#9D8BA7]">
+            <div className="rounded-2xl bg-card border border-border p-3 sm:p-6 shadow-sm border-l-4 border-l-[#9D8BA7]">
               <div className="flex items-center gap-2 mb-3">
                 <Brain size={16} className="text-[#9D8BA7]" />
                 <span className="text-xs font-semibold text-[#9D8BA7] uppercase tracking-wider">
