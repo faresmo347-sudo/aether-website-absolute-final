@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Menu, X } from 'lucide-react'
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { useAetherStore } from '@/store/aether-store'
-import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured, hasValidSession } from '@/lib/supabase/client'
 import { getProfile, fetchMemories, fetchCollections } from '@/lib/supabase/data'
 import { initOfflineDB, getCachedMemories, getCachedCollections, getSyncQueueCount } from '@/lib/offline-db'
 import { syncAll, onSyncStatus, onSyncComplete } from '@/lib/sync-engine'
@@ -38,8 +38,15 @@ function AnimatedBackground() {
 
     let animationId: number
     let time = 0
+    let isVisible = true
 
     const isMobile = window.innerWidth < 768
+
+    // Pause animation when page is not visible to save CPU/battery
+    const onVisibilityChange = () => {
+      isVisible = !document.hidden
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
 
     const resize = () => {
       canvas.width = window.innerWidth
@@ -51,9 +58,8 @@ function AnimatedBackground() {
     // Use fewer, smaller orbs on mobile for performance
     const orbs = isMobile
       ? [
-          { x: 0.2, y: 0.3, r: 200, color: 'rgba(157, 139, 167, 0.06)', speed: 0.0003, phase: 0 },
-          { x: 0.8, y: 0.6, r: 180, color: 'rgba(224, 242, 241, 0.1)', speed: 0.0004, phase: 1.5 },
-          { x: 0.5, y: 0.8, r: 220, color: 'rgba(157, 139, 167, 0.04)', speed: 0.0002, phase: 3 },
+          { x: 0.3, y: 0.4, r: 150, color: 'rgba(157, 139, 167, 0.06)', speed: 0.0003, phase: 0 },
+          { x: 0.7, y: 0.6, r: 140, color: 'rgba(224, 242, 241, 0.08)', speed: 0.0004, phase: 1.5 },
         ]
       : [
           { x: 0.2, y: 0.3, r: 300, color: 'rgba(157, 139, 167, 0.08)', speed: 0.0003, phase: 0 },
@@ -64,6 +70,10 @@ function AnimatedBackground() {
         ]
 
     const draw = () => {
+      if (!isVisible) {
+        animationId = requestAnimationFrame(draw)
+        return
+      }
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       time++
 
@@ -88,6 +98,7 @@ function AnimatedBackground() {
     return () => {
       cancelAnimationFrame(animationId)
       window.removeEventListener('resize', resize)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [])
 
@@ -113,11 +124,20 @@ function seededRandom(seed: number) {
 }
 
 function FloatingParticles() {
-  // Deterministic particles — same count on server and client to avoid hydration mismatch.
-  // 30 particles is lightweight enough for all viewports.
+  // Responsive particle count: 8 on mobile, 15 on desktop
+  // SSR-safe: defaults to 8, updates on client via resize subscription
+  const [count, setCount] = useState(8)
+
+  useEffect(() => {
+    const updateCount = () => setCount(window.innerWidth < 768 ? 8 : 15)
+    updateCount()
+    window.addEventListener('resize', updateCount)
+    return () => window.removeEventListener('resize', updateCount)
+  }, [])
+
   const particles = useMemo(() => {
     const rand = seededRandom(42)
-    return Array.from({ length: 30 }, (_, i) => ({
+    return Array.from({ length: count }, (_, i) => ({
       id: i,
       x: rand() * 100,
       y: rand() * 100,
@@ -126,7 +146,7 @@ function FloatingParticles() {
       delay: rand() * 5,
       opacity: rand() * 0.3 + 0.1,
     }))
-  }, [])
+  }, [count])
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
@@ -415,7 +435,7 @@ function FeaturesSection() {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={{ once: true, margin: '-100px', amount: 0.2 }}
           transition={{ duration: 0.6 }}
           className="text-center mb-6 sm:mb-12"
         >
@@ -435,7 +455,7 @@ function FeaturesSection() {
               key={feature.title}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-50px' }}
+              viewport={{ once: true, margin: '-50px', amount: 0.2 }}
               transition={{ delay: i * 0.1, duration: 0.5 }}
               className="group bg-white/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-[#1a1a2e]/5 shadow-sm hover:shadow-lg md:hover:-translate-y-1 transition-all duration-300"
             >
@@ -497,7 +517,7 @@ function HowItWorksSection() {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={{ once: true, margin: '-100px', amount: 0.2 }}
           transition={{ duration: 0.6 }}
           className="text-center mb-6 sm:mb-12"
         >
@@ -514,7 +534,7 @@ function HowItWorksSection() {
               key={step.step}
               initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-50px' }}
+              viewport={{ once: true, margin: '-50px', amount: 0.2 }}
               transition={{ delay: i * 0.2, duration: 0.6 }}
               className="relative text-center"
             >
@@ -578,7 +598,7 @@ function AiChatDemo() {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={{ once: true, margin: '-100px', amount: 0.2 }}
           transition={{ duration: 0.6 }}
           className="text-center mb-10 sm:mb-12"
         >
@@ -595,7 +615,7 @@ function AiChatDemo() {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-50px' }}
+          viewport={{ once: true, margin: '-50px', amount: 0.2 }}
           transition={{ delay: 0.2, duration: 0.6 }}
           className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-[#9D8BA7]/10 border border-[#1a1a2e]/5 overflow-hidden max-w-2xl mx-2 sm:mx-auto"
         >
@@ -723,7 +743,7 @@ function TestimonialsSection() {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={{ once: true, margin: '-100px', amount: 0.2 }}
           transition={{ duration: 0.6 }}
           className="text-center mb-6 sm:mb-12"
         >
@@ -739,7 +759,7 @@ function TestimonialsSection() {
               key={t.author}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-50px' }}
+              viewport={{ once: true, margin: '-50px', amount: 0.2 }}
               transition={{ delay: i * 0.15, duration: 0.5 }}
               className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-[#1a1a2e]/5 shadow-sm hover:shadow-md transition-shadow duration-300"
             >
@@ -782,7 +802,7 @@ function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={{ once: true, margin: '-100px', amount: 0.2 }}
           transition={{ duration: 0.6 }}
           className="text-center mb-6 sm:mb-12"
         >
@@ -800,7 +820,7 @@ function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-50px' }}
+            viewport={{ once: true, margin: '-50px', amount: 0.2 }}
             transition={{ duration: 0.5 }}
             className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#1a1a2e]/5 shadow-sm"
           >
@@ -832,7 +852,7 @@ function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-50px' }}
+            viewport={{ once: true, margin: '-50px', amount: 0.2 }}
             transition={{ delay: 0.15, duration: 0.5 }}
             className="relative bg-gradient-to-br from-[#9D8BA7]/10 to-[#9D8BA7]/5 rounded-2xl sm:rounded-3xl p-4 sm:p-8 border-2 border-[#9D8BA7]/20 shadow-xl shadow-[#9D8BA7]/10"
           >
@@ -881,7 +901,7 @@ function CtaSection({ onEnterApp }: { onEnterApp: () => void }) {
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={{ once: true, margin: '-100px', amount: 0.2 }}
           transition={{ duration: 0.6 }}
           className="text-center bg-gradient-to-br from-[#9D8BA7]/10 via-[#9D8BA7]/5 to-[#E0F2F1]/20 rounded-2xl sm:rounded-3xl p-6 sm:p-12 md:p-16 border border-[#9D8BA7]/10"
         >
@@ -1147,6 +1167,11 @@ export default function Home() {
   // CRITICAL DESIGN: The landing page MUST render immediately on first load.
   // Auth checks run in the background and only redirect if a session is found.
   // There is NO loading screen gate on initial load — ever.
+  //
+  // SPEED OPTIMIZATION: If auth cookies exist (hasValidSession()), we show
+  // the dashboard INSTANTLY before any async calls. getSession(), getUser(),
+  // and loadUserData() all run in the background. If the session turns out
+  // to be expired, we redirect gracefully to signin.
   // ═══════════════════════════════════════════════════════════════════
   useEffect(() => {
     // Initialize offline IndexedDB (non-blocking)
@@ -1189,6 +1214,7 @@ export default function Home() {
     const supabase = createClient()
     let mounted = true
     let authResolved = false
+    let fastPathUsed = false
 
     // Helper: resolve auth to a view (prevents double-redirects)
     const resolveAuth = (view: AppView) => {
@@ -1198,13 +1224,18 @@ export default function Home() {
       setCurrentView(view)
     }
 
-    // ─── 3-SECOND HARD TIMEOUT: force landing page if auth hangs ───
-    // This is the ultimate failsafe — no matter what happens with Supabase,
-    // the user will NEVER be stuck on a blank/loading screen for more than 3 seconds.
+    // ─── 1.5-SECOND HARD TIMEOUT: force landing page if auth hangs ───
+    // Reduced from 3s — if auth hasn't resolved in 1.5s the user is likely
+    // not signed in, and showing the landing page quickly is better than waiting.
     const timeoutId = setTimeout(() => {
       if (!authResolved && mounted) {
-        console.warn('[Aether] Auth check timed out after 3s — showing landing page')
+        console.warn('[Aether] Auth check timed out after 1.5s — showing landing page')
         authResolved = true
+        // If fast-path showed dashboard but auth never confirmed, revert
+        if (fastPathUsed) {
+          setUser(null)
+          setProfile({ name: '', email: '', initials: '' })
+        }
         const urlView = navigateFromUrl()
         if (urlView === 'signup' || urlView === 'signin' || urlView === 'forgot-password') {
           setCurrentView(urlView)
@@ -1212,44 +1243,98 @@ export default function Home() {
           setCurrentView('landing')
         }
       }
-    }, 3000)
+    }, 1500)
+
+    // ─── FAST PATH: Synchronous cookie check ───
+    // If Supabase auth cookies exist, show the dashboard IMMEDIATELY
+    // without waiting for any async getSession()/getUser() calls.
+    // The async checkAuth validates the session afterwards — if it's
+    // expired we redirect gracefully to signin.
+    if (hasValidSession()) {
+      fastPathUsed = true
+      const urlView = navigateFromUrl()
+      const targetView = urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard'
+      // Set a placeholder user so the isAuthenticated render guard passes
+      // and the dashboard renders with skeleton loading states.
+      // The real profile will be loaded by loadUserData() shortly.
+      setUser({ name: '', email: '', initials: '' })
+      setIsLoadingMemories(true)
+      setCurrentView(targetView)
+    }
 
     // ─── Background auth check ───
     const checkAuth = async () => {
       try {
         // Step 1: getSession() reads from local cookie storage (no network request)
-        // This should resolve almost instantly
+        // This resolves almost instantly (~5ms)
         const { data: { session } } = await supabase.auth.getSession()
 
-        if (!mounted || authResolved) return
+        if (!mounted) return
 
         if (session?.user) {
-          // Found session in cookies — navigate to dashboard INSTANTLY,
-          // then load data in the background.
-          const urlView = navigateFromUrl()
-          resolveAuth(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
-          // Fire-and-forget data loading — dashboard shows skeletons while loading
-          loadUserData(session.user.id).catch((err) =>
-            console.warn('[Aether] Background data load failed:', err)
-          )
+          // Session found in cookies — update user with real info from session
+          const email = session.user.email || ''
+          const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0]
+          const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || email[0].toUpperCase()
+          setUser({ name, email, initials })
+
+          if (!authResolved) {
+            const urlView = navigateFromUrl()
+            resolveAuth(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
+          }
+
+          // Validate session AND load data IN PARALLEL:
+          // - getUser() verifies the session with the Supabase server (catches expired tokens)
+          // - loadUserData() fetches profile, memories, collections
+          // Running them concurrently saves 500-2000ms vs sequential.
+          const [userResult] = await Promise.allSettled([
+            supabase.auth.getUser(),
+            loadUserData(session.user.id),
+          ])
+
+          // Check if session validation revealed an expired/invalid session
+          if (userResult.status === 'fulfilled' && mounted) {
+            const { data: { user: validatedUser } } = userResult.value
+            if (!validatedUser) {
+              // Session is expired or invalid — redirect to signin
+              console.warn('[Aether] Session validation failed — redirecting to signin')
+              dataLoadedRef.current = false
+              setUser(null)
+              setProfile({ name: '', email: '', initials: '' })
+              setMemories([])
+              setCollections([])
+              setCurrentView('signin')
+            }
+          }
           return
         }
 
-        // Step 2: No cookie session — try getUser() which validates with server
+        // Step 2: No cookie session — try getUser() which validates with server.
         // This can be slow or hang if Supabase is unreachable.
-        // Don't await loadUserData — navigate first, load in background.
         const { data: { user } } = await supabase.auth.getUser()
 
         if (!mounted || authResolved) return
 
         if (user) {
+          const email = user.email || ''
+          const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0]
+          const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || email[0].toUpperCase()
+          setUser({ name, email, initials })
+
           const urlView = navigateFromUrl()
           resolveAuth(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
           loadUserData(user.id).catch((err) =>
             console.warn('[Aether] Background data load failed:', err)
           )
         } else {
-          // Not authenticated — landing page is already showing
+          // Not authenticated
+          // If fast-path incorrectly showed dashboard, revert to landing
+          if (fastPathUsed && mounted) {
+            setUser(null)
+            setProfile({ name: '', email: '', initials: '' })
+            setCurrentView('landing')
+          }
+
           const urlView = navigateFromUrl()
           if (urlView === 'signup' || urlView === 'signin' || urlView === 'forgot-password') {
             resolveAuth(urlView)
@@ -1261,6 +1346,12 @@ export default function Home() {
       } catch {
         // Any error — ensure landing page is showing
         if (!mounted || authResolved) return
+        // If fast-path showed dashboard but auth failed, revert
+        if (fastPathUsed) {
+          setUser(null)
+          setProfile({ name: '', email: '', initials: '' })
+          setCurrentView('landing')
+        }
         authResolved = true
         clearTimeout(timeoutId)
         // Don't change view — landing page is already the default
@@ -1307,7 +1398,7 @@ export default function Home() {
       unsubComplete()
       window.removeEventListener('aether:memory-synced', handleMemorySynced)
     }
-  }, [loadUserData, setUser, setProfile, setMemories, setCollections, setCurrentView, setIsSyncing, setPendingSyncCount, setLastSyncedAt, updateMemory, navigateFromUrl])
+  }, [loadUserData, setUser, setProfile, setMemories, setCollections, setCurrentView, setIsSyncing, setIsLoadingMemories, setPendingSyncCount, setLastSyncedAt, updateMemory, navigateFromUrl])
 
   // "Enter Aether" on the landing page should go to signup for new users
   const handleEnterApp = useCallback(() => {

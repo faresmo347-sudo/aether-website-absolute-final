@@ -205,6 +205,18 @@ html, body {
   }
 }
 
+/* ─────────── Performance: Content Visibility ─────────── */
+/* Skip rendering off-screen sections until they're near viewport */
+section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
+
+/* Layout containment for card components to limit repaints */
+.card-contain {
+  contain: layout;
+}
+
 /* ─────────── Smooth Momentum Scrolling on iOS ─────────── */
 .ios-scroll {
   -webkit-overflow-scrolling: touch;

@@ -55,7 +55,7 @@ const MemoryCard = memo(function MemoryCard({ memory, onClick }: { memory: Memor
   return (
     <button
       onClick={onClick}
-      className="tap-feedback w-full text-left bg-card rounded-2xl p-4 shadow-sm border border-border transition-all duration-200 hover:-translate-y-0 md:hover:-translate-y-0.5 hover:shadow-lg cursor-pointer group active:scale-[0.98]"
+      className="tap-feedback card-contain w-full text-left bg-card rounded-2xl p-4 shadow-sm border border-border transition-all duration-200 hover:-translate-y-0 md:hover:-translate-y-0.5 hover:shadow-lg cursor-pointer group active:scale-[0.98]"
     >
       <div className="flex items-start gap-3">
         <div className="flex items-center justify-center size-9 rounded-xl bg-[#9D8BA7]/10 shrink-0 mt-0.5">
@@ -1577,7 +1577,7 @@ export default function Dashboard() {
       )}
 
       {/* Memory Feed — iOS-style scroll, mobile gap */}
-      <div className="flex-1 overflow-y-auto min-h-0 ios-scroll px-4 sm:px-6 pb-24 md:pb-6">
+      <div className="flex-1 overflow-y-auto min-h-0 ios-scroll px-4 sm:px-6 pb-20 md:pb-6">
         {isLoadingMemories ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, i) => (

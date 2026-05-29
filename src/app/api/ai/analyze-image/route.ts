@@ -4,14 +4,31 @@ import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
 const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
 
 const VISION_PROMPT = `You are an AI assistant for a personal memory app called Aether. Analyze this image carefully and return a JSON object with:
-- "description": A detailed description that includes ALL text and information visible in the image. If the image contains text (lists, menus, documents, screenshots, signs, notes, etc.), extract and list EVERY piece of text verbatim. If it contains a document, transcribe it fully. If it contains a list, list every item. If it contains a menu, list every item with prices. Never just say "this is a screenshot" — always extract the actual content. Be thorough and detailed.
+- "description": A structured, exhaustive extraction of ALL content visible in the image. You MUST treat every distinct section, panel, category, or group of information as a SEPARATE item.
 - "tags": array of 3-5 specific hashtags (with # symbol) based on ALL the content and text you found in the image
 
 CRITICAL RULES:
-1. EXTRACT ALL TEXT — do not summarize or skip any visible text in the image
-2. If the image has a document, transcription, or list — include every word, number, and detail
-3. NEVER use generic tags like #image, #photo, #capture, #picture. Be specific to the actual content
-4. The description must be useful for searching — someone should be able to find this image by searching for any text that appears in it
+1. MULTI-SECTION EXTRACTION: If the image contains multiple sections, panels, categories, columns, tabs, or areas — identify EACH one separately with its heading/title. Do NOT merge different sections together.
+2. EXHAUSTIVE ITEM ENUMERATION: If any section contains a list, menu, table, or group of items — list EVERY SINGLE item individually with ALL its details (name, price, description, quantity, etc.).
+   - For menus: "Category: Appetizers — 1. Spring Rolls $6.99, 2. Calamari $8.99; Category: Mains — 1. Burger $12.99, 2. Pasta $14.99"
+   - For documents: Transcribe each section with its heading and full text
+   - For screenshots with multiple UI elements: Describe each element (button, card, dialog, panel) separately with its text content
+   - For tables: Reproduce every row and column value
+3. PRESERVE VISUAL HIERARCHY: Organize output as Headings → Subheadings → Individual items. This makes every piece of text searchable.
+4. EXTRACT ALL TEXT — do not summarize, abbreviate, or skip any visible text. Every word, number, and detail must be included.
+5. NEVER use generic tags like #image, #photo, #capture, #picture. Be specific to the actual content.
+6. SEARCHABILITY: The description must be so detailed and structured that someone could find ANY single piece of text in this image by searching for it. Treat the description as a searchable document, not a vague summary.
+
+OUTPUT FORMAT for the description field:
+- Start with a brief overall identification (1 sentence)
+- Then use structured sections like:
+  [Section/Category Name]:
+  - Item 1: details
+  - Item 2: details
+  [Another Section]:
+  - Item 1: details
+  ...
+- For simple images (single photo, single document), transcribe fully without unnecessary structuring
 
 Return ONLY the JSON object.`
 
@@ -54,7 +71,7 @@ export async function POST(req: NextRequest) {
           },
         ],
         temperature: 0.3,
-        max_tokens: 2048,
+        max_tokens: 4096,
       })
 
       const visionText = visionCompletion.choices[0]?.message?.content?.trim() || ''

@@ -313,10 +313,10 @@ export function AskAether() {
         ref={chatContainerRef}
         className="flex-1 min-h-0 overflow-y-auto ios-scroll px-4 sm:px-6 py-4 sm:py-6"
       >
-        <div className="md:max-w-3xl md:mx-auto space-y-3 sm:space-y-4">
+        <div className="md:max-w-3xl md:mx-auto flex flex-col min-h-full gap-3 sm:gap-4">
           {/* Empty state — no memories yet */}
           {memories.length === 0 && chatMessages.length === 0 && (
-            <div className="flex flex-col items-center justify-center px-4 text-center" style={{ minHeight: 'calc(100vh - 280px)' }}>
+            <div className="flex flex-col items-center justify-center flex-1 px-4 text-center">
               <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-6 shadow-sm">
                 <Brain size={36} className="text-[#9D8BA7]" />
               </div>
@@ -337,7 +337,7 @@ export function AskAether() {
 
           {/* Empty state — has memories but no chat messages */}
           {memories.length > 0 && chatMessages.length === 0 && (
-            <div className="flex flex-col items-center justify-center px-4 text-center" style={{ minHeight: 'calc(100vh - 320px)' }}>
+            <div className="flex flex-col items-center justify-center flex-1 px-4 text-center">
               <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-5 shadow-sm">
                 <Brain size={32} className="text-[#9D8BA7]/70" />
               </div>

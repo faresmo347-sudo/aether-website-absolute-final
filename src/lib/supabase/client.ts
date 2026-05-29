@@ -80,3 +80,22 @@ export function isSupabaseConfigured(): boolean {
   return !!(SUPABASE_URL && SUPABASE_ANON_KEY &&
     SUPABASE_URL !== 'https://placeholder.supabase.co')
 }
+
+// Fast synchronous check for whether auth cookies exist.
+// Used as a fast-path to show the dashboard immediately without waiting
+// for the async getSession()/getUser() calls. Returns true if a Supabase
+// auth cookie with a non-empty value is found — does NOT validate the
+// token or check expiry. The async auth flow validates afterwards.
+export function hasValidSession(): boolean {
+  if (typeof document === 'undefined') return false
+  const cookies = document.cookie.split(';')
+  const authCookie = cookies.find(c => c.trim().startsWith('sb-'))
+  if (!authCookie) return false
+  try {
+    const value = authCookie.split('=')[1]
+    // A non-trivial cookie value strongly suggests a stored session
+    return !!(value && value.length > 20)
+  } catch {
+    return false
+  }
+}

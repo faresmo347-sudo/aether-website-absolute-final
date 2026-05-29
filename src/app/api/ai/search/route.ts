@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     const groq = getGroqClient()
 
-    // Format memories for the LLM context
+    // Format memories for the LLM context — image memories get special prefix for searchability
     const memoriesContext = memories
       .map((m) => {
         const date = new Date(m.createdAt).toLocaleDateString('en-US', {
@@ -41,7 +41,8 @@ export async function POST(req: NextRequest) {
           day: 'numeric',
           year: 'numeric',
         })
-        return `[ID: ${m.id}] [${m.type}] [${date}] "${m.title}" — ${m.content}${m.aiSummary ? ` (AI Summary: ${m.aiSummary})` : ''} Tags: ${m.tags.join(', ')}`
+        const contentPrefix = m.type === 'image' ? '[IMAGE - Full Text Extracted]: ' : ''
+        return `[ID: ${m.id}] [${m.type}] [${date}] "${m.title}" — ${contentPrefix}${m.content}${m.aiSummary ? ` (AI Summary: ${m.aiSummary})` : ''} Tags: ${m.tags.join(', ')}`
       })
       .join('\n')
 
@@ -55,6 +56,7 @@ CRITICAL RULES:
 5. Your response must always reference the actual content of the memories you found
 6. Rank results by relevance to the exact question asked
 7. When you reference a memory, include its ID in your referencedIds list
+8. IMPORTANT: Image memories contain full structured text extracted from images (marked with "[IMAGE - Full Text Extracted]:"). When searching for specific information that might be in an image (like a price, a name, a list item, a category, a menu item, a document section), you MUST check the content of ALL image-type memories, not just text/voice memories. Image memories contain full structured text extracted from photos — including menus with every item and price, documents with every section, screenshots with every UI element. Treat image memory content as searchable text just like any other memory type.
 
 You must respond with a JSON object with these fields:
 - "answer": A natural language response answering the user's question based on their memories. Be specific and reference the actual content.
@@ -63,13 +65,13 @@ You must respond with a JSON object with these fields:
 
 If no memories are relevant, set referencedIds to [] and sourcesCount to 0, and say you couldn't find anything relevant.`
 
-    const userPrompt = `Here are all my saved memories:
+    const userPrompt = `Here are all my saved memories (note: memories marked [IMAGE - Full Text Extracted] contain the full structured text content extracted from photos and screenshots — search through them just like any other text memory):
 
 ${memoriesContext}
 
 My question: ${question}
 
-Search through my memories and answer based on what you find. Remember: only reference memories that are actually relevant. If nothing matches, say so honestly.`
+Search through ALL my memories, INCLUDING image-type memories (which contain full structured text extracted from photos), and answer based on what you find. Remember: only reference memories that are actually relevant. If nothing matches, say so honestly.`
 
     const completion = await groq.chat.completions.create({
       model: GROQ_MODEL,
