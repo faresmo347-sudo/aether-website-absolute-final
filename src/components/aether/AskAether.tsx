@@ -11,6 +11,9 @@ import {
   Image as ImageIcon,
   Loader2,
   Plus,
+  Search,
+  MessageCircle,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAetherStore } from '@/store/aether-store'
@@ -23,11 +26,43 @@ const starterQuestions = [
   'Show me everything about my travel plans',
 ]
 
+const conversationStarters = [
+  "Hey Aether, what's up?",
+  "I'm feeling a bit overwhelmed today",
+  "Help me think through something",
+]
+
 const typeIconMap: Record<MemoryType, typeof FileText> = {
   text: FileText,
   voice: Mic,
   link: Link2,
   image: ImageIcon,
+}
+
+/* ─────────── Mode Badge ─────────── */
+function ModeBadge({ mode }: { mode: 'memory-search' | 'conversation' | 'both' }) {
+  if (mode === 'memory-search') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 rounded-full px-2 py-0.5">
+        <Search size={8} />
+        Memory Search
+      </span>
+    )
+  }
+  if (mode === 'both') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-violet-600 bg-violet-50 dark:bg-violet-900/20 dark:text-violet-400 rounded-full px-2 py-0.5">
+        <Sparkles size={8} />
+        Search + Chat
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-[#9D8BA7] bg-[#9D8BA7]/8 rounded-full px-2 py-0.5">
+      <MessageCircle size={8} />
+      Conversation
+    </span>
+  )
 }
 
 /* ─────────── Typing Indicator (memoized) ─────────── */
@@ -115,9 +150,13 @@ const ChatBubble = memo(function ChatBubble({
           <span className="text-[10px] font-semibold text-[#9D8BA7] uppercase tracking-wider">
             Aether
           </span>
+          {/* Mode indicator badge */}
+          {message.detectedMode && (
+            <ModeBadge mode={message.detectedMode} />
+          )}
         </div>
 
-        <p className="text-sm text-foreground leading-relaxed">{message.content}</p>
+        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{message.content}</p>
 
         {referencedMems.length > 0 && (
           <div className="mt-3 space-y-2">
@@ -205,6 +244,11 @@ export function AskAether() {
         return query.split(' ').some((word) => word.length > 2 && searchable.includes(word))
       })
 
+      // Simple heuristic for offline mode detection
+      const searchKeywords = ['find', 'show', 'what did', 'when did', 'where', 'remind', 'do i have', 'search']
+      const isSearchQuery = searchKeywords.some(kw => query.includes(kw))
+      const detectedMode = isSearchQuery ? 'memory-search' as const : 'conversation' as const
+
       const offlineAnswer = results.length > 0
         ? `I found ${results.length} cached memor${results.length === 1 ? 'y' : 'ies'} matching your question. Here's what I found:\n\n${results.slice(0, 3).map((m) => `- **${m.title}**: ${m.content.slice(0, 100)}...`).join('\n')}\n\n_Searching your cached memories — reconnect for full AI-powered results._`
         : "I couldn't find any cached memories matching your question. _Searching your cached memories — reconnect for full AI-powered results._"
@@ -215,6 +259,7 @@ export function AskAether() {
         content: offlineAnswer,
         referencedMemories: results.slice(0, 3).map((m) => m.id),
         sourcesCount: results.length,
+        detectedMode,
         timestamp: new Date().toISOString(),
       }
       addChatMessage(assistantMsg)
@@ -241,6 +286,7 @@ export function AskAether() {
         content: data.answer || "I couldn't find any relevant memories for your question.",
         referencedMemories: data.referencedIds || [],
         sourcesCount: data.sourcesCount || 0,
+        detectedMode: data.detectedMode || 'conversation',
         timestamp: new Date().toISOString(),
       }
       addChatMessage(assistantMsg)
@@ -251,6 +297,7 @@ export function AskAether() {
         content: "Sorry, I had trouble searching your memories. Please try again.",
         referencedMemories: [],
         sourcesCount: 0,
+        detectedMode: 'conversation',
         timestamp: new Date().toISOString(),
       }
       addChatMessage(assistantMsg)
@@ -267,6 +314,11 @@ export function AskAether() {
     processMessage(question)
   }, [processMessage])
 
+  // Combine search + conversation starters, shuffling them a bit
+  const displayStarters = memories.length > 0
+    ? [...starterQuestions.slice(0, 2), ...conversationStarters.slice(0, 1)]
+    : conversationStarters
+
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-background">
       {/* Header — compact on mobile */}
@@ -276,33 +328,47 @@ export function AskAether() {
             <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-2xl bg-gradient-to-br from-[#9D8BA7] to-[#6D597A] flex items-center justify-center shadow-lg shadow-[#9D8BA7]/20">
               <Brain size={18} className="text-white sm:size-5" />
             </div>
-            <div>
+            <div className="flex-1">
               <h1 className="text-lg sm:text-xl font-bold text-foreground">Ask Aether</h1>
-              {/* Subtitle hidden on mobile to save space */}
               <p className="hidden sm:block text-xs text-muted-foreground">
-                Ask anything about your memories in natural language
+                Search your memories or just chat — I&apos;ll figure out what you need
               </p>
+            </div>
+            {/* Mode hint — visible on mobile too */}
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-muted/40 rounded-full px-2.5 py-1">
+              <Search size={10} className="text-emerald-500" />
+              <MessageCircle size={10} className="text-[#9D8BA7]" />
+              <span className="hidden sm:inline">Auto-mode</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Suggested Questions — horizontally scrollable on all viewports */}
-      {memories.length > 0 && chatMessages.length === 0 && (
+      {chatMessages.length === 0 && (
         <div className="flex-shrink-0 py-2.5 px-4 border-b border-border/50 bg-background/60">
           <div className="md:max-w-3xl md:mx-auto">
             <div className="overflow-x-auto flex-nowrap scrollbar-none gap-2 flex">
-              {starterQuestions.map((question) => (
-                <button
-                  key={question}
-                  onClick={() => handleStarterClick(question)}
-                  className="px-3.5 py-2 rounded-2xl border border-[#9D8BA7]/15 bg-card text-sm text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/30 transition-all duration-300 shadow-sm min-h-[40px]"
-                >
-                  <span className="text-[#9D8BA7] mr-0.5">&ldquo;</span>
-                  {question.replace(/^"|"$/g, '')}
-                  <span className="text-[#9D8BA7] ml-0.5">&rdquo;</span>
-                </button>
-              ))}
+              {displayStarters.map((question) => {
+                // Detect if it's a search or conversation starter for icon
+                const isSearch = question.toLowerCase().includes('what') || question.toLowerCase().includes('show') || question.toLowerCase().includes('find')
+                return (
+                  <button
+                    key={question}
+                    onClick={() => handleStarterClick(question)}
+                    className="px-3.5 py-2 rounded-2xl border border-[#9D8BA7]/15 bg-card text-sm text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/30 transition-all duration-300 shadow-sm min-h-[40px] flex items-center gap-1.5 whitespace-nowrap"
+                  >
+                    {isSearch ? (
+                      <Search size={12} className="text-emerald-500 flex-shrink-0" />
+                    ) : (
+                      <MessageCircle size={12} className="text-[#9D8BA7] flex-shrink-0" />
+                    )}
+                    <span className="text-[#9D8BA7]">&ldquo;</span>
+                    {question.replace(/^"|"$/g, '')}
+                    <span className="text-[#9D8BA7]">&rdquo;</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -321,9 +387,23 @@ export function AskAether() {
                 <Brain size={36} className="text-[#9D8BA7]" />
               </div>
               <h2 className="text-xl font-bold text-foreground mb-3">Ask Aether</h2>
-              <p className="text-sm text-muted-foreground max-w-xs mb-6 leading-relaxed">
-                Your AI-powered memory assistant. Save some memories and then ask me anything about them.
+              <p className="text-sm text-muted-foreground max-w-xs mb-4 leading-relaxed">
+                Your AI companion that searches your memories or just chats. I&apos;ll figure out what you need automatically.
               </p>
+              <div className="flex flex-wrap justify-center gap-2 mb-6">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 rounded-full px-2.5 py-1">
+                  <Search size={10} />
+                  Memory Search
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#9D8BA7] bg-[#9D8BA7]/8 rounded-full px-2.5 py-1">
+                  <MessageCircle size={10} />
+                  Conversation
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-violet-600 bg-violet-50 dark:bg-violet-900/20 dark:text-violet-400 rounded-full px-2.5 py-1">
+                  <Sparkles size={10} />
+                  Both
+                </span>
+              </div>
               <Button
                 onClick={() => { setCurrentView('dashboard'); setCaptureModalOpen(true); }}
                 className="w-full sm:w-auto rounded-full px-6 shadow-lg shadow-[#9D8BA7]/20 min-h-[48px]"
@@ -342,9 +422,19 @@ export function AskAether() {
                 <Brain size={32} className="text-[#9D8BA7]/70" />
               </div>
               <h3 className="text-lg font-semibold text-foreground mb-2">What would you like to know?</h3>
-              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
-                Ask a question about your memories and I&apos;ll search through everything you&apos;ve saved.
+              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-4">
+                Search your memories, ask a question, or just talk — I&apos;ll understand what you need.
               </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 rounded-full px-2.5 py-1">
+                  <Search size={10} />
+                  Ask about your memories
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#9D8BA7] bg-[#9D8BA7]/8 rounded-full px-2.5 py-1">
+                  <MessageCircle size={10} />
+                  Or just chat
+                </span>
+              </div>
             </div>
           )}
 
@@ -375,7 +465,7 @@ export function AskAether() {
                     handleSend()
                   }
                 }}
-                placeholder="Ask Aether anything..."
+                placeholder="Ask Aether anything or just say hi..."
                 disabled={isChatThinking}
                 aria-label="Ask Aether a question"
                 className="w-full bg-background rounded-2xl border border-border px-4 sm:px-5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/30 focus:ring-2 focus:ring-[#9D8BA7]/10 transition-all duration-300 disabled:opacity-50 shadow-sm min-h-[44px] resize-none"

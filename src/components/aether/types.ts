@@ -41,6 +41,7 @@ export interface ChatMessage {
   content: string
   referencedMemories?: string[]
   sourcesCount?: number
+  detectedMode?: 'memory-search' | 'conversation' | 'both'
   timestamp: string
 }
 
