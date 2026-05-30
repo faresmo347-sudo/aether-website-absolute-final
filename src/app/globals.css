@@ -240,15 +240,26 @@ section {
   }
 }
 
-/* ─────────── Dark Mode Tag Styling ─────────── */
-.dark .bg-\\[\\#9D8BA7\\]\\/10 {
-  background-color: rgba(157, 139, 167, 0.15);
+/* ─────────── Dark Mode Lavender Color Adjustments ─────────── */
+/* Tailwind v4 compatible: use attribute selectors to target arbitrary-value classes in dark mode */
+:is(.dark [class*="bg-[#9D8BA7]"]) {
+  --tw-bg-opacity: 1;
 }
-.dark .text-\\[\\#9D8BA7\\] {
-  color: #c4b5d4;
+:is(.dark [class*="bg-[#9D8BA7]/10"]),
+:is(.dark [class*="bg-[#9D8BA7]/12"]) {
+  background-color: rgba(157, 139, 167, 0.15) !important;
 }
-.dark .border-\\[\\#9D8BA7\\]\\/15 {
-  border-color: rgba(157, 139, 167, 0.2);
+:is(.dark [class*="bg-[#9D8BA7]/5"]) {
+  background-color: rgba(157, 139, 167, 0.08) !important;
+}
+:is(.dark [class*="text-[#9D8BA7]"]) {
+  color: #c4b5d4 !important;
+}
+:is(.dark [class*="border-[#9D8BA7]"]) {
+  border-color: rgba(157, 139, 167, 0.2) !important;
+}
+:is(.dark [class*="shadow-[#9D8BA7]"]) {
+  --tw-shadow-color: rgba(157, 139, 167, 0.12) !important;
 }
 
 /* ─────────── Reduce Animation Overhead on Mobile ─────────── */
