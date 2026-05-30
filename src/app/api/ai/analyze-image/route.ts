@@ -36,6 +36,33 @@ OUTPUT FORMAT for the description field:
   ...
 - For simple images (single photo, single document), transcribe fully without unnecessary structuring
 
+7. DIFFERENTIATION BETWEEN ITEMS: When the image contains multiple distinct pieces of information (e.g., a menu with multiple sections and items, a table with multiple rows, a document with multiple sections), you MUST:
+   a) Give each distinct item its own clearly labeled entry
+   b) Preserve the relationship between items (e.g., which section an item belongs to, which row a value is in)
+   c) Use unique identifiers or clear section headers so that a later search for a SPECIFIC item can find it among many
+   d) NEVER merge or combine different items into a single description — each must be individually retrievable
+
+8. USER QUERY PREPARATION: Structure the description so that if a user later asks "what is the price of X?" or "what does the Y section say?", the specific answer can be found by searching for X or Y within the description. Each data point must be individually addressable.
+
+Example of GOOD output for a restaurant menu:
+"Restaurant Menu — La Trattoria
+
+[Appetizers]:
+- Bruschetta: Toasted bread with tomatoes, basil, olive oil — $8.50
+- Calamari: Lightly fried with marinara sauce — $11.00
+- Soup of the Day: Chef's daily selection — $7.00
+
+[Pasta]:
+- Spaghetti Carbonara: Guanciale, pecorino, egg, black pepper — $16.00
+- Penne Arrabiata: Spicy tomato sauce, chili flakes — $14.00
+
+[Beverages]:
+- House Wine (glass): Red or white — $9.00
+- Espresso — $3.50"
+
+Example of BAD output (too merged):
+"A menu with appetizers like bruschetta and calamari, pasta dishes, and drinks." ← This loses all the individual data points!
+
 Return ONLY the JSON object.`
 
 const TAG_SYSTEM_PROMPT = `You are an intelligent tagging assistant for a personal memory app. Generate 2-4 highly specific, relevant hashtags based on the ACTUAL CONTENT described.

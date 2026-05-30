@@ -214,7 +214,7 @@ section {
 
 /* Layout containment for card components to limit repaints */
 .card-contain {
-  contain: layout;
+  contain: content;
 }
 
 /* ─────────── Smooth Momentum Scrolling on iOS ─────────── */
@@ -227,6 +227,13 @@ section {
 .ios-scroll, [class*="overflow-y-auto"] {
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
+}
+
+/* ─────────── Reduce Animation Overhead on Mobile ─────────── */
+@media (max-width: 768px) {
+  .animate-ping {
+    animation-duration: 2s;
+  }
 }
 
 /* ─────────── Animation Keyframes ─────────── */

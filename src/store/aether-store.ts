@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   chatMessages: 'aether-chat',
   profile: 'aether-profile',
   currentView: 'aether-view',
+  authScreen: 'aether-auth-screen',
 }
 
 // Debounced localStorage writes to avoid excessive I/O
@@ -42,8 +43,12 @@ function loadFromStorage<T>(key: string, fallback: T): T {
       return JSON.parse(stored) as T
     }
   } catch {
-    // Corrupted data — clear it
-    try { localStorage.removeItem(key) } catch {}
+    // Corrupted data — try to clear it safely
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key)
+      }
+    } catch {}
   }
   return fallback
 }
@@ -72,6 +77,7 @@ const initialCollections = loadFromStorage<Collection[]>(STORAGE_KEYS.collection
 ])
 const initialChatMessages = loadFromStorage<ChatMessage[]>(STORAGE_KEYS.chatMessages, [])
 const initialProfile = loadFromStorage<UserProfile>(STORAGE_KEYS.profile, { name: '', email: '', initials: '' })
+const initialCurrentView = loadFromStorage<AppView>(STORAGE_KEYS.currentView, 'landing')
 
 /* ─────────── Store Interface ─────────── */
 
@@ -188,9 +194,12 @@ export const useAetherStore = create<AetherState>((set, get) => ({
   isSessionLoading: false, // Start false — landing page shows immediately, auth check runs in background
   setIsSessionLoading: (v) => set({ isSessionLoading: v }),
 
-  // Navigation
-  currentView: 'landing',
-  setCurrentView: (view) => set({ currentView: view }),
+  // Navigation — hydrated from localStorage so users return to their last view
+  currentView: initialCurrentView,
+  setCurrentView: (view) => {
+    set({ currentView: view })
+    persistToStorage(STORAGE_KEYS.currentView, view)
+  },
 
   // Memories — hydrated from localStorage for instant display
   memories: initialMemories,

@@ -124,12 +124,12 @@ function seededRandom(seed: number) {
 }
 
 function FloatingParticles() {
-  // Responsive particle count: 8 on mobile, 15 on desktop
-  // SSR-safe: defaults to 8, updates on client via resize subscription
-  const [count, setCount] = useState(8)
+  // Responsive particle count: 4 on mobile, 15 on desktop
+  // SSR-safe: defaults to 4, updates on client via resize subscription
+  const [count, setCount] = useState(4)
 
   useEffect(() => {
-    const updateCount = () => setCount(window.innerWidth < 768 ? 8 : 15)
+    const updateCount = () => setCount(window.innerWidth < 768 ? 4 : 15)
     updateCount()
     window.addEventListener('resize', updateCount)
     return () => window.removeEventListener('resize', updateCount)

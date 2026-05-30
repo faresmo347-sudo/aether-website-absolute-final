@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
+import { AETHER_MASTER_PROMPT } from '@/lib/aether-prompt'
 
 interface MemoryData {
   id: string
@@ -46,32 +47,19 @@ export async function POST(req: NextRequest) {
       })
       .join('\n')
 
-    const systemPrompt = `You are Aether, an AI assistant that helps users find information from their saved memories. Your job is to search through the user's memories and answer their question based ONLY on what you find.
+    const systemPrompt = AETHER_MASTER_PROMPT
 
-CRITICAL RULES:
-1. You must ONLY reference memories that are actually relevant to the question asked
-2. You must NEVER return a memory that has no relation to what was asked
-3. If the user asks about something recent (e.g., "today", "this week"), prioritize the most recently saved relevant memories
-4. If no relevant memory exists, honestly say "I could not find any memory about that" — do NOT make up or hallucinate information
-5. Your response must always reference the actual content of the memories you found
-6. Rank results by relevance to the exact question asked
-7. When you reference a memory, include its ID in your referencedIds list
-8. IMPORTANT: Image memories contain full structured text extracted from images (marked with "[IMAGE - Full Text Extracted]:"). When searching for specific information that might be in an image (like a price, a name, a list item, a category, a menu item, a document section), you MUST check the content of ALL image-type memories, not just text/voice memories. Image memories contain full structured text extracted from photos — including menus with every item and price, documents with every section, screenshots with every UI element. Treat image memory content as searchable text just like any other memory type.
-
-You must respond with a JSON object with these fields:
-- "answer": A natural language response answering the user's question based on their memories. Be specific and reference the actual content.
-- "referencedIds": An array of memory IDs that are relevant to the question (only include IDs from the provided memories)
-- "sourcesCount": The number of memories you referenced
-
-If no memories are relevant, set referencedIds to [] and sourcesCount to 0, and say you couldn't find anything relevant.`
-
-    const userPrompt = `Here are all my saved memories (note: memories marked [IMAGE - Full Text Extracted] contain the full structured text content extracted from photos and screenshots — search through them just like any other text memory):
+    const userPrompt = `The user has ${memories.length} saved memories. Here they all are:
 
 ${memoriesContext}
 
-My question: ${question}
+The user just said: "${question}"
 
-Search through ALL my memories, INCLUDING image-type memories (which contain full structured text extracted from photos), and answer based on what you find. Remember: only reference memories that are actually relevant. If nothing matches, say so honestly.`
+Decide first: is this a memory search, a general conversation, or both?
+Then respond as Aether — warm, caring, and human.
+If you find relevant memories, reference them specifically with dates and details.
+If it is just a conversation, be a good companion.
+Always respond with the JSON format.`
 
     const completion = await groq.chat.completions.create({
       model: GROQ_MODEL,
@@ -79,7 +67,7 @@ Search through ALL my memories, INCLUDING image-type memories (which contain ful
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.3,
+      temperature: 0.6,
       max_tokens: 1024,
     })
 

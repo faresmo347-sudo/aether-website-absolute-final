@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
+import { AETHER_MASTER_PROMPT } from '@/lib/aether-prompt'
 
 // Forbidden generic tags that should almost never appear
 const GENERIC_TAGS = new Set([

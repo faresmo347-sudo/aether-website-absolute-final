@@ -287,11 +287,11 @@ export function AskAether() {
         </div>
       </div>
 
-      {/* Suggested Questions — wraps on mobile, scrollable horizontal on desktop */}
+      {/* Suggested Questions — horizontally scrollable on all viewports */}
       {memories.length > 0 && chatMessages.length === 0 && (
         <div className="flex-shrink-0 py-2.5 px-4 border-b border-border/50 bg-background/60">
           <div className="md:max-w-3xl md:mx-auto">
-            <div className="flex flex-wrap gap-2">
+            <div className="overflow-x-auto flex-nowrap scrollbar-none gap-2 flex">
               {starterQuestions.map((question) => (
                 <button
                   key={question}
@@ -311,7 +311,7 @@ export function AskAether() {
       {/* Chat Area — fills remaining space */}
       <div
         ref={chatContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto ios-scroll px-4 sm:px-6 py-4 sm:py-6 pb-20 md:pb-6"
+        className="flex-1 min-h-0 overflow-y-auto ios-scroll px-4 sm:px-6 py-4 sm:py-6 pb-4 md:pb-6"
       >
         <div className="md:max-w-3xl md:mx-auto flex flex-col min-h-full gap-3 sm:gap-4">
           {/* Empty state — no memories yet */}

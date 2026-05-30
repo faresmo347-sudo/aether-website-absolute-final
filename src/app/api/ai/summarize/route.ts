@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
+import { AETHER_MASTER_PROMPT } from '@/lib/aether-prompt'
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,22 +19,14 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: 'system',
-          content: `You are a helpful assistant that summarizes voice notes. Given a transcription of a voice memo, provide:
-1. A concise 1-2 sentence summary of what was said
-2. A list of any action items or key points extracted from the content
-
-Respond with a JSON object with these fields:
-- "summary": A 1-2 sentence summary of the voice note
-- "keyPoints": An array of key points or action items (strings). If none are found, return an empty array.
-
-Return ONLY the JSON object, no other text.`,
+          content: AETHER_MASTER_PROMPT,
         },
         {
           role: 'user',
-          content: `Summarize this voice note and extract any action items or key points:\n\n${text}`,
+          content: `Summarize this voice note as Aether — warm, personal, capturing the feeling AND the facts. Extract key points. Respond with JSON: { "summary": "1-2 sentence warm summary", "keyPoints": ["point1", "point2"] }\n\nVoice transcription: "${text}"`,
         },
       ],
-      temperature: 0.3,
+      temperature: 0.6,
       max_tokens: 512,
     })
 
