@@ -210,7 +210,7 @@ export function Settings() {
 
   return (
     <div className="bg-background text-foreground flex-1 min-h-0 overflow-y-auto ios-scroll">
-      <div className="max-w-2xl mx-auto px-0 sm:px-6 py-6 sm:py-8 pb-28 md:pb-8">
+      <div className="max-w-2xl mx-auto px-0 sm:px-6 py-6 sm:py-8 pb-8">
         {/* Header */}
         <div className="px-4 sm:px-0 mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -519,7 +519,7 @@ export function Settings() {
               Danger Zone
             </h3>
           </div>
-          <div className="px-4 sm:px-0 space-y-2 pb-8" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="px-4 sm:px-0 space-y-2 pb-4">
             <button
               onClick={handleExport}
               disabled={isExporting}

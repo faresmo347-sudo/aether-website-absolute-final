@@ -1577,7 +1577,7 @@ export default function Dashboard() {
       )}
 
       {/* Memory Feed — iOS-style scroll, mobile gap */}
-      <div className="flex-1 overflow-y-auto min-h-0 ios-scroll px-4 sm:px-6 pb-20 md:pb-6">
+      <div className="flex-1 overflow-y-auto min-h-0 ios-scroll px-4 sm:px-6 pb-4">
         {isLoadingMemories ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, i) => (

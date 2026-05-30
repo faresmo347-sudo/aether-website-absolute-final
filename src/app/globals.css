@@ -229,6 +229,17 @@ section {
   will-change: scroll-position;
 }
 
+/* ─────────── Mobile Bottom Nav Padding ─────────── */
+/* Only applies on mobile (below md breakpoint) to account for fixed bottom nav */
+.mobile-bottom-pad {
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .mobile-bottom-pad {
+    padding-bottom: 0;
+  }
+}
+
 /* ─────────── Reduce Animation Overhead on Mobile ─────────── */
 @media (max-width: 768px) {
   .animate-ping {

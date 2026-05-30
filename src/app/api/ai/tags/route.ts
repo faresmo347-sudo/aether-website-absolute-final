@@ -15,65 +15,6 @@ function isGenericTag(tag: string): boolean {
   return GENERIC_TAGS.has(tag.toLowerCase())
 }
 
-function buildSystemPrompt(type: string): string {
-  const baseRules = `You are an intelligent tagging assistant for a personal memory app called Aether. Your job is to generate 2-4 highly relevant, specific hashtags based on the ACTUAL CONTENT of what the user saved.
-
-CRITICAL RULES:
-1. Tags MUST reflect the SPECIFIC TOPICS and SUBJECT MATTER of the content
-2. NEVER use generic placeholder tags — they are FORBIDDEN:
-   - FORBIDDEN: #notes, #note, #memory, #thoughts, #thought, #capture, #misc, #general, #content, #stuff, #item, #entry
-3. ALWAYS be specific and concrete:
-   - Cafe visit → #cafe #food #places NOT #notes
-   - Book recommendation → #books #reading NOT #notes
-   - Startup idea → #startup #ideas NOT #thoughts
-   - Meeting notes → #meeting #work NOT #notes
-   - Recipe → #food #recipe #cooking NOT #notes
-   - Travel plan → #travel #planning NOT #misc
-4. Always include the # symbol
-5. Return ONLY a JSON array of tag strings, nothing else`
-
-  if (type === 'voice') {
-    return `${baseRules}
-
-ADDITIONAL VOICE RULES:
-- This is a VOICE MEMORY that was transcribed from speech
-- Tags MUST be based on what was ACTUALLY SAID in the transcription
-- NEVER tag it #voice, #audio, #memo, or #recording — these are FORBIDDEN
-- If someone talked about a meeting, use #meeting #work
-- If someone described a recipe, use #food #recipe #cooking
-- If someone shared an idea, use #idea plus the topic of the idea
-- If someone discussed a person, use #people plus the context
-- The summary provided gives the key points — use it to generate accurate tags`
-  }
-
-  if (type === 'image') {
-    return `${baseRules}
-
-ADDITIONAL IMAGE RULES:
-- This is an IMAGE MEMORY
-- An AI has already analyzed and described the image content
-- Tags MUST be based on what is ACTUALLY IN the image as described
-- NEVER tag it #image, #photo, #capture, or #picture — these are FORBIDDEN
-- If the image shows food, use #food #restaurant #meal etc.
-- If the image shows a document with text, use tags based on the text content
-- If the image shows a place, use #travel #outdoors etc.
-- If the image shows a product, use the product category
-- If the image shows code, use #code #programming etc.`
-  }
-
-  if (type === 'link') {
-    return `${baseRules}
-
-ADDITIONAL LINK RULES:
-- This is a SAVED LINK/BOOKMARK
-- Tags should reflect the TOPIC of the linked content
-- NEVER tag it #link, #bookmark, #saved, or #url — these are FORBIDDEN
-- Extract the subject matter from the URL and any description provided`
-  }
-
-  return baseRules
-}
-
 export async function POST(req: NextRequest) {
   try {
     const { content, type, summary, imageDescription } = await req.json()
@@ -83,8 +24,6 @@ export async function POST(req: NextRequest) {
     }
 
     const groq = getGroqClient()
-
-    const systemPrompt = buildSystemPrompt(type || 'text')
 
     // Build the user prompt with all available context
     let contextBlock = ''
@@ -103,7 +42,37 @@ AI Summary of what was said: "${summary}"`
       contextBlock = `"${content.slice(0, 1000)}"`
     }
 
-    const userPrompt = `Generate 2-4 highly specific, relevant tags for this ${type || 'text'} memory. Remember: NEVER use generic tags like #notes, #memory, #voice, #image, #capture. Only use tags that reflect the ACTUAL TOPIC and CONTENT.
+    // Type-specific tagging rules to include in the user prompt
+    let typeRules = ''
+    if (type === 'voice') {
+      typeRules = `
+ADDITIONAL VOICE RULES:
+- This is a VOICE MEMORY that was transcribed from speech
+- Tags MUST be based on what was ACTUALLY SAID in the transcription
+- NEVER tag it #voice, #audio, #memo, or #recording — these are FORBIDDEN
+- If someone talked about a meeting, use #meeting #work
+- If someone described a recipe, use #food #recipe #cooking
+- If someone shared an idea, use #idea plus the topic of the idea`
+    } else if (type === 'image') {
+      typeRules = `
+ADDITIONAL IMAGE RULES:
+- This is an IMAGE MEMORY
+- Tags MUST be based on what is ACTUALLY IN the image as described
+- NEVER tag it #image, #photo, #capture, or #picture — these are FORBIDDEN
+- If the image shows food, use #food #restaurant #meal etc.
+- If the image shows a document with text, use tags based on the text content
+- If the image shows a place, use #travel #outdoors etc.`
+    } else if (type === 'link') {
+      typeRules = `
+ADDITIONAL LINK RULES:
+- This is a SAVED LINK/BOOKMARK
+- Tags should reflect the TOPIC of the linked content
+- NEVER tag it #link, #bookmark, #saved, or #url — these are FORBIDDEN
+- Extract the subject matter from the URL and any description provided`
+    }
+
+    const userPrompt = `Generate 2-4 highly specific, relevant tags for this ${type || 'text'} memory as Aether. Remember: NEVER use generic tags like #notes, #memory, #voice, #image, #capture. Only use tags that reflect the ACTUAL TOPIC and CONTENT. Think: "What would this person search for in 6 months to find this memory?"
+${typeRules}
 
 ${contextBlock}
 
@@ -112,10 +81,10 @@ Return only a JSON array of tag strings with # symbols. Example: ["#cafe", "#foo
     const completion = await groq.chat.completions.create({
       model: GROQ_MODEL,
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: AETHER_MASTER_PROMPT },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.3,
+      temperature: 0.6,
       max_tokens: 150,
     })
 
@@ -179,7 +148,6 @@ function extractFallbackTags(content: string, type: string): string[] {
     budget: ['#finance'],
     money: ['#finance'],
     doctor: ['#health'],
-    recipe: ['#food', '#cooking'],
     family: ['#family'],
     friend: ['#social'],
     party: ['#social'],

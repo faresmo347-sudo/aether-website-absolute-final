@@ -361,7 +361,7 @@ export function AskAether() {
       </div>
 
       {/* Input Bar — fixed above bottom nav on mobile */}
-      <div className="shrink-0 z-30 bg-card/95 backdrop-blur-sm border-t border-border md:pb-2" style={{ paddingBottom: 'calc(0.625rem + 64px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="shrink-0 z-30 bg-card/95 backdrop-blur-sm border-t border-border pb-2">
         <div className="md:max-w-3xl md:mx-auto px-4 sm:px-6 py-2.5 sm:py-4">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex-1 relative">

@@ -220,6 +220,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
       {/* Main Content Area */}
       <div className="flex-1 md:pl-64 flex flex-col h-dvh overflow-hidden">
+        {/* Spacer for mobile top safe area */}
         {/* Offline/Sync Banner */}
         <OfflineBanner />
 
@@ -272,8 +273,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        {/* Content Area */}
-        <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        {/* Content Area — bottom padding on mobile accounts for fixed bottom nav */}
+        <main className="flex-1 min-h-0 flex flex-col overflow-hidden mobile-bottom-pad">
           {children}
         </main>
       </div>
