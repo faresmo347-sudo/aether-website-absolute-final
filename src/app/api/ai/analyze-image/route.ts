@@ -7,7 +7,10 @@ const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
 
 const VISION_PROMPT = `You are Aether — a warm, intelligent AI companion who helps users capture and search their memories. You are analyzing an image the user just saved.
 
+This is an IMAGE memory. Process it accordingly.
+
 Return a JSON object with:
+- "title": A 5-7 word summary of what the image contains (e.g. "Grocery Store Receipt from March", "Team Meeting Whiteboard Notes", "Sunset Beach Vacation Photo")
 - "description": A structured, exhaustive extraction of ALL content visible in the image
 - "tags": array of 3-5 specific hashtags (with # symbol) based on ALL the content and text you found in the image
 
@@ -49,7 +52,7 @@ export async function POST(req: NextRequest) {
     const { image } = await req.json()
 
     if (!image || typeof image !== 'string') {
-      return NextResponse.json({ description: 'Image captured', tags: ['#image'] })
+      return NextResponse.json({ title: 'Image capture', description: 'Image captured', tags: ['#image'] })
     }
 
     // Normalize to data URL format
@@ -58,6 +61,7 @@ export async function POST(req: NextRequest) {
     const groq = getGroqClient()
 
     // Vision call uses Groq (multimodal — Gemini vision would need different API structure)
+    let title = 'Image capture'
     let description = 'Image captured'
     let tags: string[] = []
 
@@ -86,6 +90,7 @@ export async function POST(req: NextRequest) {
         if (firstBrace !== -1 && lastBrace > firstBrace) {
           const jsonStr = visionText.slice(firstBrace, lastBrace + 1)
           const parsed = JSON.parse(jsonStr)
+          if (parsed.title) title = parsed.title
           if (parsed.description) description = parsed.description
           if (Array.isArray(parsed.tags)) tags = parsed.tags
         }
@@ -135,9 +140,9 @@ export async function POST(req: NextRequest) {
 
     tags = tags.slice(0, 4)
 
-    return NextResponse.json({ description, tags })
+    return NextResponse.json({ title, description, tags })
   } catch (error) {
     console.error('Image analysis error:', error)
-    return NextResponse.json({ description: 'Image captured', tags: ['#image'] })
+    return NextResponse.json({ title: 'Image capture', description: 'Image captured', tags: ['#image'] })
   }
 }

@@ -148,6 +148,14 @@ export async function createMemory(memory: {
   imagePreview?: string
   collectionId?: string
 }): Promise<Memory> {
+  // Validate required fields
+  if (!memory.content) {
+    memory.content = ''
+  }
+  if (!memory.type || !['text', 'voice', 'link', 'image'].includes(memory.type)) {
+    memory.type = 'text'
+  }
+
   // If offline, save locally and queue for sync
   if (!getIsOnline()) {
     const tempId = `offline-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -208,7 +216,15 @@ export async function createMemory(memory: {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('[Aether] Supabase insert failed:', error.code, error.message, error.details)
+      throw error
+    }
+
+    if (!data) {
+      console.error('[Aether] Supabase insert returned no data — save may have silently failed')
+      return saveMemoryLocally(memory)
+    }
 
     // Add to collection if specified
     if (memory.collectionId && data) {

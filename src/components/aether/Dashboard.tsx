@@ -9,6 +9,7 @@ import { useAetherStore } from '@/store/aether-store'
 import { createMemory, getMemoryCount, updateMemoryById } from '@/lib/supabase/data'
 import { getCachedTags, setCachedTags } from '@/lib/tag-cache'
 import type { Memory, MemoryType } from '@/components/aether/types'
+import { useToast } from '@/hooks/use-toast'
 
 // ---------- helpers ----------
 
@@ -241,6 +242,46 @@ const FilterBar = memo(function FilterBar() {
 
 // ---------- Quick Capture Modal (Bottom Sheet on Mobile) ----------
 
+async function compressImage(file: File, maxWidth = 1920, quality = 0.8): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      let width = img.width
+      let height = img.height
+      
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width
+        width = maxWidth
+      }
+      
+      canvas.width = width
+      canvas.height = height
+      
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('Canvas not supported'))
+        return
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('Compression failed'))
+            return
+          }
+          resolve(new File([blob], file.name, { type: 'image/jpeg' }))
+        },
+        'image/jpeg',
+        quality
+      )
+    }
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 function QuickCaptureModal() {
   const {
     captureModalOpen,
@@ -253,9 +294,12 @@ function QuickCaptureModal() {
     user,
   } = useAetherStore()
 
+  const { toast } = useToast()
+
   const [textContent, setTextContent] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const [voiceTranscript, setVoiceTranscript] = useState('')
+  const [voiceTitle, setVoiceTitle] = useState('')
   const [voiceSummary, setVoiceSummary] = useState('')
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
@@ -264,12 +308,14 @@ function QuickCaptureModal() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [imageBase64, setImageBase64] = useState<string | null>(null)
   const [imageDescription, setImageDescription] = useState('')
+  const [imageTitle, setImageTitle] = useState('')
   const [imageTags, setImageTags] = useState<string[]>([])
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
   const [manualTags, setManualTags] = useState<string[]>([])
   const [manualTagInput, setManualTagInput] = useState('')
+  const tagInputRef = useRef<HTMLInputElement>(null)
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [audioChunks, setAudioChunks] = useState<Blob[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -322,6 +368,7 @@ function QuickCaptureModal() {
     setTextContent('')
     setIsRecording(false)
     setVoiceTranscript('')
+    setVoiceTitle('')
     setVoiceSummary('')
     setIsTranscribing(false)
     setLinkUrl('')
@@ -330,6 +377,7 @@ function QuickCaptureModal() {
     setImagePreview(null)
     setImageBase64(null)
     setImageDescription('')
+    setImageTitle('')
     setImageTags([])
     setIsAnalyzingImage(false)
     setIsSaving(false)
@@ -414,10 +462,13 @@ function QuickCaptureModal() {
         break
 
       case 'voice':
-        title = voiceTranscript
-          ? voiceTranscript.slice(0, 50)
-          : 'Voice memo'
-        content = voiceTranscript || 'Recorded voice memo'
+        if (!voiceTranscript || !voiceTranscript.trim() || voiceTranscript.includes('microphone access needed')) {
+          toast({ title: "Couldn't transcribe", description: "Voice note was empty or transcription failed — please try again.", variant: "destructive" })
+          setIsSaving(false)
+          return
+        }
+        title = voiceTitle || voiceSummary || voiceTranscript.slice(0, 50)
+        content = voiceTranscript
         fallbackTags = getSmartFallbackTags(content, 'voice')
         if (voiceSummary) {
           aiSummary = voiceSummary
@@ -432,11 +483,11 @@ function QuickCaptureModal() {
 
       case 'image':
         if (imageDescription && imageTags.length > 0) {
-          title = imageDescription.slice(0, 50) || 'Image capture'
+          title = imageTitle || imageDescription.slice(0, 50) || 'Image capture'
           content = imageDescription
           fallbackTags = imageTags
         } else if (imageDescription) {
-          title = imageDescription.slice(0, 50) || 'Image capture'
+          title = imageTitle || imageDescription.slice(0, 50) || 'Image capture'
           content = imageDescription
           fallbackTags = getSmartFallbackTags(content, 'image')
         } else {
@@ -645,6 +696,11 @@ function QuickCaptureModal() {
         updateMemory(tempId, { taggingStatus: 'complete' })
         setShowUpgradeDialog(true)
       } else {
+        toast({
+          title: "Couldn't save that memory",
+          description: "Please try again — your memory is saved locally in the meantime.",
+          variant: "destructive"
+        })
         // Still try to get AI tags even if Supabase save failed
         try {
           const aiTags = await generateTags(content, activeCaptureTab, voiceSummary || undefined, imageDescription || undefined)
@@ -655,10 +711,23 @@ function QuickCaptureModal() {
         }
       }
     }
-  }, [activeCaptureTab, textContent, voiceTranscript, voiceSummary, linkUrl, imagePreview, imageDescription, imageTags, manualTags, generateTags, addMemory, updateMemory, setCaptureModalOpen, resetForm, user])
+  }, [activeCaptureTab, textContent, voiceTranscript, voiceTitle, voiceSummary, linkUrl, imagePreview, imageDescription, imageTitle, imageTags, manualTags, generateTags, addMemory, updateMemory, setCaptureModalOpen, resetForm, user])
 
   // Handle image file selection
   const handleImageUpload = useCallback(async (file: File) => {
+    // Compress image if over 5MB
+    const MAX_SIZE = 5 * 1024 * 1024 // 5MB
+    let fileToRead = file
+    if (file.size > MAX_SIZE) {
+      try {
+        fileToRead = await compressImage(file)
+      } catch (e) {
+        console.error('Image compression failed:', e)
+        toast({ title: 'Image too large', description: 'Could not compress the image. Try a smaller one.', variant: 'destructive' })
+        return
+      }
+    }
+
     const reader = new FileReader()
     reader.onloadend = async () => {
       const dataUrl = reader.result as string
@@ -680,20 +749,24 @@ function QuickCaptureModal() {
           if (data.description) {
             setImageDescription(data.description)
           }
+          if (data.title) {
+            setImageTitle(data.title)
+          }
           if (data.tags && data.tags.length > 0) {
             setImageTags(data.tags)
           }
         } catch (error) {
           console.error('Image analysis failed:', error)
           setImageDescription('')
+          setImageTitle('')
           setImageTags([])
         } finally {
           setIsAnalyzingImage(false)
         }
       }
     }
-    reader.readAsDataURL(file)
-  }, [])
+    reader.readAsDataURL(fileToRead)
+  }, [toast])
 
   // Start voice recording
   const startRecording = useCallback(async () => {
@@ -728,10 +801,15 @@ function QuickCaptureModal() {
                 body: JSON.stringify({ audio: base64Audio }),
               })
               const data = await res.json()
-              if (data.transcription) {
+              if (data.error) {
+                setVoiceTranscript('Voice memo recorded — transcription will be available shortly.')
+              } else if (data.transcription) {
                 setVoiceTranscript(data.transcription)
               } else {
                 setVoiceTranscript('Voice memo recorded — transcription will be available shortly.')
+              }
+              if (data.title) {
+                setVoiceTitle(data.title)
               }
               if (data.summary) {
                 setVoiceSummary(data.summary)
@@ -1190,7 +1268,7 @@ function QuickCaptureModal() {
                 {manualTags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/15 whitespace-nowrap"
+                    className="inline-flex items-center gap-1 min-h-[32px] px-3 py-1 rounded-full text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/15 whitespace-nowrap"
                   >
                     {tag}
                     <button
@@ -1204,6 +1282,7 @@ function QuickCaptureModal() {
                 ))}
                 {manualTags.length < 6 && (
                   <input
+                    ref={tagInputRef}
                     type="text"
                     value={manualTagInput}
                     onChange={(e) => setManualTagInput(e.target.value)}
@@ -1211,29 +1290,31 @@ function QuickCaptureModal() {
                       if ((e.key === 'Enter' || e.key === ',') && manualTagInput.trim()) {
                         e.preventDefault()
                         let tag = manualTagInput.trim()
-                        if (!tag.startsWith('#')) tag = `#${tag}`
-                        tag = tag.replace(/#+/, '#')
+                        tag = tag.replace(/^#+/, '')
+                        tag = `#${tag}`
                         if (!manualTags.includes(tag)) {
                           setManualTags((prev) => [...prev, tag])
                         }
                         setManualTagInput('')
+                        setTimeout(() => tagInputRef.current?.focus(), 0)
                       }
                       if (e.key === ' ' && manualTagInput.trim() && manualTagInput.trim().length >= 2) {
                         e.preventDefault()
                         let tag = manualTagInput.trim()
-                        if (!tag.startsWith('#')) tag = `#${tag}`
-                        tag = tag.replace(/#+/, '#')
+                        tag = tag.replace(/^#+/, '')
+                        tag = `#${tag}`
                         if (!manualTags.includes(tag)) {
                           setManualTags((prev) => [...prev, tag])
                         }
                         setManualTagInput('')
+                        setTimeout(() => tagInputRef.current?.focus(), 0)
                       }
                       if (e.key === 'Backspace' && !manualTagInput && manualTags.length > 0) {
                         setManualTags((prev) => prev.slice(0, -1))
                       }
                     }}
                     placeholder={manualTags.length === 0 ? 'Add tags (press Enter or comma)' : '#tag'}
-                    className="h-7 flex-1 min-w-[100px] rounded-full border border-[#9D8BA7]/20 bg-transparent px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-1 focus:ring-[#9D8BA7]/10 transition-all duration-300"
+                    className="min-h-[32px] flex-1 min-w-[100px] rounded-full border border-[#9D8BA7]/20 bg-transparent px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-1 focus:ring-[#9D8BA7]/10 transition-all duration-300"
                   />
                 )}
               </div>
@@ -1573,7 +1654,7 @@ function QuickCaptureModal() {
                 {manualTags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/15 whitespace-nowrap"
+                    className="inline-flex items-center gap-1 min-h-[32px] px-3 py-1 rounded-full text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/15 whitespace-nowrap"
                   >
                     {tag}
                     <button
@@ -1587,6 +1668,7 @@ function QuickCaptureModal() {
                 ))}
                 {manualTags.length < 6 && (
                   <input
+                    ref={tagInputRef}
                     type="text"
                     value={manualTagInput}
                     onChange={(e) => setManualTagInput(e.target.value)}
@@ -1594,29 +1676,31 @@ function QuickCaptureModal() {
                       if ((e.key === 'Enter' || e.key === ',') && manualTagInput.trim()) {
                         e.preventDefault()
                         let tag = manualTagInput.trim()
-                        if (!tag.startsWith('#')) tag = `#${tag}`
-                        tag = tag.replace(/#+/, '#')
+                        tag = tag.replace(/^#+/, '')
+                        tag = `#${tag}`
                         if (!manualTags.includes(tag)) {
                           setManualTags((prev) => [...prev, tag])
                         }
                         setManualTagInput('')
+                        setTimeout(() => tagInputRef.current?.focus(), 0)
                       }
                       if (e.key === ' ' && manualTagInput.trim() && manualTagInput.trim().length >= 2) {
                         e.preventDefault()
                         let tag = manualTagInput.trim()
-                        if (!tag.startsWith('#')) tag = `#${tag}`
-                        tag = tag.replace(/#+/, '#')
+                        tag = tag.replace(/^#+/, '')
+                        tag = `#${tag}`
                         if (!manualTags.includes(tag)) {
                           setManualTags((prev) => [...prev, tag])
                         }
                         setManualTagInput('')
+                        setTimeout(() => tagInputRef.current?.focus(), 0)
                       }
                       if (e.key === 'Backspace' && !manualTagInput && manualTags.length > 0) {
                         setManualTags((prev) => prev.slice(0, -1))
                       }
                     }}
                     placeholder={manualTags.length === 0 ? 'Add tags (press Enter or comma)' : '#tag'}
-                    className="h-7 flex-1 min-w-[100px] rounded-full border border-[#9D8BA7]/20 bg-transparent px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-1 focus:ring-[#9D8BA7]/10 transition-all duration-300"
+                    className="min-h-[32px] flex-1 min-w-[100px] rounded-full border border-[#9D8BA7]/20 bg-transparent px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-1 focus:ring-[#9D8BA7]/10 transition-all duration-300"
                   />
                 )}
               </div>

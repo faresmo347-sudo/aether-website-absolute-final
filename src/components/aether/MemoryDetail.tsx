@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft,
@@ -159,8 +159,8 @@ export function MemoryDetail() {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [showTagInput, setShowTagInput] = useState(false)
   const [newTag, setNewTag] = useState('')
+  const tagInputRef = useRef<HTMLInputElement>(null)
   const [aiInsight, setAiInsight] = useState('')
   const [isLoadingInsight, setIsLoadingInsight] = useState(false)
   const [insightError, setInsightError] = useState(false)
@@ -274,22 +274,21 @@ export function MemoryDetail() {
       toast({ title: 'Maximum tags reached', description: 'You can have up to 6 tags per memory.' })
       return
     }
-    // Normalize: trim whitespace, auto-add # prefix, prevent double #
+    // Normalize: strip leading #s then add exactly one #
     let tagToAdd = newTag.trim()
-    if (!tagToAdd.startsWith('#')) {
-      tagToAdd = `#${tagToAdd}`
-    }
-    tagToAdd = tagToAdd.replace(/#+/, '#') // prevent ##tag
+    tagToAdd = tagToAdd.replace(/^#+/, '')
+    tagToAdd = `#${tagToAdd}`
     // Avoid duplicate tags
     if (memory.tags.includes(tagToAdd)) {
       setNewTag('')
-      // Keep input focused and open — don't close
+      setTimeout(() => tagInputRef.current?.focus(), 0)
       toast({ title: 'Tag already exists', description: `"${tagToAdd}" is already on this memory.` })
       return
     }
     const updatedTags = [...memory.tags, tagToAdd]
     updateMemory(memory.id, { tags: updatedTags })
     setNewTag('')
+    setTimeout(() => tagInputRef.current?.focus(), 0)
     // Keep input open so user can keep typing more tags
     toast({ title: 'Tag added!', description: !isOnline ? 'Tag saved locally — will sync when you reconnect.' : `"${tagToAdd}" has been added to this memory.` })
     try {
@@ -677,7 +676,7 @@ export function MemoryDetail() {
               {memory.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/15 hover:bg-[#9D8BA7]/15 transition-colors duration-300 whitespace-nowrap flex-shrink-0"
+                  className="inline-flex items-center gap-1 min-h-[32px] px-3 py-1 rounded-full text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/15 hover:bg-[#9D8BA7]/15 transition-colors duration-300 whitespace-nowrap flex-shrink-0"
                 >
                   {tag}
                   <button
@@ -702,10 +701,7 @@ export function MemoryDetail() {
               {memory.tags.length < 6 && (
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <input
-                    ref={(el) => {
-                      // Auto-focus when shown
-                      if (el && showTagInput) el.focus()
-                    }}
+                    ref={tagInputRef}
                     type="text"
                     value={newTag}
                     onChange={(e) => setNewTag(e.target.value)}
@@ -720,7 +716,6 @@ export function MemoryDetail() {
                         handleAddTag()
                       }
                       if (e.key === 'Escape') {
-                        setShowTagInput(false)
                         setNewTag('')
                       }
                       // Backspace on empty input removes last tag
@@ -733,19 +728,9 @@ export function MemoryDetail() {
                       }
                     }}
                     placeholder="#new-tag"
-                    autoFocus={showTagInput}
-                    className="h-8 w-28 rounded-full border border-[#9D8BA7]/20 bg-card px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-2 focus:ring-[#9D8BA7]/10 transition-all duration-300"
+                    className="min-h-[32px] w-28 rounded-full border border-[#9D8BA7]/20 bg-card px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-2 focus:ring-[#9D8BA7]/10 transition-all duration-300"
                   />
                 </div>
-              )}
-              {!showTagInput && memory.tags.length < 6 && (
-                <button
-                  onClick={() => setShowTagInput(true)}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium text-muted-foreground border border-dashed border-border hover:border-[#9D8BA7]/30 hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 transition-all duration-300 whitespace-nowrap flex-shrink-0"
-                >
-                  <Plus size={12} />
-                  Add tag
-                </button>
               )}
             </div>
           </div>
@@ -792,7 +777,6 @@ export function MemoryDetail() {
                     onClick={() => {
                       setSelectedMemoryId(relMemory.id)
                       setIsEditing(false)
-                      setShowTagInput(false)
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
                   />

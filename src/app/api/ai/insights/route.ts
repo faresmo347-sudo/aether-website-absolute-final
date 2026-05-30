@@ -33,9 +33,18 @@ export async function POST(req: NextRequest) {
 
     const contextBlock = contextParts.join('\n')
 
+    // Add memory type context for type-specific insights
+    const typeContext = type ? `This is a ${type.toUpperCase()} memory. Process it accordingly.\n` : ''
+    const typeInstructions: Record<string, string> = {
+      image: 'Reference what was actually IN the image — not just "you saved an image". Describe the content, text, or scene visible.\n',
+      voice: 'Reference specific things said in the voice note — not just "you recorded a voice note". Quote or paraphrase the transcript.\n',
+      link: 'Reference the actual content from the linked page — not just "you saved a link". Mention the topic or key information.\n',
+    }
+    const typeInstruction = typeInstructions[type || ''] || ''
+
     const userPrompt = `Generate a warm, insightful summary for this memory. Remember: 3-5 sentences, personal tone ("You visited/captured/noted..."), reference specific details, suggest connections or actions, and NEVER start with "This is a memory about..."
 
-${contextBlock}`
+${typeContext}${typeInstruction}${contextBlock}`
 
     const insight = await callAI(AETHER_MASTER_PROMPT, userPrompt, 0.6, 512)
 

@@ -67,7 +67,7 @@ ADDITIONAL LINK RULES:
 - Extract the subject matter from the URL and any description provided`
     }
 
-    const userPrompt = `Generate 2-4 highly specific, relevant tags for this ${type || 'text'} memory as Aether. Remember: NEVER use generic tags like #notes, #memory, #voice, #image, #capture. Only use tags that reflect the ACTUAL TOPIC and CONTENT. Think: "What would this person search for in 6 months to find this memory?"
+    const userPrompt = `Generate 2-4 highly specific, relevant tags for this ${type || 'text'} memory as Aether. This is a ${(type || 'text').toUpperCase()} memory. Process it accordingly. Remember: NEVER use generic tags like #notes, #memory, #voice, #image, #capture. Only use tags that reflect the ACTUAL TOPIC and CONTENT. Think: "What would this person search for in 6 months to find this memory?"
 ${typeRules}
 
 ${contextBlock}

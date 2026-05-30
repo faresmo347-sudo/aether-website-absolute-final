@@ -1,24 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
+  let url: string | undefined
   try {
-    const { url } = await req.json() as { url: string }
+    const body = await req.json() as { url: string }
+    url = body.url
 
     // Validate URL
     if (!url || typeof url !== 'string') {
-      return NextResponse.json(emptyResult(), { status: 200 })
+      return NextResponse.json(emptyResult(url), { status: 200 })
     }
 
     let parsedUrl: URL
     try {
       parsedUrl = new URL(url)
     } catch {
-      return NextResponse.json(emptyResult(), { status: 200 })
+      return NextResponse.json(emptyResult(url), { status: 200 })
     }
 
     // Only allow http and https
     if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-      return NextResponse.json(emptyResult(), { status: 200 })
+      return NextResponse.json(emptyResult(url), { status: 200 })
     }
 
     // Fetch with timeout
@@ -58,13 +60,13 @@ export async function POST(req: NextRequest) {
       }
     } catch {
       // Fetch failed (timeout, network error, blocked, etc.)
-      return NextResponse.json(emptyResult(), { status: 200 })
+      return NextResponse.json(emptyResult(url), { status: 200 })
     } finally {
       clearTimeout(timeout)
     }
 
     if (!html) {
-      return NextResponse.json(emptyResult(), { status: 200 })
+      return NextResponse.json(emptyResult(url), { status: 200 })
     }
 
     // Extract metadata from HTML using pure string manipulation and regex
@@ -84,16 +86,24 @@ export async function POST(req: NextRequest) {
     })
   } catch {
     // Never throw — always return a response
-    return NextResponse.json(emptyResult(), { status: 200 })
+    // NOTE: When link content is processed by AI routes (tags, insights), they should
+    // receive context "This is a LINK memory. Process it accordingly." — handled in those routes.
+    return NextResponse.json(emptyResult(url), { status: 200 })
   }
 }
 
-function emptyResult() {
+function emptyResult(url?: string) {
+  let domainTitle = ''
+  if (url) {
+    try {
+      domainTitle = new URL(url).hostname.replace(/^www\./, '')
+    } catch {}
+  }
   return {
-    title: '',
+    title: domainTitle,
     description: '',
     content: '',
-    siteName: '',
+    siteName: domainTitle ? domainTitle.replace(/\.[a-z]+$/, '') : '',
     image: '',
     success: false,
   }
