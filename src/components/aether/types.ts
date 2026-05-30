@@ -57,6 +57,7 @@ export type AppView =
   | 'collections' 
   | 'recaps' 
   | 'settings'
+  | 'constellations'
 
 export type CaptureTab = 'text' | 'voice' | 'link' | 'image'
 

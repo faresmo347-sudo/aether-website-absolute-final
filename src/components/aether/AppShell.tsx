@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, memo, useMemo, useEffect } from 'react'
-import { Brain, FolderOpen, Settings, Search, Plus, Home, WifiOff, Cloud, CheckCircle2 } from 'lucide-react'
+import { Brain, FolderOpen, Settings, Search, Plus, Home, WifiOff, Cloud, CheckCircle2, Sparkles, Map } from 'lucide-react'
 import { useAetherStore } from '@/store/aether-store'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -21,6 +21,7 @@ const desktopNavItems: NavItem[] = [
   { label: 'Home', icon: Home, view: 'dashboard' },
   { label: 'Ask Aether', icon: Brain, view: 'ask-aether' },
   { label: 'Collections', icon: FolderOpen, view: 'collections' },
+  { label: 'Constellations', icon: Sparkles, view: 'constellations' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
 
@@ -28,7 +29,7 @@ const mobileNavItems: NavItem[] = [
   { label: 'Home', icon: Home, view: 'dashboard' },
   { label: 'Ask', icon: Brain, view: 'ask-aether' },
   { label: 'Capture', icon: Plus, view: 'dashboard', isCapture: true },
-  { label: 'Collections', icon: FolderOpen, view: 'collections' },
+  { label: 'Stars', icon: Sparkles, view: 'constellations' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
 
@@ -45,6 +46,9 @@ const navIconSvgs: Record<string, (isActive: boolean) => React.ReactNode> = {
   ),
   settings: (isActive) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+  ),
+  constellations: (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
   ),
 }
 

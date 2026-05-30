@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Menu, X } from 'lucide-react'
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
+import dynamic from 'next/dynamic'
 import { useAetherStore } from '@/store/aether-store'
 import { createClient, isSupabaseConfigured, hasValidSession } from '@/lib/supabase/client'
 import { getProfile, fetchMemories, fetchCollections } from '@/lib/supabase/data'
@@ -18,6 +19,16 @@ import { Settings } from '@/components/aether/Settings'
 import { SignUp, SignIn, ForgotPassword } from '@/components/aether/Auth'
 import { AetherLogo } from '@/components/aether/AetherLogo'
 import type { AppView } from '@/components/aether/types'
+
+// Dynamic import for Constellations — D3 requires browser DOM
+const Constellations = dynamic(() => import('@/components/aether/Constellations'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-full w-full flex items-center justify-center" style={{ background: '#030308' }}>
+      <p className="text-[11px] text-white/30">Loading constellation...</p>
+    </div>
+  ),
+})
 
 /* ═══════════════════════════════════════════════════════════════
    ANIMATED BACKGROUND — Canvas with floating gradient orbs
@@ -1016,6 +1027,8 @@ function AppContent() {
       return <AskAether />
     case 'collections':
       return <Collections />
+    case 'constellations':
+      return <Constellations />
     case 'recaps':
       return <Recaps />
     case 'settings':
@@ -1080,6 +1093,7 @@ export default function Home() {
       '/dashboard': 'dashboard',
       '/ask': 'ask-aether',
       '/collections': 'collections',
+      '/constellations': 'constellations',
       '/recaps': 'recaps',
       '/settings': 'settings',
       '/signup': 'signup',
