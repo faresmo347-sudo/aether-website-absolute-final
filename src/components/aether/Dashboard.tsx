@@ -12,6 +12,19 @@ import type { Memory, MemoryType } from '@/components/aether/types'
 
 // ---------- helpers ----------
 
+function getSupportedMimeType(): string {
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4',
+  ]
+  for (const type of types) {
+    if (MediaRecorder.isTypeSupported(type)) return type
+  }
+  return '' // let browser decide
+}
+
 const FILTER_MAP: Record<string, MemoryType | undefined> = {
   All: undefined,
   Text: 'text',
@@ -579,7 +592,10 @@ function QuickCaptureModal() {
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      const mimeType = getSupportedMimeType()
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream)
       const chunks: Blob[] = []
 
       recorder.ondataavailable = (e) => {
@@ -590,7 +606,7 @@ function QuickCaptureModal() {
 
       recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop())
-        const blob = new Blob(chunks, { type: 'audio/webm' })
+        const blob = new Blob(chunks, { type: mimeType || 'audio/webm' })
 
         // Start transcription IMMEDIATELY on stop — don't wait for save
         setIsTranscribing(true)
@@ -1473,10 +1489,78 @@ function getSmartFallbackTags(content: string, type: string): string[] {
   return tags
 }
 
+// ---------- Tag Cloud ----------
+
+const TAG_CATEGORIES: Record<string, string[]> = {
+  Work: ['#work', '#meeting', '#project', '#office', '#code', '#programming', '#tech'],
+  Ideas: ['#idea', '#brainstorm', '#creative', '#concept', '#innovation'],
+  Personal: ['#personal', '#family', '#friend', '#social', '#health', '#fitness', '#gym'],
+  Food: ['#food', '#recipe', '#cooking', '#cafe', '#restaurant', '#coffee', '#meal'],
+  Travel: ['#travel', '#trip', '#vacation', '#outdoor', '#adventure'],
+  Learning: ['#book', '#books', '#reading', '#course', '#learning', '#study'],
+  Finance: ['#finance', '#budget', '#money', '#investment', '#shopping'],
+}
+
+function categorizeTag(tag: string): string {
+  const lower = tag.toLowerCase()
+  for (const [category, tags] of Object.entries(TAG_CATEGORIES)) {
+    if (tags.includes(lower)) return category
+  }
+  return 'Other'
+}
+
+const TagCloud = memo(function TagCloud({ memories, onTagClick }: { memories: Memory[]; onTagClick: (tag: string) => void }) {
+  const tagData = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const m of memories) {
+      for (const tag of m.tags) {
+        counts.set(tag, (counts.get(tag) || 0) + 1)
+      }
+    }
+
+    const grouped = new Map<string, Array<{ tag: string; count: number }>>()
+    for (const [tag, count] of counts) {
+      const cat = categorizeTag(tag)
+      if (!grouped.has(cat)) grouped.set(cat, [])
+      grouped.get(cat)!.push({ tag, count })
+    }
+
+    for (const tags of grouped.values()) {
+      tags.sort((a, b) => b.count - a.count)
+    }
+
+    return grouped
+  }, [memories])
+
+  if (tagData.size === 0) return null
+
+  return (
+    <div className="space-y-2 overflow-x-auto ios-scroll">
+      {Array.from(tagData.entries()).map(([category, tags]) => (
+        <div key={category}>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 mb-1">{category}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {tags.map(({ tag, count }) => (
+              <button
+                key={tag}
+                onClick={() => onTagClick(tag)}
+                className="tap-feedback text-[11px] px-2.5 py-1 rounded-full bg-[#9D8BA7]/8 text-[#9D8BA7] hover:bg-[#9D8BA7]/15 transition-all duration-200 active:scale-[0.95] min-h-[32px] flex items-center gap-1"
+              >
+                {tag}
+                {count > 1 && <span className="text-[9px] text-[#9D8BA7]/40">{count}</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+})
+
 // ---------- main Dashboard ----------
 
 export default function Dashboard() {
-  const { memories, activeFilter, collectionFilter, tagFilter, setSelectedMemoryId, setCurrentView, collections, isLoadingMemories } = useAetherStore()
+  const { memories, activeFilter, collectionFilter, tagFilter, setTagFilter, setSelectedMemoryId, setCurrentView, collections, isLoadingMemories } = useAetherStore()
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set())
 
   const activeCollection = useMemo(
@@ -1569,6 +1653,13 @@ export default function Dashboard() {
       <div className="shrink-0 pb-3 px-4 sm:px-6">
         <FilterBar />
       </div>
+
+      {/* Tag Cloud — categorized tag overview */}
+      {memories.some((m) => m.tags.length > 0) && (
+        <div className="shrink-0 mb-4 px-4 sm:px-6">
+          <TagCloud memories={memories} onTagClick={setTagFilter} />
+        </div>
+      )}
 
       {/* Extracted Tasks Section — mobile-friendly touch targets */}
       {extractedTasks.length > 0 && (

@@ -1111,12 +1111,16 @@ export default function Home() {
   // Track whether initial data has been loaded for this session
   const dataLoadedRef = useRef(false)
 
-  // Initialize dark mode from store on mount
+  // Sync dark mode class with store state on mount and whenever darkMode changes.
+  // The blocking script in layout.tsx handles the initial paint to prevent flash,
+  // but this effect ensures the DOM stays in sync with the Zustand store.
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark')
+      document.documentElement.classList.remove('light')
     } else {
       document.documentElement.classList.remove('dark')
+      document.documentElement.classList.add('light')
     }
   }, [darkMode])
 

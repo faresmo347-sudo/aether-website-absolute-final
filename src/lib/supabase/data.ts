@@ -181,81 +181,64 @@ export async function createMemory(memory: {
     return offlineMemory
   }
 
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    // Not authenticated — fall back to local-only save
-    const localId = `local-${Date.now()}`
-    const localMemory: Memory = {
-      id: localId,
-      type: memory.type as Memory['type'],
-      title: memory.title,
-      content: memory.content,
-      tags: memory.tags,
-      createdAt: new Date().toISOString(),
-      summary: memory.summary,
-      sourceUrl: memory.sourceUrl,
-      fileUrl: memory.fileUrl,
-      imagePreview: memory.imagePreview,
-      syncStatus: 'pending',
-      updatedAt: new Date().toISOString(),
+  // ─── Try authenticated Supabase save; fall back to local on any error ───
+  // This ensures memories are NEVER lost even if the session expires,
+  // Supabase is unreachable, or getUser() throws.
+  try {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      // Not authenticated — fall back to local-only save
+      return saveMemoryLocally(memory)
     }
 
-    // Cache locally via IndexedDB
-    await cacheMemory(localMemory)
+    const { data, error } = await supabase
+      .from('memories')
+      .insert({
+        user_id: user.id,
+        type: memory.type,
+        title: memory.title,
+        content: memory.content,
+        summary: memory.summary,
+        tags: memory.tags,
+        source_url: memory.sourceUrl,
+        file_url: memory.fileUrl,
+        image_preview: memory.imagePreview,
+      })
+      .select()
+      .single()
 
-    // Queue for sync (when they log in later, it'll sync)
-    await addToSyncQueue({
-      type: 'create',
-      entityType: 'memory',
-      data: { ...memory, tempId: localId },
-      tempId: localId,
-      createdAt: new Date().toISOString(),
-    })
+    if (error) throw error
 
-    return localMemory
-  }
+    // Add to collection if specified
+    if (memory.collectionId && data) {
+      await supabase.from('memory_collections').insert({
+        memory_id: data.id,
+        collection_id: memory.collectionId,
+      })
+    }
 
-  const { data, error } = await supabase
-    .from('memories')
-    .insert({      user_id: user.id,
-      type: memory.type,
+    const savedMemory = mapMemoryFromDb(data)
+
+    // Cache the saved memory
+    await cacheMemory(savedMemory)
+
+    // Fire-and-forget: generate and store embedding for semantic search
+    // This never blocks the memory save and fails silently
+    storeEmbeddingFireAndForget(savedMemory.id, {
       title: memory.title,
       content: memory.content,
-      summary: memory.summary,
       tags: memory.tags,
-      source_url: memory.sourceUrl,
-      file_url: memory.fileUrl,
-      image_preview: memory.imagePreview,
-    })
-    .select()
-    .single()
+      aiSummary: memory.summary,
+    }).catch(() => {})
 
-  if (error) throw error
-
-  // Add to collection if specified
-  if (memory.collectionId && data) {
-    await supabase.from('memory_collections').insert({
-      memory_id: data.id,
-      collection_id: memory.collectionId,
-    })
+    return savedMemory
+  } catch (err) {
+    // Supabase save failed (expired session, network error, etc.)
+    // Fall back to local-only save so the memory is never lost.
+    console.warn('[Aether] Supabase save failed, saving locally:', err)
+    return saveMemoryLocally(memory)
   }
-
-  const savedMemory = mapMemoryFromDb(data)
-
-  // Cache the saved memory
-  await cacheMemory(savedMemory)
-
-  // Fire-and-forget: generate and store embedding for semantic search
-  // This never blocks the memory save and fails silently
-  storeEmbeddingFireAndForget(savedMemory.id, {
-    title: memory.title,
-    content: memory.content,
-    tags: memory.tags,
-    aiSummary: memory.summary,
-  }).catch(() => {})
-
-  return savedMemory
 }
 
 export async function updateMemoryById(id: string, updates: { content?: string; tags?: string[]; title?: string }) {
@@ -547,6 +530,52 @@ export async function exportAllMemories(): Promise<string> {
 }
 
 // ─── HELPERS ───
+
+/**
+ * Save a memory locally (IndexedDB + sync queue) when Supabase is unavailable
+ * or the user is not authenticated. Returns a Memory object with a `local-` prefix ID
+ * and `syncStatus: 'pending'` so it can be synced later.
+ */
+async function saveMemoryLocally(memory: {
+  type: string
+  title: string
+  content: string
+  summary?: string
+  tags: string[]
+  sourceUrl?: string
+  fileUrl?: string
+  imagePreview?: string
+}): Promise<Memory> {
+  const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+  const localMemory: Memory = {
+    id: localId,
+    type: memory.type as Memory['type'],
+    title: memory.title,
+    content: memory.content,
+    tags: memory.tags,
+    createdAt: new Date().toISOString(),
+    summary: memory.summary,
+    sourceUrl: memory.sourceUrl,
+    fileUrl: memory.fileUrl,
+    imagePreview: memory.imagePreview,
+    syncStatus: 'pending',
+    updatedAt: new Date().toISOString(),
+  }
+
+  // Cache locally via IndexedDB
+  await cacheMemory(localMemory)
+
+  // Queue for sync (when they log in later, it'll sync)
+  await addToSyncQueue({
+    type: 'create',
+    entityType: 'memory',
+    data: { ...memory, tempId: localId },
+    tempId: localId,
+    createdAt: new Date().toISOString(),
+  })
+
+  return localMemory
+}
 
 function mapMemoryFromDb(row: any): Memory {
   return {

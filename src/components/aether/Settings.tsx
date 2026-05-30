@@ -80,25 +80,10 @@ export function Settings() {
   // Delete account dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
-  // ──── Dark mode: sync class on mount AND read from localStorage ────
-  useEffect(() => {
-    try {
-      const settings = localStorage.getItem('aether-settings')
-      const parsed = settings ? JSON.parse(settings) : null
-      const isDark = parsed?.darkMode ?? localStorage.getItem('aether-dark-mode') === 'true'
-      if (isDark) {
-        document.documentElement.classList.add('dark')
-        document.documentElement.classList.remove('light')
-        if (!darkMode) setDarkMode(true)
-      } else {
-        document.documentElement.classList.remove('dark')
-        document.documentElement.classList.add('light')
-      }
-    } catch {
-      document.documentElement.classList.remove('dark')
-      document.documentElement.classList.add('light')
-    }
-  }, []) // Only on mount
+  // ──── Dark mode: DOM sync is handled by the blocking script in layout.tsx
+  // (initial paint) and the useEffect in page.tsx (ongoing sync with store).
+  // No additional mount-time sync needed here — handleDarkModeToggle below
+  // is the single source of truth for toggling.
 
   // ──── Profile handlers ────
   const handleEditStart = () => {

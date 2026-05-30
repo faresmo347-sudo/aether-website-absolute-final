@@ -18,6 +18,19 @@ import { useAetherStore } from '@/store/aether-store'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 import type { ChatMessage, MemoryType } from '@/components/aether/types'
 
+function getSupportedMimeType(): string {
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4',
+  ]
+  for (const type of types) {
+    if (MediaRecorder.isTypeSupported(type)) return type
+  }
+  return '' // let browser decide
+}
+
 const starterQuestions = [
   'What ideas did I save this week?',
   'What was that book recommendation?',
@@ -290,7 +303,10 @@ export function AskAether() {
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      const mimeType = getSupportedMimeType()
+      const mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream)
       audioChunksRef.current = []
 
       mediaRecorder.ondataavailable = (event) => {
@@ -303,7 +319,7 @@ export function AskAether() {
         // Stop all tracks to release microphone
         stream.getTracks().forEach((track) => track.stop())
 
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' })
 
         // Convert to base64
         const reader = new FileReader()
