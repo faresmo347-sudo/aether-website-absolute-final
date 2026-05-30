@@ -125,6 +125,10 @@ interface AetherState {
   collectionFilter: string | null
   setCollectionFilter: (id: string | null) => void
 
+  // Tag Filter
+  tagFilter: string | null
+  setTagFilter: (tag: string | null) => void
+
   // Chat
   chatMessages: ChatMessage[]
   addChatMessage: (msg: ChatMessage) => void
@@ -252,6 +256,10 @@ export const useAetherStore = create<AetherState>((set, get) => ({
   // Collection Filter
   collectionFilter: null,
   setCollectionFilter: (id) => set({ collectionFilter: id }),
+
+  // Tag Filter
+  tagFilter: null,
+  setTagFilter: (tag) => set({ tagFilter: tag }),
 
   // Chat — hydrated from localStorage
   chatMessages: initialChatMessages,

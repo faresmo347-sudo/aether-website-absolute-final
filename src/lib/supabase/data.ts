@@ -93,7 +93,16 @@ export async function fetchMemories(page: number = 0): Promise<{ memories: Memor
 
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { memories: [], hasMore: false }
+  if (!user) {
+    // Not authenticated — return cached memories from IndexedDB
+    const cached = await getCachedMemories()
+    const from = page * PAGE_SIZE
+    const to = from + PAGE_SIZE
+    return {
+      memories: cached.slice(from, to),
+      hasMore: to < cached.length,
+    }
+  }
 
   const from = page * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
@@ -174,12 +183,42 @@ export async function createMemory(memory: {
 
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  if (!user) {
+    // Not authenticated — fall back to local-only save
+    const localId = `local-${Date.now()}`
+    const localMemory: Memory = {
+      id: localId,
+      type: memory.type as Memory['type'],
+      title: memory.title,
+      content: memory.content,
+      tags: memory.tags,
+      createdAt: new Date().toISOString(),
+      summary: memory.summary,
+      sourceUrl: memory.sourceUrl,
+      fileUrl: memory.fileUrl,
+      imagePreview: memory.imagePreview,
+      syncStatus: 'pending',
+      updatedAt: new Date().toISOString(),
+    }
+
+    // Cache locally via IndexedDB
+    await cacheMemory(localMemory)
+
+    // Queue for sync (when they log in later, it'll sync)
+    await addToSyncQueue({
+      type: 'create',
+      entityType: 'memory',
+      data: { ...memory, tempId: localId },
+      tempId: localId,
+      createdAt: new Date().toISOString(),
+    })
+
+    return localMemory
+  }
 
   const { data, error } = await supabase
     .from('memories')
-    .insert({
-      user_id: user.id,
+    .insert({      user_id: user.id,
       type: memory.type,
       title: memory.title,
       content: memory.content,

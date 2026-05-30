@@ -75,7 +75,7 @@ const formatDate = (dateStr: string) => {
 /* ─────────── Collections Component ─────────── */
 
 export function Collections() {
-  const { setCurrentView, setCollectionFilter, collections, memories, addCollection } = useAetherStore()
+  const { setCurrentView, setCollectionFilter, setTagFilter, collections, memories, addCollection } = useAetherStore()
   const [createOpen, setCreateOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [selectedIcon, setSelectedIcon] = useState<string>('briefcase')
@@ -122,11 +122,13 @@ export function Collections() {
 
   const handleCollectionClick = (collection: Collection) => {
     setCollectionFilter(collection.id)
+    setTagFilter(null)
     setCurrentView('dashboard')
   }
 
-  const handleTagClick = () => {
+  const handleTagClick = (tagName: string) => {
     setCollectionFilter(null)
+    setTagFilter(tagName)
     setCurrentView('dashboard')
   }
 
@@ -238,7 +240,7 @@ export function Collections() {
                   transition={{ delay: index * 0.03, duration: 0.2 }}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={handleTagClick}
+                  onClick={() => handleTagClick(tag.name)}
                   className={`tap-feedback px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center bg-[#9D8BA7]/8 text-foreground hover:bg-[#9D8BA7]/15 active:bg-muted/50 ${
                     tag.count >= 6
                       ? 'text-base'

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, memo, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, ArrowLeft, FolderOpen, Loader2, Eye, Sparkles, ClipboardPaste, CheckSquare, Square, Camera } from 'lucide-react'
+import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, ArrowLeft, FolderOpen, Loader2, Eye, Sparkles, ClipboardPaste, CheckSquare, Square, Camera, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAetherStore } from '@/store/aether-store'
@@ -159,28 +159,46 @@ const EmptyState = memo(function EmptyState({ collectionName }: { collectionName
 // ---------- FilterBar (memoized) ----------
 
 const FilterBar = memo(function FilterBar() {
-  const { activeFilter, setActiveFilter, collectionFilter, setCollectionFilter, collections } = useAetherStore()
+  const { activeFilter, setActiveFilter, collectionFilter, setCollectionFilter, tagFilter, setTagFilter, collections } = useAetherStore()
 
   const activeCollection = useMemo(
     () => (collectionFilter ? collections.find((c) => c.id === collectionFilter) : null),
     [collectionFilter, collections]
   )
 
-  if (activeCollection) {
+  if (activeCollection || tagFilter) {
     return (
-      <div className="flex items-center gap-3 min-h-[44px]">
+      <div className="flex items-center gap-3 min-h-[44px] flex-wrap">
         <button
-          onClick={() => setCollectionFilter(null)}
+          onClick={() => {
+            setCollectionFilter(null)
+            setTagFilter(null)
+          }}
           className="tap-feedback flex items-center gap-1.5 text-sm text-[#9D8BA7] hover:text-[#7A6B85] transition-colors font-medium active:scale-[0.98] min-h-[44px]"
         >
           <ArrowLeft className="size-4" />
           All memories
         </button>
         <div className="h-4 w-px bg-border" />
-        <div className="flex items-center gap-2 bg-[#9D8BA7]/10 text-[#9D8BA7] text-sm px-3 py-1.5 rounded-full font-medium">
-          <FolderOpen className="size-3.5" />
-          {activeCollection.name}
-        </div>
+        {activeCollection && (
+          <div className="flex items-center gap-2 bg-[#9D8BA7]/10 text-[#9D8BA7] text-sm px-3 py-1.5 rounded-full font-medium">
+            <FolderOpen className="size-3.5" />
+            {activeCollection.name}
+          </div>
+        )}
+        {tagFilter && (
+          <div className="flex items-center gap-1.5 bg-[#9D8BA7]/10 text-[#9D8BA7] text-sm px-3 py-1.5 rounded-full font-medium">
+            <Tag className="size-3.5" />
+            {tagFilter}
+            <button
+              onClick={() => setTagFilter(null)}
+              className="ml-0.5 size-4 rounded-full flex items-center justify-center hover:bg-[#9D8BA7]/20 transition-colors"
+              aria-label="Clear tag filter"
+            >
+              <X className="size-3" />
+            </button>
+          </div>
+        )}
       </div>
     )
   }
@@ -496,6 +514,7 @@ function QuickCaptureModal() {
         tags: aiTags,
         taggingStatus: 'complete',
         createdAt: savedMemory.createdAt,
+        ...(savedMemory.syncStatus ? { syncStatus: savedMemory.syncStatus } : {}),
         ...(savedMemory.aiSummary ? { aiSummary: savedMemory.aiSummary } : {}),
         ...(savedMemory.source ? { source: savedMemory.source } : {}),
       })
@@ -1457,13 +1476,20 @@ function getSmartFallbackTags(content: string, type: string): string[] {
 // ---------- main Dashboard ----------
 
 export default function Dashboard() {
-  const { memories, activeFilter, collectionFilter, setSelectedMemoryId, setCurrentView, collections, isLoadingMemories } = useAetherStore()
+  const { memories, activeFilter, collectionFilter, tagFilter, setSelectedMemoryId, setCurrentView, collections, isLoadingMemories } = useAetherStore()
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set())
 
   const activeCollection = useMemo(
     () => (collectionFilter ? collections.find((c) => c.id === collectionFilter) : null),
     [collectionFilter, collections]
   )
+
+  // Determine the filter label for empty state
+  const filterLabel = useMemo(() => {
+    if (activeCollection) return activeCollection.name
+    if (tagFilter) return `#${tagFilter}`
+    return undefined
+  }, [activeCollection, tagFilter])
 
   // Extract actionable tasks from memory content
   const extractedTasks = useMemo(() => {
@@ -1523,10 +1549,14 @@ export default function Dashboard() {
       filtered = filtered.filter((m) => m.collectionId === collectionFilter)
     }
 
+    if (tagFilter) {
+      filtered = filtered.filter((m) => m.tags.includes(tagFilter))
+    }
+
     return [...filtered].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
-  }, [memories, activeFilter, collectionFilter])
+  }, [memories, activeFilter, collectionFilter, tagFilter])
 
   const handleMemoryClick = useCallback((id: string) => {
     setSelectedMemoryId(id)
@@ -1611,7 +1641,7 @@ export default function Dashboard() {
             ))}
           </div>
         ) : (
-          <EmptyState collectionName={activeCollection?.name} />
+          <EmptyState collectionName={filterLabel} />
         )}
       </div>
 

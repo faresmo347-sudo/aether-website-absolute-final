@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   Loader2,
   Plus,
+  AlertCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAetherStore } from '@/store/aether-store'
@@ -136,6 +137,15 @@ const ChatBubble = memo(function ChatBubble({
             </span>
           </div>
         )}
+
+        {message.confidence === 'low' && (
+          <div className="mt-2 flex items-start gap-1.5">
+            <AlertCircle size={11} className="text-muted-foreground/50 mt-0.5 flex-shrink-0" />
+            <span className="text-[11px] text-muted-foreground/50 leading-relaxed">
+              I&apos;m not very confident about this — try rephrasing your question
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -146,8 +156,12 @@ export function AskAether() {
   const { chatMessages, addChatMessage, isChatThinking, setChatThinking, memories, setCurrentView, setCaptureModalOpen } = useAetherStore()
   const isOnline = useOnlineStatus()
   const [input, setInput] = useState('')
+  const [isRecording, setIsRecording] = useState(false)
+  const [isTranscribing, setIsTranscribing] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
 
   // Memoize the memory list for lookup
   const memoryLookup = useMemo(
@@ -253,6 +267,8 @@ export function AskAether() {
         content: data.answer || "I couldn't find any relevant memories for your question.",
         referencedMemories: data.referencedIds || [],
         sourcesCount: data.sourcesCount || 0,
+        detectedMode: data.detectedMode,
+        confidence: data.confidence,
         timestamp: new Date().toISOString(),
       }
       addChatMessage(assistantMsg)
@@ -270,6 +286,74 @@ export function AskAether() {
       setChatThinking(false)
     }
   }, [addChatMessage, setChatThinking, memoriesForApi, chatHistoryForApi, isOnline, memories])
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach((track) => track.stop())
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+
+        // Convert to base64
+        const reader = new FileReader()
+        reader.onloadend = async () => {
+          const base64Audio = (reader.result as string).split(',')[1]
+          setIsTranscribing(true)
+
+          try {
+            const res = await fetch('/api/ai/transcribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ audio: base64Audio }),
+            })
+
+            const data = await res.json()
+            if (data.transcription?.trim()) {
+              setInput((prev) => (prev ? prev + ' ' + data.transcription.trim() : data.transcription.trim()))
+            }
+          } catch {
+            // Silently fail — transcription not critical
+          } finally {
+            setIsTranscribing(false)
+          }
+        }
+        reader.readAsDataURL(audioBlob)
+      }
+
+      mediaRecorderRef.current = mediaRecorder
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch {
+      // Microphone permission denied or not available
+      setIsRecording(false)
+    }
+  }, [])
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+    }
+  }, [])
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      stopRecording()
+    } else {
+      startRecording()
+    }
+  }, [isRecording, startRecording, stopRecording])
 
   const handleSend = useCallback(() => {
     processMessage(input)
@@ -398,11 +482,30 @@ export function AskAether() {
               />
               {/* Microphone button inside input */}
               <button
-                className="absolute right-3 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center text-muted-foreground hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 transition-colors duration-150 active:bg-[#9D8BA7]/10"
-                aria-label="Voice input"
+                onClick={toggleRecording}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center transition-all duration-200 ${
+                  isRecording
+                    ? 'text-red-500 bg-red-500/10'
+                    : 'text-muted-foreground hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 active:bg-[#9D8BA7]/10'
+                }`}
+                aria-label={isRecording ? 'Stop recording' : 'Voice input'}
               >
-                <Mic size={18} />
+                {isRecording ? (
+                  <span className="relative flex h-5 w-5 items-center justify-center">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-50" />
+                    <Mic size={18} className="relative" />
+                  </span>
+                ) : (
+                  <Mic size={18} />
+                )}
               </button>
+              {/* Transcribing indicator */}
+              {isTranscribing && (
+                <span className="absolute right-14 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 size={14} className="animate-spin" />
+                  <span className="hidden sm:inline">Transcribing…</span>
+                </span>
+              )}
             </div>
             <Button
               onClick={handleSend}
