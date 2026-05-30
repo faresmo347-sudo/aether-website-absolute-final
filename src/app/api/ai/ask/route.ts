@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
 import { AETHER_MASTER_PROMPT } from '@/lib/aether-prompt'
+import { generateEmbedding, isZeroVector } from '@/lib/embeddings'
+import { semanticSearchMemories } from '@/lib/supabase/data'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 interface MemoryData {
   id: string
@@ -18,11 +21,10 @@ interface ChatHistoryItem {
   content: string
 }
 
-/**
- * Score a memory's relevance to a query by counting how many query words
- * appear in its searchable fields (title, content, tags, aiSummary).
- * Uses case-insensitive matching and also checks partial word boundaries.
- */
+// ─────────────────────────────────────────────────────────
+// KEYWORD-BASED FALLBACK (used when semantic search fails)
+// ─────────────────────────────────────────────────────────
+
 function scoreMemoryRelevance(memory: MemoryData, queryWords: string[]): number {
   const searchable = [
     memory.title,
@@ -33,18 +35,15 @@ function scoreMemoryRelevance(memory: MemoryData, queryWords: string[]): number 
 
   let score = 0
   for (const word of queryWords) {
-    if (word.length < 2) continue // Skip tiny words
-    // Full word match gets higher weight
+    if (word.length < 2) continue
     const wordRegex = new RegExp(`\\b${escapeRegex(word)}\\b`, 'i')
     if (wordRegex.test(searchable)) {
       score += 3
     } else if (searchable.includes(word.toLowerCase())) {
-      // Partial match (substring) gets lower weight
       score += 1
     }
   }
 
-  // Bonus: if the title matches, it's extra relevant
   const titleLower = memory.title.toLowerCase()
   for (const word of queryWords) {
     if (word.length < 2) continue
@@ -60,11 +59,7 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-/**
- * Pre-filter memories by relevance to reduce noise sent to the LLM.
- * Returns the top N most relevant memories, or all if there are few.
- */
-function preFilterMemories(memories: MemoryData[], question: string, maxResults = 18): MemoryData[] {
+function preFilterMemories(memories: MemoryData[], question: string, maxResults = 10): MemoryData[] {
   if (memories.length <= maxResults) return memories
 
   const queryWords = question
@@ -72,37 +67,30 @@ function preFilterMemories(memories: MemoryData[], question: string, maxResults 
     .split(/\s+/)
     .filter((w) => w.length >= 2 && !STOP_WORDS.has(w))
 
-  // If no meaningful query words after filtering, return all memories (up to max)
   if (queryWords.length === 0) {
     return memories.slice(0, maxResults)
   }
 
-  // Score each memory
   const scored = memories.map((m) => ({
     memory: m,
     score: scoreMemoryRelevance(m, queryWords),
   }))
 
-  // Sort by score descending, then by date (newer first) for ties
   scored.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score
     return new Date(b.memory.createdAt).getTime() - new Date(a.memory.createdAt).getTime()
   })
 
-  // Take top results, but always include at least some with score > 0 if they exist
   const topScored = scored.slice(0, maxResults)
 
-  // If we have memories with score > 0, filter out zeros but keep at least 5 for context
   const withScore = topScored.filter((s) => s.score > 0)
-  if (withScore.length >= 5) {
+  if (withScore.length >= 3) {
     return withScore.map((s) => s.memory)
   }
 
-  // Otherwise return all top N (even zeros) so the AI has some context
   return topScored.map((s) => s.memory)
 }
 
-// Common stop words to ignore during relevance scoring
 const STOP_WORDS = new Set([
   'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
   'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
@@ -117,6 +105,71 @@ const STOP_WORDS = new Set([
   'your', 'he', 'him', 'his', 'she', 'her', 'they', 'them', 'their',
   'what', 'which', 'who', 'whom', 'and', 'but', 'or', 'if', 'while',
 ])
+
+// ─────────────────────────────────────────────────────────
+// SEMANTIC SEARCH: Try pgvector first, fall back to keyword
+// ─────────────────────────────────────────────────────────
+
+/**
+ * Attempt semantic search using pgvector embeddings.
+ * Returns the matched memories or null if semantic search is unavailable.
+ */
+async function trySemanticSearch(
+  question: string,
+  clientMemories: MemoryData[]
+): Promise<{ memories: MemoryData[]; source: 'semantic' | 'keyword' } | null> {
+  // Step 1: Generate embedding for the question
+  const queryEmbedding = await generateEmbedding(question)
+
+  // If embedding generation failed (zero vector), skip semantic search
+  if (isZeroVector(queryEmbedding)) {
+    return null
+  }
+
+  // Step 2: Get the authenticated user ID for the Supabase query
+  try {
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      // Not authenticated — can't use server-side semantic search
+      // Fall back to client-side keyword filtering
+      return null
+    }
+
+    // Step 3: Call the match_memories RPC function
+    const matched = await semanticSearchMemories(user.id, queryEmbedding, 10, 0.25)
+
+    if (matched.length > 0) {
+      // Convert the Supabase Memory objects back to MemoryData format
+      const semanticMemories: MemoryData[] = matched.map((m) => ({
+        id: m.id,
+        type: m.type,
+        title: m.title,
+        content: m.content,
+        tags: m.tags,
+        createdAt: m.createdAt,
+        aiSummary: m.aiSummary,
+        collectionId: m.collectionId,
+      }))
+
+      return { memories: semanticMemories, source: 'semantic' }
+    }
+
+    // Semantic search returned 0 results — could mean:
+    // 1. No memories have embeddings yet (need backfill)
+    // 2. No memories match the threshold
+    // Fall back to keyword search
+    return null
+  } catch (error) {
+    console.warn('[Aether] Semantic search error, falling back to keyword:', error)
+    return null
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// MAIN ASK ROUTE
+// ─────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
@@ -134,7 +187,7 @@ export async function POST(req: NextRequest) {
     const hasHistory = chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0
     const conversationContext = hasHistory
       ? `\nRECENT CONVERSATION (what you and the user have been talking about):\n${chatHistory!
-          .slice(-10) // Last 10 messages max
+          .slice(-10)
           .map((msg) => `${msg.role === 'user' ? 'User' : 'Aether'}: ${msg.content}`)
           .join('\n')}\n`
       : ''
@@ -165,7 +218,6 @@ Respond with JSON:
         { role: 'system', content: AETHER_MASTER_PROMPT },
       ]
 
-      // Include chat history as actual conversation messages for better context
       if (hasHistory) {
         for (const msg of chatHistory!.slice(-8)) {
           messages.push({
@@ -205,12 +257,25 @@ Respond with JSON:
       return NextResponse.json(result)
     }
 
-    // Pre-filter memories by relevance to reduce noise
-    const filteredMemories = preFilterMemories(memories, question, 18)
+    // ──── SEMANTIC SEARCH (primary) with KEYWORD FALLBACK ────
+    let filteredMemories: MemoryData[]
+    let searchMethod: 'semantic' | 'keyword' = 'keyword'
+
+    const semanticResult = await trySemanticSearch(question, memories)
+
+    if (semanticResult) {
+      // Semantic search returned results — use them
+      filteredMemories = semanticResult.memories
+      searchMethod = semanticResult.source
+    } else {
+      // Semantic search unavailable or returned 0 results — fall back to keyword pre-filter
+      filteredMemories = preFilterMemories(memories, question, 10)
+      searchMethod = 'keyword'
+    }
 
     const groq = getGroqClient()
 
-    // Format memories for the LLM context — image memories get special prefix for searchability
+    // Format memories for the LLM context
     const memoriesContext = filteredMemories
       .map((m) => {
         const date = new Date(m.createdAt).toLocaleDateString('en-US', {
@@ -223,7 +288,11 @@ Respond with JSON:
       })
       .join('\n')
 
-    const userPrompt = `The user has ${filteredMemories.length} saved memories (pre-filtered from ${memories.length} total by relevance). Here they are:
+    const searchLabel = searchMethod === 'semantic'
+      ? 'semantic similarity search (embeddings + cosine similarity)'
+      : 'keyword relevance scoring'
+
+    const userPrompt = `The user has ${memories.length} total memories. Using ${searchLabel}, I found the ${filteredMemories.length} most relevant ones:
 
 ${memoriesContext}
 ${conversationContext}
@@ -300,11 +369,10 @@ ALWAYS respond with the JSON format specified in your system instructions.`
     let result = parseAIResponse(responseText)
 
     if (!result || !result.answer) {
-      // Fallback: try to extract any readable text as the answer
       const fallbackAnswer = responseText
         .replace(/```json?\n?/g, '')
         .replace(/```/g, '')
-        .replace(/^\s*\{[\s\S]*\}\s*$/g, '') // Try to strip JSON
+        .replace(/^\s*\{[\s\S]*\}\s*$/g, '')
         .trim()
 
       result = {
@@ -326,10 +394,9 @@ ALWAYS respond with the JSON format specified in your system instructions.`
 
     result.sourcesCount = result.referencedIds.length
 
-    // Validate detectedMode — ensure it's one of the allowed values
+    // Validate detectedMode
     const validModes = ['memory-search', 'conversation', 'both']
     if (!result.detectedMode || !validModes.includes(result.detectedMode)) {
-      // Infer mode from referencedIds
       if (result.referencedIds.length > 0 && result.answer.length > 0) {
         result.detectedMode = 'both'
       } else if (result.referencedIds.length > 0) {
@@ -339,11 +406,9 @@ ALWAYS respond with the JSON format specified in your system instructions.`
       }
     }
 
-    // Validate confidence — ensure it's one of the allowed values
+    // Validate confidence
     const validConfidences = ['high', 'medium', 'low']
     if (!result.confidence || !validConfidences.includes(result.confidence)) {
-      // Infer confidence: if no memories referenced but answer exists, it's conversation (high)
-      // If memories referenced, default to medium
       if (result.referencedIds.length > 0) {
         result.confidence = 'medium'
       } else {
@@ -371,20 +436,17 @@ ALWAYS respond with the JSON format specified in your system instructions.`
 function parseAIResponse(responseText: string): Record<string, unknown> | null {
   if (!responseText) return null
 
-  // Strategy 1: Find a JSON block in the response
   const jsonMatch = responseText.match(/\{[\s\S]*\}/)
   if (jsonMatch) {
     try {
       return JSON.parse(jsonMatch[0])
     } catch {
-      // Strategy 2: Try to fix common JSON issues (trailing commas, etc.)
       try {
         const cleaned = jsonMatch[0]
-          .replace(/,\s*([}\]])/g, '$1') // Remove trailing commas
-          .replace(/'/g, '"') // Replace single quotes with double quotes
+          .replace(/,\s*([}\]])/g, '$1')
+          .replace(/'/g, '"')
         return JSON.parse(cleaned)
       } catch {
-        // Strategy 3: Try to extract just the "answer" field value as a fallback
         const answerMatch = responseText.match(/"answer"\s*:\s*"((?:[^"\\]|\\.)*)"/)
         if (answerMatch) {
           return {

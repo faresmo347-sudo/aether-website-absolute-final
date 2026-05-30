@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS public.memories (
   source_url TEXT,
   file_url TEXT,
   image_preview TEXT,
+  embedding public.vector(384),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -64,6 +65,86 @@ CREATE TABLE IF NOT EXISTS public.memories (
 CREATE INDEX IF NOT EXISTS idx_memories_user_id ON public.memories(user_id);
 CREATE INDEX IF NOT EXISTS idx_memories_created_at ON public.memories(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_memories_type ON public.memories(user_id, type);
+
+-- Enable pgvector extension for semantic search
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+
+-- IVFFlat index for fast ANN search on embeddings
+CREATE INDEX IF NOT EXISTS idx_memories_embedding
+  ON public.memories
+  USING ivfflat (embedding public.vector_cosine_ops)
+  WITH (lists = 100);
+
+-- Semantic search function: finds top N most similar memories using cosine similarity
+CREATE OR REPLACE FUNCTION public.match_memories(
+  query_embedding public.vector(384),
+  matching_user_id UUID,
+  match_count INT DEFAULT 10,
+  match_threshold FLOAT DEFAULT 0.3
+)
+RETURNS TABLE (
+  id UUID,
+  user_id UUID,
+  type TEXT,
+  title TEXT,
+  content TEXT,
+  summary TEXT,
+  tags TEXT[],
+  source_url TEXT,
+  file_url TEXT,
+  image_preview TEXT,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ,
+  similarity FLOAT
+)
+LANGUAGE plpgsql STABLE
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    m.id,
+    m.user_id,
+    m.type,
+    m.title,
+    m.content,
+    m.summary,
+    m.tags,
+    m.source_url,
+    m.file_url,
+    m.image_preview,
+    m.created_at,
+    m.updated_at,
+    1 - (m.embedding <=> query_embedding) AS similarity
+  FROM public.memories m
+  WHERE m.user_id = matching_user_id
+    AND m.embedding IS NOT NULL
+    AND (1 - (m.embedding <=> query_embedding)) >= match_threshold
+  ORDER BY m.embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$$;
+
+-- Helper function to update a memory's embedding (used by backfill and save flow)
+CREATE OR REPLACE FUNCTION public.update_memory_embedding(
+  memory_id UUID,
+  new_embedding public.vector(384)
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  UPDATE public.memories
+  SET embedding = new_embedding
+  WHERE id = memory_id;
+END;
+$$;
+
+-- Grant permissions for embedding functions
+GRANT EXECUTE ON FUNCTION public.match_memories TO authenticated;
+GRANT EXECUTE ON FUNCTION public.match_memories TO anon;
+GRANT EXECUTE ON FUNCTION public.update_memory_embedding TO authenticated;
+GRANT EXECUTE ON FUNCTION public.update_memory_embedding TO anon;
 
 -- 3. COLLECTIONS TABLE
 CREATE TABLE IF NOT EXISTS public.collections (

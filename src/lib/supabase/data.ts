@@ -246,6 +246,15 @@ export async function createMemory(memory: {
   // Cache the saved memory
   await cacheMemory(savedMemory)
 
+  // Fire-and-forget: generate and store embedding for semantic search
+  // This never blocks the memory save and fails silently
+  storeEmbeddingFireAndForget(savedMemory.id, {
+    title: memory.title,
+    content: memory.content,
+    tags: memory.tags,
+    aiSummary: memory.summary,
+  }).catch(() => {})
+
   return savedMemory
 }
 
@@ -278,6 +287,53 @@ export async function updateMemoryById(id: string, updates: { content?: string; 
     .eq('id', id)
 
   if (error) throw error
+
+  // Fire-and-forget: regenerate embedding if content/tags/title changed
+  if (updates.content || updates.tags || updates.title) {
+    // We need to get the full memory to build the embedding text
+    // But since this is fire-and-forget, we can fetch it asynchronously
+    regenerateEmbeddingFireAndForget(id).catch(() => {})
+  }
+}
+
+/**
+ * Regenerate the embedding for a memory after it's been updated.
+ * Fetches the current memory data, builds embedding text, and stores it.
+ */
+async function regenerateEmbeddingFireAndForget(memoryId: string): Promise<void> {
+  try {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('memories')
+      .select('title, content, tags, summary')
+      .eq('id', memoryId)
+      .single()
+
+    if (!data) return
+
+    const { generateEmbedding, buildMemoryEmbeddingText, isZeroVector } = await import('@/lib/embeddings')
+
+    const textToEmbed = buildMemoryEmbeddingText({
+      title: data.title || '',
+      content: data.content || '',
+      tags: data.tags || [],
+      aiSummary: data.summary || undefined,
+    })
+    const embedding = await generateEmbedding(textToEmbed)
+
+    if (isZeroVector(embedding)) return
+
+    const { error } = await supabase.rpc('update_memory_embedding', {
+      memory_id: memoryId,
+      new_embedding: embedding,
+    })
+
+    if (error) {
+      console.warn('[Aether] Failed to update embedding:', error.message)
+    }
+  } catch (error) {
+    console.warn('[Aether] Embedding regeneration failed:', error)
+  }
 }
 
 export async function deleteMemoryById(id: string) {
@@ -527,4 +583,78 @@ export async function getOfflineMemoryCount(): Promise<number> {
 
 export async function getOfflineSyncQueueCount(): Promise<number> {
   return getSyncQueueCount()
+}
+
+// ─── Embeddings / Semantic Search ───
+
+/**
+ * Fire-and-forget: generate an embedding for a memory and store it in Supabase.
+ * This is called after a memory is created and should NEVER block the save flow.
+ * If the embedding fails, the memory is still saved — it just won't be in semantic search
+ * until a backfill is run.
+ */
+async function storeEmbeddingFireAndForget(
+  memoryId: string,
+  memoryData: { title: string; content: string; tags: string[]; aiSummary?: string }
+): Promise<void> {
+  try {
+    const { generateEmbedding, buildMemoryEmbeddingText, isZeroVector } = await import('@/lib/embeddings')
+
+    const textToEmbed = buildMemoryEmbeddingText(memoryData)
+    const embedding = await generateEmbedding(textToEmbed)
+
+    // Don't store zero vectors (means generation failed)
+    if (isZeroVector(embedding)) return
+
+    const supabase = createClient()
+
+    // Use the service role approach — call the update_memory_embedding function
+    // which runs as SECURITY DEFINER
+    const { error } = await supabase.rpc('update_memory_embedding', {
+      memory_id: memoryId,
+      new_embedding: embedding,
+    })
+
+    if (error) {
+      console.warn('[Aether] Failed to store embedding:', error.message)
+    }
+  } catch (error) {
+    // Silently fail — embeddings are non-critical
+    console.warn('[Aether] Embedding storage failed:', error)
+  }
+}
+
+/**
+ * Semantic search: find memories similar to a query using pgvector.
+ * Falls back to empty array if embeddings are not available.
+ * This is called from the server-side AI ask route.
+ */
+export async function semanticSearchMemories(
+  userId: string,
+  queryEmbedding: number[],
+  matchCount: number = 10,
+  matchThreshold: number = 0.3
+): Promise<Memory[]> {
+  try {
+    const supabase = createClient()
+
+    const { data, error } = await supabase.rpc('match_memories', {
+      query_embedding: queryEmbedding,
+      matching_user_id: userId,
+      match_count: matchCount,
+      match_threshold: matchThreshold,
+    })
+
+    if (error) {
+      console.warn('[Aether] Semantic search RPC failed:', error.message)
+      return []
+    }
+
+    if (!data || !Array.isArray(data)) return []
+
+    return data.map((row: any) => mapMemoryFromDb(row))
+  } catch (error) {
+    console.warn('[Aether] Semantic search failed:', error)
+    return []
+  }
 }
