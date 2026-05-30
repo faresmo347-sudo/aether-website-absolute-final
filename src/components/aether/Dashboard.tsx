@@ -6,7 +6,7 @@ import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, ArrowLeft, Fol
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAetherStore } from '@/store/aether-store'
-import { createMemory, getMemoryCount } from '@/lib/supabase/data'
+import { createMemory, getMemoryCount, updateMemoryById } from '@/lib/supabase/data'
 import { getCachedTags, setCachedTags } from '@/lib/tag-cache'
 import type { Memory, MemoryType } from '@/components/aether/types'
 
@@ -64,6 +64,10 @@ function formatDate(iso: string): string {
 const MemoryCard = memo(function MemoryCard({ memory, onClick }: { memory: Memory; onClick: () => void }) {
   const isTagging = memory.taggingStatus === 'tagging' || memory.taggingStatus === 'pending'
   const isSyncing = memory.syncStatus === 'pending' || memory.syncStatus === 'syncing'
+  // For link memories, strip the [From SiteName] prefix from the preview
+  const previewContent = memory.type === 'link'
+    ? memory.content.replace(/^\[From\s+.+?\]\s*\n*/, '').trim() || memory.content
+    : memory.content
 
   return (
     <button
@@ -79,7 +83,7 @@ const MemoryCard = memo(function MemoryCard({ memory, onClick }: { memory: Memor
             {memory.title}
           </h3>
           <p className="text-muted-foreground text-xs mt-1 line-clamp-2 leading-relaxed overflow-hidden" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-            {memory.content}
+            {previewContent}
           </p>
           <div className="flex items-center justify-between mt-3 gap-2">
             <div className="flex items-center gap-1.5 overflow-hidden">
@@ -456,7 +460,7 @@ function QuickCaptureModal() {
       taggingStatus: isOffline ? 'complete' : 'pending', // Skip AI tagging when offline
       syncStatus: isOffline ? 'pending' : 'synced', // Mark as pending sync when offline
       ...(aiSummary ? { aiSummary } : {}),
-      ...(activeCaptureTab === 'link' && linkUrl ? { source: linkUrl } : {}),
+      ...(activeCaptureTab === 'link' && linkUrl ? { source: linkUrl, sourceUrl: linkUrl } : {}),
       ...(activeCaptureTab === 'image' && imagePreview ? { imagePreview } : {}),
     })
 
@@ -503,34 +507,122 @@ function QuickCaptureModal() {
         }
       }
 
-      const [savedMemory, aiTags] = await Promise.all([
-        createMemory({
-          type: activeCaptureTab,
-          title,
-          content,
-          tags: fallbackTags,
-          ...(aiSummary ? { summary: aiSummary } : {}),
-          ...(activeCaptureTab === 'link' && linkUrl ? { sourceUrl: linkUrl } : {}),
-          ...(activeCaptureTab === 'image' && imagePreview ? { imagePreview } : {}),
-        }),
-        // For image type with pre-existing tags, skip AI tagging
-        activeCaptureTab === 'image' && imageTags.length > 0
-          ? Promise.resolve(imageTags)
-          : generateTags(content, activeCaptureTab, voiceSummary || undefined, imageDescription || undefined),
-      ])
+      // ─── LINK ENRICHMENT FLOW ───
+      // For link memories, fetch page content first, then use it for better tags & insights
+      if (activeCaptureTab === 'link' && linkUrl) {
+        // Step A: Fetch link content AND save to Supabase in parallel
+        const [linkResult, savedMemory] = await Promise.all([
+          fetch('/api/ai/fetch-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: linkUrl }),
+          })
+            .then((r) => r.json())
+            .catch(() => ({ success: false, title: '', description: '', content: '', siteName: '', image: '' })),
+          createMemory({
+            type: 'link',
+            title,
+            content,
+            tags: fallbackTags,
+            sourceUrl: linkUrl,
+          }),
+        ])
 
-      clearTimeout(taggingTimeout)
+        // Step B: Build enriched content from link fetch results
+        let enrichedContent = content // default: raw URL
+        let enrichedTitle = title // default: "Saved link"
+        let enrichedImage = ''
+        let siteName = ''
 
-      // Step 6: Update memory with real ID from Supabase and real AI tags
-      updateMemory(tempId, {
-        id: savedMemory.id,
-        tags: aiTags,
-        taggingStatus: 'complete',
-        createdAt: savedMemory.createdAt,
-        ...(savedMemory.syncStatus ? { syncStatus: savedMemory.syncStatus } : {}),
-        ...(savedMemory.aiSummary ? { aiSummary: savedMemory.aiSummary } : {}),
-        ...(savedMemory.source ? { source: savedMemory.source } : {}),
-      })
+        if (linkResult.success) {
+          siteName = linkResult.siteName || ''
+          enrichedImage = linkResult.image || ''
+          enrichedTitle = linkResult.title || title
+
+          // Combine site name, description, and body text into enriched content
+          const parts: string[] = []
+          if (siteName) parts.push(`[From ${siteName}]`)
+          if (linkResult.description) parts.push(linkResult.description)
+          if (linkResult.content) parts.push(linkResult.content)
+          enrichedContent = parts.join('\n\n') || content
+        }
+
+        // Step C: Generate AI tags and insight with enriched content (not the raw URL)
+        const tagContent = enrichedContent === content ? linkUrl : enrichedContent
+        const [aiTags, insightResult] = await Promise.all([
+          generateTags(tagContent, 'link'),
+          fetch('/api/ai/insights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: tagContent,
+              type: 'link',
+              tags: fallbackTags,
+              title: enrichedTitle,
+            }),
+          })
+            .then((r) => r.json())
+            .catch(() => ({ insight: '' })),
+        ])
+
+        clearTimeout(taggingTimeout)
+
+        // Step D: Update memory in store with all enriched data
+        updateMemory(tempId, {
+          id: savedMemory.id,
+          title: enrichedTitle !== 'Saved link' ? enrichedTitle : title,
+          content: enrichedContent,
+          tags: aiTags,
+          taggingStatus: 'complete',
+          createdAt: savedMemory.createdAt,
+          ...(savedMemory.syncStatus ? { syncStatus: savedMemory.syncStatus } : {}),
+          ...(savedMemory.source ? { source: savedMemory.source } : {}),
+          ...(siteName ? { siteName } : {}),
+          ...(enrichedImage ? { linkImage: enrichedImage, imagePreview: enrichedImage } : {}),
+          ...(insightResult.insight ? { aiSummary: insightResult.insight } : {}),
+        })
+
+        // Step E: Update Supabase with enriched data (fire-and-forget)
+        updateMemoryById(savedMemory.id, {
+          title: enrichedTitle !== 'Saved link' ? enrichedTitle : title,
+          content: enrichedContent,
+          tags: aiTags,
+          ...(insightResult.insight ? { summary: insightResult.insight } : {}),
+          ...(enrichedImage ? { imagePreview: enrichedImage } : {}),
+        }).catch(() => {
+          // Supabase update failed silently — store is already updated locally
+        })
+      } else {
+        // ─── STANDARD FLOW (text, voice, image) ───
+        const [savedMemory, aiTags] = await Promise.all([
+          createMemory({
+            type: activeCaptureTab,
+            title,
+            content,
+            tags: fallbackTags,
+            ...(aiSummary ? { summary: aiSummary } : {}),
+            ...(activeCaptureTab === 'link' && linkUrl ? { sourceUrl: linkUrl } : {}),
+            ...(activeCaptureTab === 'image' && imagePreview ? { imagePreview } : {}),
+          }),
+          // For image type with pre-existing tags, skip AI tagging
+          activeCaptureTab === 'image' && imageTags.length > 0
+            ? Promise.resolve(imageTags)
+            : generateTags(content, activeCaptureTab, voiceSummary || undefined, imageDescription || undefined),
+        ])
+
+        clearTimeout(taggingTimeout)
+
+        // Step 6: Update memory with real ID from Supabase and real AI tags
+        updateMemory(tempId, {
+          id: savedMemory.id,
+          tags: aiTags,
+          taggingStatus: 'complete',
+          createdAt: savedMemory.createdAt,
+          ...(savedMemory.syncStatus ? { syncStatus: savedMemory.syncStatus } : {}),
+          ...(savedMemory.aiSummary ? { aiSummary: savedMemory.aiSummary } : {}),
+          ...(savedMemory.source ? { source: savedMemory.source } : {}),
+        })
+      }
     } catch (error: any) {
       clearTimeout(taggingTimeout)
 

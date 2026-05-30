@@ -22,6 +22,9 @@ export interface Memory {
   sourceUrl?: string
   fileUrl?: string
   updatedAt?: string
+  // Link enrichment fields
+  siteName?: string
+  linkImage?: string
 }
 
 export interface Collection {

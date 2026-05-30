@@ -58,6 +58,29 @@ function formatDate(dateStr: string): string {
   })
 }
 
+/**
+ * Parse the site name from enriched link content.
+ * Looks for the "[From SiteName]" pattern at the start of content,
+ * or falls back to the memory.siteName field.
+ */
+function parseSiteName(memory: Memory): string | null {
+  if (memory.siteName) return memory.siteName
+  if (memory.type !== 'link') return null
+
+  // Try to extract [From SiteName] from the beginning of content
+  const match = memory.content.match(/^\[From\s+(.+?)\]/)
+  if (match) return match[1]
+
+  return null
+}
+
+/**
+ * Strip the [From SiteName] prefix from content for display.
+ */
+function stripSiteNamePrefix(content: string): string {
+  return content.replace(/^\[From\s+.+?\]\s*\n*/, '').trim()
+}
+
 /* ─────────── Related Memory Card ─────────── */
 function RelatedMemoryCard({ memory, onClick }: { memory: Memory; onClick: () => void }) {
   const config = typeConfig[memory.type]
@@ -295,6 +318,8 @@ export function MemoryDetail() {
 
   const config = typeConfig[memory.type]
   const TypeIcon = config.icon
+  const siteName = parseSiteName(memory)
+  const displayContent = memory.type === 'link' ? stripSiteNamePrefix(memory.content) : memory.content
 
   return (
     <motion.div
@@ -329,6 +354,12 @@ export function MemoryDetail() {
               <h1 className="text-lg sm:text-3xl font-bold text-foreground leading-tight">
                 {memory.title}
               </h1>
+              {/* Site name badge for link memories */}
+              {memory.type === 'link' && siteName && (
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium">
+                  From {siteName}
+                </p>
+              )}
             </div>
           </div>
 
@@ -345,7 +376,19 @@ export function MemoryDetail() {
               <TypeIcon size={12} className="mr-1" />
               {config.label}
             </Badge>
-            {memory.source && (
+            {/* Open Link button for link memories */}
+            {memory.type === 'link' && (memory.source || memory.sourceUrl) && (
+              <a
+                href={memory.source || memory.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] hover:bg-[#9D8BA7] hover:text-white px-3 py-1.5 rounded-lg transition-all duration-300"
+              >
+                <ExternalLink size={12} />
+                Open Link
+              </a>
+            )}
+            {memory.type !== 'link' && memory.source && (
               <a
                 href={memory.source}
                 target="_blank"
@@ -358,6 +401,34 @@ export function MemoryDetail() {
               </a>
             )}
           </div>
+
+          {/* ── Link Preview Card ── */}
+          {memory.type === 'link' && (memory.linkImage || memory.imagePreview) && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.11, duration: 0.3 }}
+              className="mb-4 sm:mb-6"
+            >
+              <div
+                className="rounded-xl overflow-hidden border border-border cursor-pointer group"
+                onClick={() => {
+                  const url = memory.source || memory.sourceUrl
+                  if (url) window.open(url, '_blank', 'noopener,noreferrer')
+                }}
+              >
+                <img
+                  src={memory.linkImage || memory.imagePreview}
+                  alt={memory.title}
+                  className="w-full max-h-[200px] object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                  onError={(e) => {
+                    // Hide broken images
+                    ;(e.target as HTMLImageElement).style.display = 'none'
+                  }}
+                />
+              </div>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* ── AI Insights ── */}
@@ -501,24 +572,28 @@ export function MemoryDetail() {
                 </div>
               )}
 
-              {/* Link memories: show original URL */}
+              {/* Link memories: show original URL and extracted content */}
               {memory.type === 'link' && (
                 <div className="space-y-3 overflow-hidden">
-                  {memory.source && (
-                    <a
-                      href={memory.source}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-[#9D8BA7] hover:text-[#6D597A] underline underline-offset-2 transition-colors duration-300 break-all max-w-full overflow-hidden"
-                    >
-                      <Link2 size={14} className="shrink-0" />
-                      <span className="break-all">{memory.source}</span>
-                      <ExternalLink size={12} className="shrink-0" />
-                    </a>
+                  {(memory.source || memory.sourceUrl) && (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={memory.source || memory.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-[#9D8BA7] hover:text-[#6D597A] underline underline-offset-2 transition-colors duration-300 break-all max-w-full overflow-hidden"
+                      >
+                        <Link2 size={14} className="shrink-0" />
+                        <span className="break-all">{memory.source || memory.sourceUrl}</span>
+                        <ExternalLink size={12} className="shrink-0" />
+                      </a>
+                    </div>
                   )}
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-all overflow-hidden">
-                    {memory.content}
-                  </p>
+                  {displayContent && displayContent !== (memory.source || memory.sourceUrl) && (
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-all overflow-hidden">
+                      {displayContent}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -569,7 +644,7 @@ export function MemoryDetail() {
           ) : (
             <div className="rounded-2xl bg-card border border-border p-3 sm:p-6 shadow-sm">
               <p className="text-foreground text-base leading-relaxed whitespace-pre-wrap">
-                {memory.content}
+                {displayContent}
               </p>
             </div>
           )}
