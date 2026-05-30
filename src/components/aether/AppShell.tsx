@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, memo, useMemo, useEffect } from 'react'
-import { Brain, FolderOpen, Settings, Search, Plus, Home, WifiOff, Cloud, CheckCircle2, Sparkles, Map } from 'lucide-react'
+import { Brain, FolderOpen, Settings, Search, Plus, Home, WifiOff, Cloud, CheckCircle2, Sparkles, CalendarDays } from 'lucide-react'
 import { useAetherStore } from '@/store/aether-store'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -21,13 +21,14 @@ const desktopNavItems: NavItem[] = [
   { label: 'Home', icon: Home, view: 'dashboard' },
   { label: 'Ask Aether', icon: Brain, view: 'ask-aether' },
   { label: 'Collections', icon: FolderOpen, view: 'collections' },
+  { label: 'Recaps', icon: CalendarDays, view: 'recaps' },
   { label: 'Constellations', icon: Sparkles, view: 'constellations' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
 
 const mobileNavItems: NavItem[] = [
   { label: 'Home', icon: Home, view: 'dashboard' },
-  { label: 'Ask', icon: Brain, view: 'ask-aether' },
+  { label: 'Collections', icon: FolderOpen, view: 'collections' },
   { label: 'Capture', icon: Plus, view: 'dashboard', isCapture: true },
   { label: 'Stars', icon: Sparkles, view: 'constellations' },
   { label: 'Settings', icon: Settings, view: 'settings' },
@@ -89,6 +90,9 @@ const SidebarNavItem = memo(function SidebarNavItem({
         }`}
       />
       <span className="truncate">{item.label}</span>
+      {item.view === 'constellations' && !isActive && (
+        <span className="ml-auto text-[9px] font-bold tracking-wide uppercase bg-[#9D8BA7]/15 text-[#9D8BA7] px-1.5 py-0.5 rounded-full">New</span>
+      )}
     </button>
   )
 })
