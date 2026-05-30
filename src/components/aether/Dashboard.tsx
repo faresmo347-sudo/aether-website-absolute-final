@@ -72,17 +72,17 @@ const MemoryCard = memo(function MemoryCard({ memory, onClick }: { memory: Memor
   return (
     <button
       onClick={onClick}
-      className="tap-feedback card-contain w-full text-left bg-card rounded-2xl p-4 shadow-sm border border-border transition-all duration-200 hover:-translate-y-0 md:hover:-translate-y-0.5 hover:shadow-lg cursor-pointer group active:scale-[0.98]"
+      className="tap-feedback card-contain w-full text-left bg-gradient-to-b from-card to-[#9D8BA7]/[0.03] rounded-2xl p-4 shadow-sm border border-border transition-all duration-200 hover:-translate-y-0 md:hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(157,139,167,0.15)] cursor-pointer group active:scale-95"
     >
       <div className="flex items-start gap-3">
         <div className="flex items-center justify-center size-9 rounded-xl bg-[#9D8BA7]/10 shrink-0 mt-0.5">
           {typeIcon(memory.type)}
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-bold text-foreground text-sm leading-snug truncate group-hover:text-[#9D8BA7] transition-colors">
+          <h3 className="font-semibold text-foreground text-[15px] leading-snug truncate group-hover:text-[#9D8BA7] transition-colors">
             {memory.title}
           </h3>
-          <p className="text-muted-foreground text-xs mt-1 line-clamp-2 leading-relaxed overflow-hidden" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+          <p className="text-muted-foreground text-xs mt-1 line-clamp-2 leading-[1.65] overflow-hidden" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
             {previewContent}
           </p>
           <div className="flex items-center justify-between mt-3 gap-2">
@@ -90,7 +90,7 @@ const MemoryCard = memo(function MemoryCard({ memory, onClick }: { memory: Memor
               {memory.tags.slice(0, 3).map((tag, i) => (
                 <span
                   key={tag}
-                  className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap transition-all duration-500 ${
+                  className={`text-[10px] px-3 py-1 rounded-full whitespace-nowrap transition-all duration-500 ${
                     isTagging
                       ? 'bg-[#9D8BA7]/5 text-[#9D8BA7]/40 animate-pulse'
                       : 'bg-[#9D8BA7]/10 text-[#9D8BA7]'
@@ -121,7 +121,7 @@ const MemoryCard = memo(function MemoryCard({ memory, onClick }: { memory: Memor
                 </span>
               )}
             </div>
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+            <span className="text-[10px] text-muted-foreground/40 whitespace-nowrap shrink-0">
               {formatDate(memory.createdAt)}
             </span>
           </div>
@@ -268,6 +268,8 @@ function QuickCaptureModal() {
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false)
+  const [manualTags, setManualTags] = useState<string[]>([])
+  const [manualTagInput, setManualTagInput] = useState('')
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [audioChunks, setAudioChunks] = useState<Blob[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -331,6 +333,8 @@ function QuickCaptureModal() {
     setImageTags([])
     setIsAnalyzingImage(false)
     setIsSaving(false)
+    setManualTags([])
+    setManualTagInput('')
     setAudioChunks([])
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop()
@@ -444,6 +448,17 @@ function QuickCaptureModal() {
           aiSummary = `AI detected: ${imageDescription}`
         }
         break
+    }
+
+    // Merge manual tags with fallback tags (manual tags take priority, avoid duplicates, max 6)
+    if (manualTags.length > 0) {
+      const merged = [...manualTags]
+      for (const ft of fallbackTags) {
+        if (!merged.includes(ft) && merged.length < 6) {
+          merged.push(ft)
+        }
+      }
+      fallbackTags = merged.slice(0, 6)
     }
 
     // Check if we're offline
@@ -640,7 +655,7 @@ function QuickCaptureModal() {
         }
       }
     }
-  }, [activeCaptureTab, textContent, voiceTranscript, voiceSummary, linkUrl, imagePreview, imageDescription, imageTags, generateTags, addMemory, updateMemory, setCaptureModalOpen, resetForm, user])
+  }, [activeCaptureTab, textContent, voiceTranscript, voiceSummary, linkUrl, imagePreview, imageDescription, imageTags, manualTags, generateTags, addMemory, updateMemory, setCaptureModalOpen, resetForm, user])
 
   // Handle image file selection
   const handleImageUpload = useCallback(async (file: File) => {
@@ -1167,8 +1182,63 @@ function QuickCaptureModal() {
             )}
           </div>
 
-          {/* Save button — always visible, full width, min 48px */}
-          <div className="shrink-0 px-4 pb-5 pt-2 border-t border-border/50 bg-card">
+          {/* Tags section + Save button — always visible */}
+          <div className="shrink-0 px-6 pb-5 pt-3 border-t border-border/50 bg-card">
+            {/* Manual tag input */}
+            <div className="mb-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                {manualTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/15 whitespace-nowrap"
+                  >
+                    {tag}
+                    <button
+                      onClick={() => setManualTags((prev) => prev.filter((t) => t !== tag))}
+                      className="ml-0.5 size-3.5 rounded-full flex items-center justify-center hover:bg-[#9D8BA7]/25 transition-colors"
+                      aria-label={`Remove tag ${tag}`}
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+                {manualTags.length < 6 && (
+                  <input
+                    type="text"
+                    value={manualTagInput}
+                    onChange={(e) => setManualTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ',') && manualTagInput.trim()) {
+                        e.preventDefault()
+                        let tag = manualTagInput.trim()
+                        if (!tag.startsWith('#')) tag = `#${tag}`
+                        tag = tag.replace(/#+/, '#')
+                        if (!manualTags.includes(tag)) {
+                          setManualTags((prev) => [...prev, tag])
+                        }
+                        setManualTagInput('')
+                      }
+                      if (e.key === ' ' && manualTagInput.trim() && manualTagInput.trim().length >= 2) {
+                        e.preventDefault()
+                        let tag = manualTagInput.trim()
+                        if (!tag.startsWith('#')) tag = `#${tag}`
+                        tag = tag.replace(/#+/, '#')
+                        if (!manualTags.includes(tag)) {
+                          setManualTags((prev) => [...prev, tag])
+                        }
+                        setManualTagInput('')
+                      }
+                      if (e.key === 'Backspace' && !manualTagInput && manualTags.length > 0) {
+                        setManualTags((prev) => prev.slice(0, -1))
+                      }
+                    }}
+                    placeholder={manualTags.length === 0 ? 'Add tags (press Enter or comma)' : '#tag'}
+                    className="h-7 flex-1 min-w-[100px] rounded-full border border-[#9D8BA7]/20 bg-transparent px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-1 focus:ring-[#9D8BA7]/10 transition-all duration-300"
+                  />
+                )}
+              </div>
+            </div>
+
             <Button
               onClick={handleSave}
               disabled={isSaving || isAnalyzingImage}
@@ -1243,11 +1313,18 @@ function QuickCaptureModal() {
       </AnimatePresence>
 
       {/* Capture Modal — Desktop */}
-      <div
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
         onClick={handleClose}
       >
-        <div
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 8 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
           className="bg-card rounded-2xl max-w-lg w-full mx-4 overflow-hidden shadow-xl"
           onClick={(e) => e.stopPropagation()}
         >
@@ -1488,8 +1565,63 @@ function QuickCaptureModal() {
             )}
           </div>
 
-          {/* Save button */}
-          <div className="px-4 pb-5">
+          {/* Tags + Save button */}
+          <div className="px-6 pb-6">
+            {/* Manual tag input */}
+            <div className="mb-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                {manualTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/15 whitespace-nowrap"
+                  >
+                    {tag}
+                    <button
+                      onClick={() => setManualTags((prev) => prev.filter((t) => t !== tag))}
+                      className="ml-0.5 size-3.5 rounded-full flex items-center justify-center hover:bg-[#9D8BA7]/25 transition-colors"
+                      aria-label={`Remove tag ${tag}`}
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+                {manualTags.length < 6 && (
+                  <input
+                    type="text"
+                    value={manualTagInput}
+                    onChange={(e) => setManualTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ',') && manualTagInput.trim()) {
+                        e.preventDefault()
+                        let tag = manualTagInput.trim()
+                        if (!tag.startsWith('#')) tag = `#${tag}`
+                        tag = tag.replace(/#+/, '#')
+                        if (!manualTags.includes(tag)) {
+                          setManualTags((prev) => [...prev, tag])
+                        }
+                        setManualTagInput('')
+                      }
+                      if (e.key === ' ' && manualTagInput.trim() && manualTagInput.trim().length >= 2) {
+                        e.preventDefault()
+                        let tag = manualTagInput.trim()
+                        if (!tag.startsWith('#')) tag = `#${tag}`
+                        tag = tag.replace(/#+/, '#')
+                        if (!manualTags.includes(tag)) {
+                          setManualTags((prev) => [...prev, tag])
+                        }
+                        setManualTagInput('')
+                      }
+                      if (e.key === 'Backspace' && !manualTagInput && manualTags.length > 0) {
+                        setManualTags((prev) => prev.slice(0, -1))
+                      }
+                    }}
+                    placeholder={manualTags.length === 0 ? 'Add tags (press Enter or comma)' : '#tag'}
+                    className="h-7 flex-1 min-w-[100px] rounded-full border border-[#9D8BA7]/20 bg-transparent px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-1 focus:ring-[#9D8BA7]/10 transition-all duration-300"
+                  />
+                )}
+              </div>
+            </div>
+
             <Button
               onClick={handleSave}
               disabled={isSaving || isAnalyzingImage}
@@ -1508,8 +1640,8 @@ function QuickCaptureModal() {
               )}
             </Button>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </>
   )
 }
@@ -1742,7 +1874,7 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Filter Bar — horizontally scrollable on mobile */}
-      <div className="shrink-0 pb-3 px-4 sm:px-6">
+      <div className="shrink-0 pt-6 sm:pt-8 pb-3 px-4 sm:px-6">
         <FilterBar />
       </div>
 
@@ -1814,13 +1946,19 @@ export default function Dashboard() {
             ))}
           </div>
         ) : sortedMemories.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {sortedMemories.map((memory) => (
-              <MemoryCard
+          <div className="flex flex-col gap-4">
+            {sortedMemories.map((memory, index) => (
+              <motion.div
                 key={memory.id}
-                memory={memory}
-                onClick={() => handleMemoryClick(memory.id)}
-              />
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: Math.min(index * 0.05, 0.5) }}
+              >
+                <MemoryCard
+                  memory={memory}
+                  onClick={() => handleMemoryClick(memory.id)}
+                />
+              </motion.div>
             ))}
           </div>
         ) : (

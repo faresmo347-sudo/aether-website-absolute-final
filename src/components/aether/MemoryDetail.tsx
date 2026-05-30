@@ -269,18 +269,28 @@ export function MemoryDetail() {
 
   const handleAddTag = async () => {
     if (!newTag.trim() || !memory) return
-    const tagToAdd = newTag.trim()
+    // Enforce max 6 tags
+    if (memory.tags.length >= 6) {
+      toast({ title: 'Maximum tags reached', description: 'You can have up to 6 tags per memory.' })
+      return
+    }
+    // Normalize: trim whitespace, auto-add # prefix, prevent double #
+    let tagToAdd = newTag.trim()
+    if (!tagToAdd.startsWith('#')) {
+      tagToAdd = `#${tagToAdd}`
+    }
+    tagToAdd = tagToAdd.replace(/#+/, '#') // prevent ##tag
     // Avoid duplicate tags
     if (memory.tags.includes(tagToAdd)) {
       setNewTag('')
-      setShowTagInput(false)
+      // Keep input focused and open — don't close
       toast({ title: 'Tag already exists', description: `"${tagToAdd}" is already on this memory.` })
       return
     }
     const updatedTags = [...memory.tags, tagToAdd]
     updateMemory(memory.id, { tags: updatedTags })
     setNewTag('')
-    setShowTagInput(false)
+    // Keep input open so user can keep typing more tags
     toast({ title: 'Tag added!', description: !isOnline ? 'Tag saved locally — will sync when you reconnect.' : `"${tagToAdd}" has been added to this memory.` })
     try {
       await updateMemoryById(memory.id, { tags: updatedTags })
@@ -642,8 +652,8 @@ export function MemoryDetail() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-card border border-border p-3 sm:p-6 shadow-sm">
-              <p className="text-foreground text-base leading-relaxed whitespace-pre-wrap">
+            <div className="rounded-2xl bg-gradient-to-b from-card to-[#9D8BA7]/[0.03] border border-border p-3 sm:p-6 shadow-sm">
+              <p className="text-foreground text-base leading-[1.65] whitespace-pre-wrap">
                 {displayContent}
               </p>
             </div>
@@ -667,50 +677,71 @@ export function MemoryDetail() {
               {memory.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-[#9D8BA7]/8 text-[#9D8BA7] border border-[#9D8BA7]/15 hover:bg-[#9D8BA7]/15 transition-colors duration-300 whitespace-nowrap flex-shrink-0"
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/15 hover:bg-[#9D8BA7]/15 transition-colors duration-300 whitespace-nowrap flex-shrink-0"
                 >
                   {tag}
+                  <button
+                    onClick={async () => {
+                      if (!memory) return
+                      const updatedTags = memory.tags.filter((t) => t !== tag)
+                      updateMemory(memory.id, { tags: updatedTags })
+                      try {
+                        await updateMemoryById(memory.id, { tags: updatedTags })
+                      } catch {
+                        // Supabase update failed silently
+                      }
+                    }}
+                    className="ml-0.5 size-3.5 rounded-full flex items-center justify-center hover:bg-[#9D8BA7]/25 transition-colors"
+                    aria-label={`Remove tag ${tag}`}
+                  >
+                    <X size={10} />
+                  </button>
                 </span>
               ))}
-              {showTagInput ? (
+              {/* Tag input — always visible when under 6 tags */}
+              {memory.tags.length < 6 && (
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <input
+                    ref={(el) => {
+                      // Auto-focus when shown
+                      if (el && showTagInput) el.focus()
+                    }}
                     type="text"
                     value={newTag}
                     onChange={(e) => setNewTag(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAddTag()
+                      if ((e.key === 'Enter' || e.key === ',') && newTag.trim()) {
+                        e.preventDefault()
+                        handleAddTag()
+                      }
+                      // Space also confirms on mobile (but only if there's content)
+                      if (e.key === ' ' && newTag.trim() && newTag.trim().length >= 2) {
+                        e.preventDefault()
+                        handleAddTag()
+                      }
                       if (e.key === 'Escape') {
                         setShowTagInput(false)
                         setNewTag('')
                       }
+                      // Backspace on empty input removes last tag
+                      if (e.key === 'Backspace' && !newTag && memory.tags.length > 0) {
+                        const lastTag = memory.tags[memory.tags.length - 1]
+                        const updatedTags = memory.tags.slice(0, -1)
+                        updateMemory(memory.id, { tags: updatedTags })
+                        updateMemoryById(memory.id, { tags: updatedTags }).catch(() => {})
+                        toast({ title: 'Tag removed', description: `Removed ${lastTag}` })
+                      }
                     }}
                     placeholder="#new-tag"
-                    autoFocus
+                    autoFocus={showTagInput}
                     className="h-8 w-28 rounded-full border border-[#9D8BA7]/20 bg-card px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-2 focus:ring-[#9D8BA7]/10 transition-all duration-300"
                   />
-                  <button
-                    onClick={handleAddTag}
-                    aria-label="Add tag"
-                    className="min-h-[44px] min-w-[44px] rounded-full bg-[#9D8BA7] text-white flex items-center justify-center hover:bg-[#6D597A] transition-colors duration-300"
-                  >
-                    <Check size={14} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowTagInput(false)
-                      setNewTag('')
-                    }}
-                    aria-label="Cancel tag"
-                    className="min-h-[44px] min-w-[44px] rounded-full bg-muted text-muted-foreground flex items-center justify-center hover:bg-muted/80 transition-colors duration-300"
-                  >
-                    <X size={14} />
-                  </button>
                 </div>
-              ) : (
+              )}
+              {!showTagInput && memory.tags.length < 6 && (
                 <button
                   onClick={() => setShowTagInput(true)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-muted-foreground border border-dashed border-border hover:border-[#9D8BA7]/30 hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 transition-all duration-300 whitespace-nowrap flex-shrink-0"
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium text-muted-foreground border border-dashed border-border hover:border-[#9D8BA7]/30 hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 transition-all duration-300 whitespace-nowrap flex-shrink-0"
                 >
                   <Plus size={12} />
                   Add tag

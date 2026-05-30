@@ -155,7 +155,7 @@ const ChatBubble = memo(function ChatBubble({
           <div className="mt-2 flex items-start gap-1.5">
             <AlertCircle size={11} className="text-muted-foreground/50 mt-0.5 flex-shrink-0" />
             <span className="text-[11px] text-muted-foreground/50 leading-relaxed">
-              I&apos;m not very confident about this — try rephrasing your question
+              I couldn&apos;t find anything about that in your memories — it might not be saved yet
             </span>
           </div>
         )}
@@ -260,24 +260,60 @@ export function AskAether() {
       return
     }
 
+    // Check if memories are loaded before sending API request
+    if (memories.length === 0) {
+      // Wait a moment for hydration, then proceed
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // Re-check after waiting
+      const currentMemories = useAetherStore.getState().memories
+      if (currentMemories.length === 0) {
+        // Still no memories — send request anyway (API handles empty case gracefully)
+        // But log the state for debugging
+        console.log('[Aether] Sending request with 0 memories — may still be loading')
+      }
+    }
+
     try {
-      // Call the AI ask API (Groq-powered) — include chat history for follow-up context
+      // Get fresh memories from store (may have loaded since component mounted)
+      const freshMemories = useAetherStore.getState().memories
+      const apiMemories = freshMemories.length > 0
+        ? freshMemories.map((m) => ({
+            id: m.id,
+            type: m.type,
+            title: m.title,
+            content: m.content,
+            tags: m.tags,
+            createdAt: m.createdAt,
+            aiSummary: m.aiSummary,
+            collectionId: m.collectionId,
+          }))
+        : memoriesForApi
+
+      console.log(`[Aether] Sending request with ${apiMemories.length} memories`)
+
+      // 15 second timeout for slow mobile connections
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
+
       const res = await fetch('/api/ai/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: text.trim(),
-          memories: memoriesForApi,
+          memories: apiMemories,
           chatHistory: chatHistoryForApi,
         }),
+        signal: controller.signal,
       })
+
+      clearTimeout(timeoutId)
 
       const data = await res.json()
 
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: data.answer || "I couldn't find any relevant memories for your question.",
+        content: data.answer || "I couldn't find anything about that in your memories — it might not be saved yet.",
         referencedMemories: data.referencedIds || [],
         sourcesCount: data.sourcesCount || 0,
         detectedMode: data.detectedMode,
@@ -285,11 +321,14 @@ export function AskAether() {
         timestamp: new Date().toISOString(),
       }
       addChatMessage(assistantMsg)
-    } catch {
+    } catch (err: any) {
+      const isTimeout = err?.name === 'AbortError'
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: "Sorry, I had trouble searching your memories. Please try again.",
+        content: isTimeout
+          ? "That took too long — try again when you have a stronger connection. I'm here whenever you're ready!"
+          : "I had trouble reaching my thinking space. Please try again — I'm here for you.",
         referencedMemories: [],
         sourcesCount: 0,
         timestamp: new Date().toISOString(),
@@ -476,9 +515,14 @@ export function AskAether() {
         </div>
       </div>
 
-      {/* Input Bar — fixed above bottom nav on mobile */}
-      <div className="shrink-0 z-30 bg-card/95 backdrop-blur-sm border-t border-border pb-2">
-        <div className="md:max-w-3xl md:mx-auto px-4 sm:px-6 py-2.5 sm:py-4">
+      {/* Input Bar — fixed above bottom nav on mobile, adapts to keyboard */}
+      <div
+        className="shrink-0 z-30 bg-card/95 backdrop-blur-sm border-t border-border"
+        style={{
+          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+        <div className="md:max-w-3xl md:mx-auto px-4 sm:px-6 py-2.5 sm:py-3">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex-1 relative">
               <input
@@ -528,7 +572,7 @@ export function AskAether() {
               disabled={!input.trim() || isChatThinking}
               size="icon"
               aria-label="Send message"
-              className="h-11 w-11 sm:h-11 sm:w-11 rounded-2xl bg-[#9D8BA7] hover:bg-[#6D597A] text-white shadow-lg shadow-[#9D8BA7]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[#9D8BA7]/30 disabled:opacity-40 disabled:shadow-none flex-shrink-0"
+              className="h-12 w-12 rounded-2xl bg-[#9D8BA7] hover:bg-[#6D597A] text-white shadow-lg shadow-[#9D8BA7]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[#9D8BA7]/30 disabled:opacity-40 disabled:shadow-none flex-shrink-0 active:scale-95"
             >
               {isChatThinking ? (
                 <Loader2 size={18} className="animate-spin" />

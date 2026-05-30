@@ -73,7 +73,7 @@ const SidebarNavItem = memo(function SidebarNavItem({
         text-sm font-medium transition-colors duration-150
         ${
           isActive
-            ? 'bg-[#9D8BA7]/10 text-[#9D8BA7] dark:bg-[#9D8BA7]/20 dark:text-[#B8A8C4]'
+            ? 'bg-[#9D8BA7]/12 text-[#9D8BA7] dark:bg-[#9D8BA7]/20 dark:text-[#B8A8C4]'
             : 'text-muted-foreground hover:text-foreground hover:bg-[#9D8BA7]/5 dark:hover:bg-[#9D8BA7]/10'
         }
       `}
@@ -118,7 +118,7 @@ const BottomNavItem = memo(function BottomNavItem({
         min-w-[48px] min-h-[44px] transition-all duration-150
         ${
           isActive
-            ? 'text-[#9D8BA7] scale-[1.05]'
+            ? 'text-[#9D8BA7] scale-[1.05] bg-[#9D8BA7]/12 rounded-xl'
             : 'text-muted-foreground active:text-foreground'
         }
       `}

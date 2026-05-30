@@ -384,7 +384,7 @@ ALWAYS respond with the JSON format specified in your system instructions.`
         .trim()
 
       result = {
-        answer: fallbackAnswer || "I looked through your memories but couldn't find a clear match for your question. Could you try rephrasing it?",
+        answer: fallbackAnswer || "I couldn't find anything about that in your memories — it might not be saved yet. Could you try rephrasing your question?",
         referencedIds: [],
         sourcesCount: 0,
         detectedMode: 'conversation' as const,
@@ -428,7 +428,7 @@ ALWAYS respond with the JSON format specified in your system instructions.`
   } catch (error) {
     console.error('AI ask error:', error)
     return NextResponse.json({
-      answer: 'Sorry, I had trouble searching your memories. Please try again.',
+      answer: "I had trouble searching your memories right now. Please try again — I'm here for you.",
       referencedIds: [],
       sourcesCount: 0,
       detectedMode: 'conversation',

@@ -192,7 +192,7 @@ html, body {
   transition: transform 0.1s ease;
 }
 .tap-feedback:active {
-  transform: scale(0.97);
+  transform: scale(0.95);
 }
 
 /* ─────────── Reduced Blur on Mobile for Performance ─────────── */
@@ -238,6 +238,17 @@ section {
   .mobile-bottom-pad {
     padding-bottom: 0;
   }
+}
+
+/* ─────────── Dark Mode Tag Styling ─────────── */
+.dark .bg-\\[\\#9D8BA7\\]\\/10 {
+  background-color: rgba(157, 139, 167, 0.15);
+}
+.dark .text-\\[\\#9D8BA7\\] {
+  color: #c4b5d4;
+}
+.dark .border-\\[\\#9D8BA7\\]\\/15 {
+  border-color: rgba(157, 139, 167, 0.2);
 }
 
 /* ─────────── Reduce Animation Overhead on Mobile ─────────── */
