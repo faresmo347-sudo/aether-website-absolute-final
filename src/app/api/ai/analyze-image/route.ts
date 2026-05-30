@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
+import { callAI } from '@/lib/ai-provider'
 import { AETHER_MASTER_PROMPT } from '@/lib/aether-prompt'
 
 const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'
@@ -43,8 +44,6 @@ OUTPUT FORMAT for the description field:
 
 Return ONLY the JSON object.`
 
-const TAG_SYSTEM_PROMPT = AETHER_MASTER_PROMPT
-
 export async function POST(req: NextRequest) {
   try {
     const { image } = await req.json()
@@ -58,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     const groq = getGroqClient()
 
-    // Combined vision call: description + tags in one shot
+    // Vision call uses Groq (multimodal — Gemini vision would need different API structure)
     let description = 'Image captured'
     let tags: string[] = []
 
@@ -82,7 +81,6 @@ export async function POST(req: NextRequest) {
 
       // Try to parse JSON from the vision response
       try {
-        // Try to find the JSON object — use first { and last } for robustness
         const firstBrace = visionText.indexOf('{')
         const lastBrace = visionText.lastIndexOf('}')
         if (firstBrace !== -1 && lastBrace > firstBrace) {
@@ -92,27 +90,22 @@ export async function POST(req: NextRequest) {
           if (Array.isArray(parsed.tags)) tags = parsed.tags
         }
       } catch {
-        // If JSON parse fails, use the raw text as description
         if (visionText) description = visionText
       }
     } catch (visionError) {
       console.error('Vision model error:', visionError)
     }
 
-    // Fallback: if the combined call didn't produce tags, use a separate Groq LLM call
+    // Fallback: if the combined call didn't produce tags, use callAI (Gemini primary, Groq fallback)
     if (tags.length === 0 && description !== 'Image captured') {
       try {
-        const tagCompletion = await groq.chat.completions.create({
-          model: GROQ_MODEL,
-          messages: [
-            { role: 'system', content: TAG_SYSTEM_PROMPT },
-            { role: 'user', content: `Generate 2-4 specific tags for this image description: "${description}"` },
-          ],
-          temperature: 0.3,
-          max_tokens: 128,
-        })
+        const tagResponseText = await callAI(
+          AETHER_MASTER_PROMPT,
+          `Generate 2-4 specific tags for this image description: "${description}"`,
+          0.3,
+          128
+        )
 
-        const tagResponseText = tagCompletion.choices[0]?.message?.content || ''
         try {
           const jsonMatch = tagResponseText.match(/\[[\s\S]*?\]/)
           if (jsonMatch) {

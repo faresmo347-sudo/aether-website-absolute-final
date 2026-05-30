@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
+import { callAI } from '@/lib/ai-provider'
 import { AETHER_MASTER_PROMPT } from '@/lib/aether-prompt'
 
 interface MemoryData {
@@ -32,9 +32,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const groq = getGroqClient()
-
-    // Format memories for the LLM context — image memories get special prefix for searchability
+    // Format memories for the LLM context — cap content at 300 chars
     const memoriesContext = memories
       .map((m) => {
         const date = new Date(m.createdAt).toLocaleDateString('en-US', {
@@ -43,11 +41,9 @@ export async function POST(req: NextRequest) {
           year: 'numeric',
         })
         const contentPrefix = m.type === 'image' ? '[IMAGE - Full Text Extracted]: ' : ''
-        return `[ID: ${m.id}] [${m.type}] [${date}] "${m.title}" — ${contentPrefix}${m.content}${m.aiSummary ? ` (AI Summary: ${m.aiSummary})` : ''} Tags: ${m.tags.join(', ')}`
+        return `[ID: ${m.id}] [${m.type}] [${date}] "${m.title}" — ${contentPrefix}${m.content.slice(0, 300)}${m.aiSummary ? ` (AI Summary: ${m.aiSummary.slice(0, 100)})` : ''} Tags: ${m.tags.join(', ')}`
       })
       .join('\n')
-
-    const systemPrompt = AETHER_MASTER_PROMPT
 
     const userPrompt = `The user has ${memories.length} saved memories. Here they all are:
 
@@ -59,34 +55,26 @@ Decide first: is this a memory search, a general conversation, or both?
 Then respond as Aether — warm, caring, and human.
 If you find relevant memories, reference them specifically with dates and details.
 If it is just a conversation, be a good companion.
-Always respond with the JSON format.`
+Always respond with the JSON format specified in your system instructions.`
 
-    const completion = await groq.chat.completions.create({
-      model: GROQ_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.6,
-      max_tokens: 1024,
-    })
-
-    const responseText = completion.choices[0]?.message?.content || ''
+    const responseText = await callAI(AETHER_MASTER_PROMPT, userPrompt, 0.6, 1024)
 
     // Parse the JSON response
-    let result
+    let result: Record<string, unknown>
     try {
       const jsonMatch = responseText.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         result = JSON.parse(jsonMatch[0])
+      } else {
+        result = { answer: responseText }
       }
     } catch {
-      // Fallback
+      result = { answer: responseText }
     }
 
-    if (!result || !result.answer) {
+    if (!result.answer) {
       result = {
-        answer: responseText || "I couldn't find any relevant memories for your question.",
+        answer: "I couldn't find any relevant memories for your question.",
         referencedIds: [],
         sourcesCount: 0,
       }
@@ -95,16 +83,26 @@ Always respond with the JSON format.`
     // Validate referencedIds exist in the provided memories
     const memoryIds = new Set(memories.map((m) => m.id))
     if (Array.isArray(result.referencedIds)) {
-      result.referencedIds = result.referencedIds.filter((id: string) => memoryIds.has(id))
+      result.referencedIds = (result.referencedIds as string[]).filter((id) => memoryIds.has(id))
     } else {
       result.referencedIds = []
     }
 
-    result.sourcesCount = result.referencedIds.length
+    result.sourcesCount = (result.referencedIds as string[]).length
 
     return NextResponse.json(result)
   } catch (error) {
     console.error('AI search error:', error)
+
+    // If all providers exhausted, fail gracefully
+    if (error instanceof Error && error.message === 'ALL_PROVIDERS_EXHAUSTED') {
+      return NextResponse.json({
+        answer: "I need a little rest right now — both my thinking engines are taking a short break. Try again in about an hour and I'll be fully back for you! 💜",
+        referencedIds: [],
+        sourcesCount: 0,
+      })
+    }
+
     return NextResponse.json({
       answer: 'Sorry, I had trouble searching your memories. Please try again.',
       referencedIds: [],

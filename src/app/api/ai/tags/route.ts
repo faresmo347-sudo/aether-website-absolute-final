@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
+import { callAI } from '@/lib/ai-provider'
 import { AETHER_MASTER_PROMPT } from '@/lib/aether-prompt'
 
 // Forbidden generic tags that should almost never appear
@@ -23,18 +23,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     }
 
-    const groq = getGroqClient()
-
     // Build the user prompt with all available context
     let contextBlock = ''
 
-    // For image memories, prioritize the AI-generated image description
     if (type === 'image' && imageDescription) {
       contextBlock = `Image content analysis: "${imageDescription}"
 
 Original text: "${content.slice(0, 500)}"`
     } else if (type === 'voice' && summary) {
-      // For voice memories, include the AI summary for richer context
       contextBlock = `Voice transcription: "${content.slice(0, 800)}"
 
 AI Summary of what was said: "${summary}"`
@@ -42,7 +38,7 @@ AI Summary of what was said: "${summary}"`
       contextBlock = `"${content.slice(0, 1000)}"`
     }
 
-    // Type-specific tagging rules to include in the user prompt
+    // Type-specific tagging rules
     let typeRules = ''
     if (type === 'voice') {
       typeRules = `
@@ -78,17 +74,7 @@ ${contextBlock}
 
 Return only a JSON array of tag strings with # symbols. Example: ["#cafe", "#food", "#places"]`
 
-    const completion = await groq.chat.completions.create({
-      model: GROQ_MODEL,
-      messages: [
-        { role: 'system', content: AETHER_MASTER_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.6,
-      max_tokens: 150,
-    })
-
-    const responseText = completion.choices[0]?.message?.content || ''
+    const responseText = await callAI(AETHER_MASTER_PROMPT, userPrompt, 0.6, 150)
 
     // Parse the JSON array from the response
     let tags: string[] = []
@@ -119,6 +105,12 @@ Return only a JSON array of tag strings with # symbols. Example: ["#cafe", "#foo
     return NextResponse.json({ tags })
   } catch (error) {
     console.error('Tag generation error:', error)
+
+    // If all providers exhausted, fail silently — memory still saves without AI tags
+    if (error instanceof Error && error.message === 'ALL_PROVIDERS_EXHAUSTED') {
+      return NextResponse.json({ tags: [] })
+    }
+
     return NextResponse.json({ tags: ['#memory'] })
   }
 }

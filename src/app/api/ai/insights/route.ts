@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
+import { callAI } from '@/lib/ai-provider'
 import { AETHER_MASTER_PROMPT } from '@/lib/aether-prompt'
 
+const DEFAULT_INSIGHT = 'You captured something worth remembering. Consider reviewing the details and adding it to a relevant collection for easy access later.'
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,10 +16,6 @@ export async function POST(req: NextRequest) {
     if (!content || typeof content !== 'string') {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     }
-
-    const groq = getGroqClient()
-
-    const systemPrompt = AETHER_MASTER_PROMPT
 
     // Build a rich user prompt with all available context
     const contextParts: string[] = []
@@ -40,29 +37,21 @@ export async function POST(req: NextRequest) {
 
 ${contextBlock}`
 
-    const completion = await groq.chat.completions.create({
-      model: GROQ_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.6,
-      max_tokens: 512,
-    })
+    const insight = await callAI(AETHER_MASTER_PROMPT, userPrompt, 0.6, 512)
 
-    const insight = completion.choices[0]?.message?.content?.trim() || ''
-
-    if (!insight) {
-      return NextResponse.json({
-        insight: 'You captured something worth remembering. Consider reviewing the details and adding it to a relevant collection for easy access later.',
-      })
+    if (!insight || !insight.trim()) {
+      return NextResponse.json({ insight: DEFAULT_INSIGHT })
     }
 
-    return NextResponse.json({ insight })
+    return NextResponse.json({ insight: insight.trim() })
   } catch (error) {
     console.error('AI insights error:', error)
-    return NextResponse.json({
-      insight: 'You captured something worth remembering. Consider reviewing the details and adding it to a relevant collection for easy access later.',
-    })
+
+    // If all providers exhausted, fail silently — memory still saves without AI insight
+    if (error instanceof Error && error.message === 'ALL_PROVIDERS_EXHAUSTED') {
+      return NextResponse.json({ insight: DEFAULT_INSIGHT })
+    }
+
+    return NextResponse.json({ insight: DEFAULT_INSIGHT })
   }
 }

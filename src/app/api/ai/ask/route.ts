@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
+import { callAI, callAIWithHistory } from '@/lib/ai-provider'
 import { AETHER_MASTER_PROMPT } from '@/lib/aether-prompt'
 
 interface MemoryData {
@@ -27,10 +27,8 @@ interface AskResult {
 }
 
 // ─────────────────────────────────────────────────────────
-// 1. CONVERSATION vs MEMORY SEARCH DETECTION
+// CONVERSATION vs MEMORY SEARCH DETECTION
 // ─────────────────────────────────────────────────────────
-// Patterns that signal the user wants to SEARCH their memories.
-// If NONE of these match → it's a general conversation → ZERO memories sent.
 
 const MEMORY_SEARCH_PATTERNS = [
   /\bdid i\b/i,
@@ -63,27 +61,15 @@ const MEMORY_SEARCH_PATTERNS = [
   /\btell me (about |what )?(i |we )?(save|thought|said|wrote|mentioned)\b/i,
 ]
 
-/**
- * Returns true if the question looks like the user is trying to
- * find/recall something from their saved memories.
- */
 function isMemorySearch(question: string): boolean {
   return MEMORY_SEARCH_PATTERNS.some((p) => p.test(question))
 }
 
 // ─────────────────────────────────────────────────────────
-// 2. SMART MEMORY FILTERING (no embeddings, no new APIs)
+// SMART MEMORY FILTERING
 // ─────────────────────────────────────────────────────────
-// For memory-search questions:
-//   - Take the 15 most recent memories
-//   - PLUS any memories whose title or tags contain words from the question
-//   - Cap the content of each memory at 200 characters for Groq
 
-const CONTENT_CAP = 200
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
+const CONTENT_CAP = 300
 
 const STOP_WORDS = new Set([
   'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -102,9 +88,6 @@ const STOP_WORDS = new Set([
   'many', 'own', 'also', 'even', 'still', 'already', 'yet', 'just',
 ])
 
-/**
- * Extract meaningful keywords from the question for matching.
- */
 function extractKeywords(question: string): string[] {
   return question
     .toLowerCase()
@@ -112,14 +95,6 @@ function extractKeywords(question: string): string[] {
     .filter((w) => w.length >= 3 && !STOP_WORDS.has(w))
 }
 
-/**
- * Smart memory filter:
- * 1. Sort all memories by recency
- * 2. Take the 15 most recent
- * 3. Also find memories where title or tags contain question keywords
- * 4. Merge and deduplicate
- * Returns slim memories (content capped at CONTENT_CAP chars).
- */
 function smartFilterMemories(memories: MemoryData[], question: string): MemoryData[] {
   const keywords = extractKeywords(question)
 
@@ -135,15 +110,16 @@ function smartFilterMemories(memories: MemoryData[], question: string): MemoryDa
     recentIds.add(m.id)
   }
 
-  // Keyword-matched memories (title or tags contain question words)
+  // Keyword-matched memories (title, tags, or content contain question words)
   const matched: MemoryData[] = []
   if (keywords.length > 0) {
     for (const m of memories) {
-      if (recentIds.has(m.id)) continue // already included
+      if (recentIds.has(m.id)) continue
 
       const titleLower = m.title.toLowerCase()
       const tagsLower = m.tags.map((t) => t.toLowerCase()).join(' ')
-      const searchable = `${titleLower} ${tagsLower}`
+      const contentLower = m.content.toLowerCase()
+      const searchable = `${titleLower} ${tagsLower} ${contentLower}`
 
       const hasMatch = keywords.some((kw) => searchable.includes(kw))
       if (hasMatch) {
@@ -152,8 +128,8 @@ function smartFilterMemories(memories: MemoryData[], question: string): MemoryDa
     }
   }
 
-  // Merge: recent first, then keyword matches
-  const combined = [...recent, ...matched]
+  // Merge: recent first, then keyword matches — cap at 20 total
+  const combined = [...recent, ...matched].slice(0, 20)
 
   // Slim down: cap content at CONTENT_CAP chars
   return combined.map((m) => ({
@@ -164,7 +140,7 @@ function smartFilterMemories(memories: MemoryData[], question: string): MemoryDa
 }
 
 // ─────────────────────────────────────────────────────────
-// 3. CONVERSATION-ONLY PROMPT (zero memories sent)
+// PROMPT BUILDERS
 // ─────────────────────────────────────────────────────────
 
 function buildConversationPrompt(question: string, conversationContext: string): string {
@@ -191,17 +167,12 @@ Respond with JSON:
 }`
 }
 
-// ─────────────────────────────────────────────────────────
-// 4. MEMORY SEARCH PROMPT (slim memories sent)
-// ─────────────────────────────────────────────────────────
-
 function buildMemorySearchPrompt(
   filteredMemories: MemoryData[],
   totalMemories: number,
   question: string,
   conversationContext: string
 ): string {
-  // Format slim memories for the LLM context
   const memoriesContext = filteredMemories
     .map((m) => {
       const date = new Date(m.createdAt).toLocaleDateString('en-US', {
@@ -248,60 +219,6 @@ RESPOND with JSON:
 }
 
 // ─────────────────────────────────────────────────────────
-// 429 RATE LIMIT HANDLER
-// ─────────────────────────────────────────────────────────
-
-const RATE_LIMIT_MESSAGE = "I need a moment to rest — my thinking limit has been reached for now. Try again in a little while!"
-
-function isRateLimitError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false
-  const err = error as Record<string, unknown>
-  // Groq SDK throws errors with status property
-  if (err.status === 429) return true
-  if (err.statusCode === 429) return true
-  // Check nested error
-  if (err.error && typeof err.error === 'object') {
-    const nested = err.error as Record<string, unknown>
-    if (nested.status === 429 || nested.statusCode === 429) return true
-  }
-  // Check message string
-  const msg = String(err.message || '').toLowerCase()
-  if (msg.includes('rate limit') || msg.includes('429') || msg.includes('too many requests')) return true
-  return false
-}
-
-// ─────────────────────────────────────────────────────────
-// CALL GROQ WITH RATE-LIMIT AWARENESS
-// ─────────────────────────────────────────────────────────
-
-async function callGroq(
-  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
-  maxRetries = 1
-): Promise<string> {
-  const groq = getGroqClient()
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const completion = await groq.chat.completions.create({
-        model: GROQ_MODEL,
-        messages,
-        temperature: 0.3,
-        max_tokens: 1024, // Reduced from 2048 — answers don't need that much
-      })
-      return completion.choices[0]?.message?.content || ''
-    } catch (error) {
-      if (isRateLimitError(error) && attempt < maxRetries) {
-        // Wait 2s before retry on rate limit
-        await new Promise((r) => setTimeout(r, 2000))
-        continue
-      }
-      throw error
-    }
-  }
-  throw new Error('Max retries exceeded')
-}
-
-// ─────────────────────────────────────────────────────────
 // MAIN ASK ROUTE
 // ─────────────────────────────────────────────────────────
 
@@ -317,71 +234,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 })
     }
 
-    // Build conversation context from chat history (if provided)
+    // Build conversation context from chat history
     const hasHistory = chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0
     const conversationContext = hasHistory
       ? `\nRECENT CONVERSATION:\n${chatHistory!
-          .slice(-6) // Reduced from 10 to 6 — less token waste
+          .slice(-6)
           .map((msg) => `${msg.role === 'user' ? 'User' : 'Aether'}: ${msg.content}`)
           .join('\n')}\n`
       : ''
-
-    // Build messages array — shared between both paths
-    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: AETHER_MASTER_PROMPT },
-    ]
-
-    // Include chat history as conversation messages
-    if (hasHistory) {
-      for (const msg of chatHistory!.slice(-6)) { // Reduced from 8 to 6
-        messages.push({
-          role: msg.role === 'user' ? 'user' : 'assistant',
-          content: msg.content,
-        })
-      }
-    }
 
     // ──── DECISION: Conversation-only or Memory Search? ────
     const noMemories = !memories || !Array.isArray(memories) || memories.length === 0
     const isSearch = !noMemories && isMemorySearch(question)
 
+    let responseText: string
+
     if (!isSearch) {
-      // ═══════ CONVERSATION PATH: ZERO memories sent to Groq ═══════
-      const prompt = buildConversationPrompt(question, conversationContext)
-      messages.push({ role: 'user', content: prompt })
-
-      const responseText = await callGroq(messages)
-      const result = parseAIResponse(responseText)
-
-      if (!result || !result.answer) {
-        return NextResponse.json({
-          answer: "Hey! I'd love to chat with you. What's on your mind?",
-          referencedIds: [],
-          sourcesCount: 0,
-          detectedMode: 'conversation',
-          confidence: 'high',
-        })
-      }
-
-      result.referencedIds = []
-      result.sourcesCount = 0
-      result.detectedMode = 'conversation'
-      result.confidence = result.confidence || 'high'
-
-      return NextResponse.json(result)
+      // ═══════ CONVERSATION PATH: ZERO memories sent ═══════
+      const userPrompt = buildConversationPrompt(question, conversationContext)
+      responseText = await callAI(AETHER_MASTER_PROMPT, userPrompt, 0.6, 1024)
+    } else {
+      // ═══════ MEMORY SEARCH PATH: Slim filtered memories ═══════
+      const filteredMemories = smartFilterMemories(memories, question)
+      const userPrompt = buildMemorySearchPrompt(
+        filteredMemories,
+        memories.length,
+        question,
+        conversationContext
+      )
+      responseText = await callAI(AETHER_MASTER_PROMPT, userPrompt, 0.3, 1024)
     }
-
-    // ═══════ MEMORY SEARCH PATH: Slim filtered memories sent ═══════
-    const filteredMemories = smartFilterMemories(memories, question)
-    const prompt = buildMemorySearchPrompt(
-      filteredMemories,
-      memories.length,
-      question,
-      conversationContext
-    )
-    messages.push({ role: 'user', content: prompt })
-
-    const responseText = await callGroq(messages)
 
     // Parse the JSON response with fallback
     let result = parseAIResponse(responseText)
@@ -402,48 +284,56 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Validate referencedIds exist in the provided memories (use ALL memories, not just filtered)
-    const memoryIds = new Set(memories.map((m) => m.id))
-    if (Array.isArray(result.referencedIds)) {
-      result.referencedIds = (result.referencedIds as string[]).filter((id) => memoryIds.has(id))
-    } else {
+    // For conversation path, always reset these
+    if (!isSearch) {
       result.referencedIds = []
-    }
-
-    result.sourcesCount = result.referencedIds.length
-
-    // Validate detectedMode
-    const validModes: string[] = ['memory-search', 'conversation', 'both']
-    const detectedMode = String(result.detectedMode || '')
-    if (!detectedMode || !validModes.includes(detectedMode)) {
-      if (result.referencedIds.length > 0 && result.answer.length > 0) {
-        result.detectedMode = 'both'
-      } else if (result.referencedIds.length > 0) {
-        result.detectedMode = 'memory-search'
+      result.sourcesCount = 0
+      result.detectedMode = 'conversation'
+      result.confidence = result.confidence || 'high'
+    } else {
+      // Validate referencedIds exist in the provided memories
+      const memoryIds = new Set(memories.map((m) => m.id))
+      if (Array.isArray(result.referencedIds)) {
+        result.referencedIds = (result.referencedIds as string[]).filter((id) => memoryIds.has(id))
       } else {
-        result.detectedMode = 'conversation'
+        result.referencedIds = []
       }
-    } else {
-      result.detectedMode = detectedMode as AskResult['detectedMode']
-    }
 
-    // Validate confidence
-    const validConfidences: string[] = ['high', 'medium', 'low']
-    const confidence = String(result.confidence || '')
-    if (!confidence || !validConfidences.includes(confidence)) {
-      result.confidence = result.referencedIds.length > 0 ? 'medium' : 'high'
-    } else {
-      result.confidence = confidence as AskResult['confidence']
+      result.sourcesCount = result.referencedIds.length
+
+      // Validate detectedMode
+      const validModes: string[] = ['memory-search', 'conversation', 'both']
+      const detectedMode = String(result.detectedMode || '')
+      if (!detectedMode || !validModes.includes(detectedMode)) {
+        if (result.referencedIds.length > 0 && result.answer.length > 0) {
+          result.detectedMode = 'both'
+        } else if (result.referencedIds.length > 0) {
+          result.detectedMode = 'memory-search'
+        } else {
+          result.detectedMode = 'conversation'
+        }
+      } else {
+        result.detectedMode = detectedMode as AskResult['detectedMode']
+      }
+
+      // Validate confidence
+      const validConfidences: string[] = ['high', 'medium', 'low']
+      const confidence = String(result.confidence || '')
+      if (!confidence || !validConfidences.includes(confidence)) {
+        result.confidence = result.referencedIds.length > 0 ? 'medium' : 'high'
+      } else {
+        result.confidence = confidence as AskResult['confidence']
+      }
     }
 
     return NextResponse.json(result)
   } catch (error) {
     console.error('AI ask error:', error)
 
-    // 429 rate limit — warm message, never raw error
-    if (isRateLimitError(error)) {
+    // ALL_PROVIDERS_EXHAUSTED — both Gemini and Groq are down
+    if (error instanceof Error && error.message === 'ALL_PROVIDERS_EXHAUSTED') {
       return NextResponse.json({
-        answer: RATE_LIMIT_MESSAGE,
+        answer: "I need a little rest right now — both my thinking engines are taking a short break. Try again in about an hour and I'll be fully back for you! 💜",
         referencedIds: [],
         sourcesCount: 0,
         detectedMode: 'conversation',
@@ -472,7 +362,6 @@ function parseAIResponse(responseText: string): AskResult | null {
   if (jsonMatch) {
     try {
       const parsed = JSON.parse(jsonMatch[0]) as AskResult
-      // Ensure required fields exist
       if (typeof parsed.answer === 'string') return parsed
       return null
     } catch {
