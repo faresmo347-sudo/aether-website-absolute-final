@@ -13,25 +13,42 @@ interface MemoryData {
   collectionId?: string
 }
 
+interface ChatHistoryItem {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { question, memories } = (await req.json()) as {
+    const { question, memories, chatHistory } = (await req.json()) as {
       question: string
       memories: MemoryData[]
+      chatHistory?: ChatHistoryItem[]
     }
 
     if (!question || typeof question !== 'string') {
       return NextResponse.json({ error: 'Question is required' }, { status: 400 })
     }
 
+    // Build conversation context from chat history (if provided)
+    const hasHistory = chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0
+    const conversationContext = hasHistory
+      ? `\nRECENT CONVERSATION (what you and the user have been talking about):\n${chatHistory!
+          .slice(-10) // Last 10 messages max
+          .map((msg) => `${msg.role === 'user' ? 'User' : 'Aether'}: ${msg.content}`)
+          .join('\n')}\n`
+      : ''
+
     // Handle the case where there are no memories — the AI can still have a conversation
     if (!memories || !Array.isArray(memories) || memories.length === 0) {
       const groq = getGroqClient()
 
-      const noMemoryPrompt = `The user has no saved memories yet. They just said: "${question}"
+      const noMemoryPrompt = `The user has no saved memories yet.${conversationContext}
+The user just said: "${question}"
 
 Since they have no memories, this is a GENERAL CONVERSATION. Talk to them warmly as Aether — their memory companion. You can:
 - Answer their question conversationally
+- If they're referring to something you said earlier, continue that conversation naturally
 - Suggest they start saving memories so you can help them find things later
 - Just be a good companion and chat with them
 
@@ -43,12 +60,25 @@ Respond with JSON:
   "detectedMode": "conversation"
 }`
 
+      const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+        { role: 'system', content: AETHER_MASTER_PROMPT },
+      ]
+
+      // Include chat history as actual conversation messages for better context
+      if (hasHistory) {
+        for (const msg of chatHistory!.slice(-8)) {
+          messages.push({
+            role: msg.role === 'user' ? 'user' : 'assistant',
+            content: msg.content,
+          })
+        }
+      }
+
+      messages.push({ role: 'user', content: noMemoryPrompt })
+
       const completion = await groq.chat.completions.create({
         model: GROQ_MODEL,
-        messages: [
-          { role: 'system', content: AETHER_MASTER_PROMPT },
-          { role: 'user', content: noMemoryPrompt },
-        ],
+        messages,
         temperature: 0.6,
         max_tokens: 1024,
       })
@@ -95,23 +125,29 @@ Respond with JSON:
       })
       .join('\n')
 
-    const systemPrompt = AETHER_MASTER_PROMPT
-
     const userPrompt = `The user has ${memories.length} saved memories. Here they all are:
 
 ${memoriesContext}
-
+${conversationContext}
 ═══
 The user just said: "${question}"
 ═══
 
+IMPORTANT — CONVERSATION AWARENESS:
+- If the user is referring to something you (Aether) said in a previous message, CONTINUE that conversation naturally. Don't start from scratch.
+- If the user says "that one", "the second one", "tell me more about it", "what about the other one", etc. — they are referring to something from the conversation above. Look at what was discussed and respond accordingly.
+- If the user asks a follow-up question about a memory you referenced, provide MORE details about that specific memory.
+- You can naturally flow between searching memories and having a conversation — the user doesn't need to explicitly ask for one or the other.
+
 STEP 1 — DETECT THE MODE:
-Read the user's message carefully and decide:
+Read the user's message carefully AND consider the conversation context:
 - Is this a MEMORY SEARCH? (they want to find/recall something they saved)
 - Is this a GENERAL CONVERSATION? (they want to talk, vent, think out loud, or ask a general question)
 - Is it BOTH? (they're chatting AND want to find something)
+- Is this a FOLLOW-UP to the conversation? (referring to something you said or a memory you referenced)
 
 STEP 2 — RESPOND AS AETHER:
+- If FOLLOW-UP: Continue the conversation naturally, referencing what was already discussed. Don't repeat yourself unnecessarily.
 - If MEMORY SEARCH: Search through their memories carefully. Reference specific dates, titles, and content. Put relevant IDs in referencedIds.
 - If CONVERSATION: Talk to them like a warm friend. Listen, support, advise. Only reference a memory if it naturally fits. referencedIds should be [].
 - If BOTH: Start conversationally, then naturally bring in relevant memories. Put referenced IDs in referencedIds.
@@ -121,12 +157,26 @@ Include "detectedMode" in your JSON response: "memory-search", "conversation", o
 
 ALWAYS respond with the JSON format specified in your system instructions.`
 
+    // Build messages array with system prompt, chat history, and current question
+    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+      { role: 'system', content: AETHER_MASTER_PROMPT },
+    ]
+
+    // Include chat history as actual conversation messages so the model understands context
+    if (hasHistory) {
+      for (const msg of chatHistory!.slice(-8)) {
+        messages.push({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content,
+        })
+      }
+    }
+
+    messages.push({ role: 'user', content: userPrompt })
+
     const completion = await groq.chat.completions.create({
       model: GROQ_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
+      messages,
       temperature: 0.6,
       max_tokens: 1024,
     })
