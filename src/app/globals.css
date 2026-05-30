@@ -223,6 +223,12 @@ section {
   overscroll-behavior-y: contain;
 }
 
+/* Smooth scrolling with GPU acceleration */
+.ios-scroll, [class*="overflow-y-auto"] {
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
+}
+
 /* ─────────── Animation Keyframes ─────────── */
 @keyframes float {
   0%, 100% {

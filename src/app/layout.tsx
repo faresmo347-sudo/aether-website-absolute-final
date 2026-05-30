@@ -57,20 +57,41 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="light" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Blocking script: restore dark mode & background BEFORE first paint
+            to prevent flash of wrong theme. Reads from aether-settings (Zustand persist)
+            with fallback to aether-dark-mode (legacy key). */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            var saved = localStorage.getItem('aether-dark-mode');
-            if (saved !== 'true') {
-              document.documentElement.classList.remove('dark');
+            try {
+              var isDark = false;
+              // Try new settings key first
+              var settings = localStorage.getItem('aether-settings');
+              if (settings) {
+                var parsed = JSON.parse(settings);
+                isDark = !!parsed.darkMode;
+              } else {
+                // Fallback to legacy key
+                isDark = localStorage.getItem('aether-dark-mode') === 'true';
+              }
+              if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+              } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+              }
+            } catch(e) {
               document.documentElement.classList.add('light');
             }
           })();
         `}} />
       </head>
       <body
-        className={`${inter.variable} ${playfair.variable} antialiased`}
+        className={`${inter.variable} ${playfair.variable} antialiased min-h-dvh flex flex-col`}
       >
         {children}
         <Toaster />

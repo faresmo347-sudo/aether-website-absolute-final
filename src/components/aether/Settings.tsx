@@ -80,12 +80,19 @@ export function Settings() {
 
   // ──── Dark mode: sync class on mount AND read from localStorage ────
   useEffect(() => {
-    const saved = localStorage.getItem('aether-dark-mode')
-    if (saved === 'true') {
-      document.documentElement.classList.add('dark')
-      document.documentElement.classList.remove('light')
-      if (!darkMode) setDarkMode(true)
-    } else {
+    try {
+      const settings = localStorage.getItem('aether-settings')
+      const parsed = settings ? JSON.parse(settings) : null
+      const isDark = parsed?.darkMode ?? localStorage.getItem('aether-dark-mode') === 'true'
+      if (isDark) {
+        document.documentElement.classList.add('dark')
+        document.documentElement.classList.remove('light')
+        if (!darkMode) setDarkMode(true)
+      } else {
+        document.documentElement.classList.remove('dark')
+        document.documentElement.classList.add('light')
+      }
+    } catch {
       document.documentElement.classList.remove('dark')
       document.documentElement.classList.add('light')
     }

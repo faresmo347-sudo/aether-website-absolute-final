@@ -1125,6 +1125,34 @@ export default function Home() {
     if (dataLoadedRef.current) return
     dataLoadedRef.current = true
 
+    // Load from localStorage cache for instant display
+    try {
+      const cachedMemories = localStorage.getItem('aether-memories')
+      const cachedCollections = localStorage.getItem('aether-collections')
+      const cachedProfile = localStorage.getItem('aether-profile')
+      if (cachedMemories) {
+        const parsed = JSON.parse(cachedMemories)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMemories(parsed)
+        }
+      }
+      if (cachedCollections) {
+        const parsed = JSON.parse(cachedCollections)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCollections(parsed)
+        }
+      }
+      if (cachedProfile) {
+        const parsed = JSON.parse(cachedProfile)
+        if (parsed && parsed.name) {
+          setProfile(parsed)
+        }
+      }
+    } catch {
+      // localStorage read failed — will fetch from Supabase
+    }
+    setIsLoadingMemories(false) // Cache loaded — remove skeleton
+
     setIsLoadingMemories(true)
     try {
       const profile = await getProfile(userId)
@@ -1177,6 +1205,13 @@ export default function Home() {
     // Initialize offline IndexedDB (non-blocking)
     initOfflineDB().catch((err) => console.warn('Failed to init offline DB:', err))
 
+    // Register service worker for caching
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // Service worker registration failed — non-critical
+      });
+    }
+
     // Listen for sync events
     const unsubStatus = onSyncStatus((status) => {
       setIsSyncing(status === 'syncing')
@@ -1224,12 +1259,12 @@ export default function Home() {
       setCurrentView(view)
     }
 
-    // ─── 1.5-SECOND HARD TIMEOUT: force landing page if auth hangs ───
-    // Reduced from 3s — if auth hasn't resolved in 1.5s the user is likely
+    // ─── 0.8-SECOND HARD TIMEOUT: force landing page if auth hangs ───
+    // Reduced from 3s — if auth hasn't resolved in 0.8s the user is likely
     // not signed in, and showing the landing page quickly is better than waiting.
     const timeoutId = setTimeout(() => {
       if (!authResolved && mounted) {
-        console.warn('[Aether] Auth check timed out after 1.5s — showing landing page')
+        console.warn('[Aether] Auth check timed out after 0.8s — showing landing page')
         authResolved = true
         // If fast-path showed dashboard but auth never confirmed, revert
         if (fastPathUsed) {
@@ -1243,7 +1278,7 @@ export default function Home() {
           setCurrentView('landing')
         }
       }
-    }, 1500)
+    }, 800)
 
     // ─── FAST PATH: Synchronous cookie check ───
     // If Supabase auth cookies exist, show the dashboard IMMEDIATELY
