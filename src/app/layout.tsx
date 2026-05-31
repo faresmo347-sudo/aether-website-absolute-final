@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Playfair_Display, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -12,6 +12,13 @@ const inter = Inter({
 const playfair = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
   display: "swap",
 });
 
@@ -57,20 +64,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="light" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            var saved = localStorage.getItem('aether-dark-mode');
-            if (saved !== 'true') {
-              document.documentElement.classList.remove('dark');
-              document.documentElement.classList.add('light');
-            }
+            // Force dark mode always — deep space is the default
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
           })();
         `}} />
       </head>
       <body
-        className={`${inter.variable} ${playfair.variable} antialiased`}
+        className={`${inter.variable} ${playfair.variable} ${dmMono.variable} antialiased`}
       >
         {children}
         <Toaster />

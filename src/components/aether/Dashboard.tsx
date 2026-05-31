@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, memo, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, ArrowLeft, FolderOpen, Loader2, Eye, Sparkles, ClipboardPaste, CheckSquare, Square, Camera } from 'lucide-react'
+import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, ArrowLeft, FolderOpen, Loader2, Eye, Sparkles, ClipboardPaste, CheckSquare, Square, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAetherStore } from '@/store/aether-store'
@@ -22,16 +22,53 @@ const FILTER_MAP: Record<string, MemoryType | undefined> = {
 
 const FILTERS = Object.keys(FILTER_MAP)
 
+const TYPE_ACCENT_COLORS: Record<MemoryType, { border: string; bg: string; text: string; glow: string }> = {
+  text: {
+    border: 'rgba(157,139,167,0.6)',
+    bg: 'rgba(157,139,167,0.1)',
+    text: '#9D8BA7',
+    glow: 'rgba(157,139,167,0.3)',
+  },
+  voice: {
+    border: 'rgba(192,132,252,0.6)',
+    bg: 'rgba(192,132,252,0.1)',
+    text: '#c084fc',
+    glow: 'rgba(192,132,252,0.3)',
+  },
+  link: {
+    border: 'rgba(103,232,249,0.6)',
+    bg: 'rgba(103,232,249,0.1)',
+    text: '#67e8f9',
+    glow: 'rgba(103,232,249,0.3)',
+  },
+  image: {
+    border: 'rgba(134,239,172,0.6)',
+    bg: 'rgba(134,239,172,0.1)',
+    text: '#86efac',
+    glow: 'rgba(134,239,172,0.3)',
+  },
+}
+
 function typeIcon(type: MemoryType) {
+  const colors = TYPE_ACCENT_COLORS[type]
   switch (type) {
     case 'voice':
-      return <Mic className="size-4 text-[#9D8BA7]" />
+      return <Mic className="size-3.5" style={{ color: colors.text }} />
     case 'link':
-      return <Link2 className="size-4 text-[#9D8BA7]" />
+      return <Link2 className="size-3.5" style={{ color: colors.text }} />
     case 'image':
-      return <ImageIcon className="size-4 text-[#9D8BA7]" />
+      return <ImageIcon className="size-3.5" style={{ color: colors.text }} />
     default:
-      return <FileText className="size-4 text-[#9D8BA7]" />
+      return <FileText className="size-3.5" style={{ color: colors.text }} />
+  }
+}
+
+function typeLabel(type: MemoryType): string {
+  switch (type) {
+    case 'voice': return 'Voice'
+    case 'link': return 'Link'
+    case 'image': return 'Image'
+    default: return 'Text'
   }
 }
 
@@ -46,112 +83,305 @@ function formatDate(iso: string): string {
   })
 }
 
+function formatRelativeTime(iso: string): string {
+  const now = Date.now()
+  const then = new Date(iso).getTime()
+  const diff = now - then
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days < 30) return `${days}d ago`
+  return formatDate(iso)
+}
+
 // ---------- sub-components (memoized) ----------
 
-const MemoryCard = memo(function MemoryCard({ memory, onClick }: { memory: Memory; onClick: () => void }) {
+const MemoryCard = memo(function MemoryCard({
+  memory,
+  onClick,
+  index,
+}: {
+  memory: Memory
+  onClick: () => void
+  index: number
+}) {
   const isTagging = memory.taggingStatus === 'tagging' || memory.taggingStatus === 'pending'
   const isSyncing = memory.syncStatus === 'pending' || memory.syncStatus === 'syncing'
+  const accent = TYPE_ACCENT_COLORS[memory.type]
 
   return (
     <button
       onClick={onClick}
-      className="tap-feedback card-contain w-full text-left bg-card rounded-2xl p-4 shadow-sm border border-border transition-all duration-200 hover:-translate-y-0 md:hover:-translate-y-0.5 hover:shadow-lg cursor-pointer group active:scale-[0.98]"
+      className="tap-feedback card-contain animate-card-entrance w-full text-left cursor-pointer group active:scale-[0.98]"
+      style={{
+        animationDelay: `${index * 40}ms`,
+        background: 'rgba(15, 15, 26, 0.8)',
+        border: '1px solid rgba(157,139,167,0.1)',
+        borderRadius: '16px',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        borderTop: `1px solid ${accent.border}`,
+        transition: 'all 200ms cubic-bezier(0.4,0,0.2,1)',
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget
+        el.style.border = '1px solid rgba(157,139,167,0.25)'
+        el.style.borderTop = `1px solid ${accent.border}`
+        el.style.background = 'rgba(20, 20, 35, 0.9)'
+        el.style.transform = 'translateY(-2px)'
+        el.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(157,139,167,0.1), inset 0 1px 0 rgba(255,255,255,0.05)'
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget
+        el.style.border = '1px solid rgba(157,139,167,0.1)'
+        el.style.borderTop = `1px solid ${accent.border}`
+        el.style.background = 'rgba(15, 15, 26, 0.8)'
+        el.style.transform = 'translateY(0)'
+        el.style.boxShadow = 'none'
+      }}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex items-center justify-center size-9 rounded-xl bg-[#9D8BA7]/10 shrink-0 mt-0.5">
-          {typeIcon(memory.type)}
+      <div className="p-4 relative">
+        {/* Type pill badge — top right */}
+        <div
+          className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full"
+          style={{
+            background: accent.bg,
+            border: `1px solid ${accent.border.replace('0.6', '0.2')}`,
+          }}
+        >
+          <span style={{ filter: `drop-shadow(0 0 4px ${accent.glow})` }}>
+            {typeIcon(memory.type)}
+          </span>
+          <span className="text-[10px] font-medium" style={{ color: accent.text }}>
+            {typeLabel(memory.type)}
+          </span>
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-bold text-foreground text-sm leading-snug truncate group-hover:text-[#9D8BA7] transition-colors">
+
+        <div className="min-w-0 pr-20">
+          {/* Title */}
+          <h3
+            className="font-semibold leading-snug truncate transition-colors"
+            style={{
+              fontSize: '15px',
+              color: '#f0f0f8',
+              textShadow: '0 0 20px rgba(157,139,167,0.3)',
+            }}
+          >
             {memory.title}
           </h3>
-          <p className="text-muted-foreground text-xs mt-1 line-clamp-2 leading-relaxed overflow-hidden" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+
+          {/* Content preview */}
+          <p
+            className="mt-1.5 line-clamp-2 leading-relaxed overflow-hidden"
+            style={{
+              fontSize: '12px',
+              color: 'rgba(240,240,248,0.5)',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+            }}
+          >
             {memory.content}
           </p>
-          <div className="flex items-center justify-between mt-3 gap-2">
-            <div className="flex items-center gap-1.5 overflow-hidden">
-              {memory.tags.slice(0, 3).map((tag, i) => (
-                <span
-                  key={tag}
-                  className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap transition-all duration-500 ${
-                    isTagging
-                      ? 'bg-[#9D8BA7]/5 text-[#9D8BA7]/40 animate-pulse'
-                      : 'bg-[#9D8BA7]/10 text-[#9D8BA7]'
-                  }`}
-                  style={isTagging ? { animationDelay: `${i * 200}ms` } : undefined}
-                >
-                  {tag}
-                </span>
-              ))}
-              {/* Sync indicator for offline-captured memories */}
-              {isSyncing && !isTagging && (
-                <span className="inline-flex items-center gap-1 text-[9px] text-amber-600/70 bg-amber-50 px-2 py-0.5 rounded-full whitespace-nowrap">
-                  <span className="relative flex size-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400/40 opacity-75" />
-                    <span className="relative inline-flex rounded-full size-1.5 bg-amber-500/70" />
-                  </span>
-                  Syncing...
-                </span>
-              )}
-              {/* Aether is thinking indicator */}
-              {isTagging && (
-                <span className="inline-flex items-center gap-1 text-[9px] text-[#9D8BA7]/60 bg-[#9D8BA7]/5 px-2 py-0.5 rounded-full whitespace-nowrap">
-                  <span className="relative flex size-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#9D8BA7]/40 opacity-75" />
-                    <span className="relative inline-flex rounded-full size-1.5 bg-[#9D8BA7]/60" />
-                  </span>
-                  Aether is thinking...
-                </span>
-              )}
+
+          {/* AI insight preview */}
+          {memory.aiSummary && !isTagging && (
+            <div
+              className="mt-2 text-xs italic leading-relaxed"
+              style={{
+                color: 'rgba(240,240,248,0.4)',
+                borderLeft: '2px solid rgba(157,139,167,0.3)',
+                paddingLeft: '8px',
+              }}
+            >
+              {memory.aiSummary}
             </div>
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
-              {formatDate(memory.createdAt)}
-            </span>
+          )}
+        </div>
+
+        {/* Bottom row: tags + date */}
+        <div className="flex items-center justify-between mt-3 gap-2">
+          <div className="flex items-center gap-1.5 overflow-hidden">
+            {memory.tags.slice(0, 3).map((tag, i) => (
+              <span
+                key={tag}
+                className="text-[11px] px-2.5 py-0.5 rounded-full whitespace-nowrap transition-all duration-500"
+                style={
+                  isTagging
+                    ? {
+                        background: 'rgba(157,139,167,0.05)',
+                        color: 'rgba(157,139,167,0.4)',
+                        border: '1px solid rgba(157,139,167,0.08)',
+                        animationDelay: `${i * 200}ms`,
+                      }
+                    : {
+                        background: 'rgba(157,139,167,0.08)',
+                        color: '#c084fc',
+                        border: '1px solid rgba(157,139,167,0.15)',
+                      }
+                }
+                onMouseEnter={(e) => {
+                  if (!isTagging) e.currentTarget.style.background = 'rgba(157,139,167,0.15)'
+                }}
+                onMouseLeave={(e) => {
+                  if (!isTagging) e.currentTarget.style.background = 'rgba(157,139,167,0.08)'
+                }}
+              >
+                {isTagging ? (
+                  <span className="animate-pulse">{tag}</span>
+                ) : (
+                  tag
+                )}
+              </span>
+            ))}
+            {/* Sync indicator for offline-captured memories */}
+            {isSyncing && !isTagging && (
+              <span
+                className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full whitespace-nowrap"
+                style={{
+                  color: 'rgba(251,191,36,0.7)',
+                  background: 'rgba(251,191,36,0.08)',
+                  border: '1px solid rgba(251,191,36,0.15)',
+                }}
+              >
+                <span className="relative flex size-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400/40 opacity-75" />
+                  <span className="relative inline-flex rounded-full size-1.5 bg-amber-500/70" />
+                </span>
+                Syncing...
+              </span>
+            )}
+            {/* Aether is thinking indicator */}
+            {isTagging && (
+              <span
+                className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full whitespace-nowrap"
+                style={{
+                  color: 'rgba(157,139,167,0.6)',
+                  background: 'rgba(157,139,167,0.05)',
+                  border: '1px solid rgba(157,139,167,0.1)',
+                }}
+              >
+                <span className="relative flex size-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#9D8BA7]/40 opacity-75" />
+                  <span className="relative inline-flex rounded-full size-1.5 bg-[#9D8BA7]/60" />
+                </span>
+                Aether is thinking...
+              </span>
+            )}
           </div>
+          <span
+            className="font-mono whitespace-nowrap shrink-0"
+            style={{ fontSize: '11px', color: 'rgba(240,240,248,0.35)' }}
+          >
+            {formatDate(memory.createdAt)}
+          </span>
         </div>
       </div>
     </button>
   )
 })
 
+// ---------- EmptyState (deep-space star) ----------
+
 const EmptyState = memo(function EmptyState({ collectionName }: { collectionName?: string }) {
   const { setCaptureModalOpen } = useAetherStore()
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 sm:py-20 px-4 sm:px-6 text-center">
-      {/* Animated brain icon with pulse ring */}
-      <div className="relative mb-6">
-        <div className="absolute inset-0 rounded-full bg-[#9D8BA7]/20 animate-ping opacity-20" />
-        <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center ring-4 ring-[#9D8BA7]/10">
-          {collectionName ? (
-            <FolderOpen className="size-9 text-[#9D8BA7]" />
-          ) : (
-            <Brain className="size-9 text-[#9D8BA7]" />
-          )}
-        </div>
+    <div className="flex flex-col items-center justify-center py-16 sm:py-24 px-4 sm:px-6 text-center">
+      {/* Deep-space star */}
+      <div className="relative mb-8 flex items-center justify-center">
+        {/* Outer radial glow */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: '120px',
+            height: '120px',
+            background: 'radial-gradient(circle, rgba(157,139,167,0.2) 0%, transparent 70%)',
+            filter: 'blur(20px)',
+          }}
+        />
+        {/* Star core */}
+        <div
+          className="animate-star-pulse relative size-5 rounded-full bg-[#9D8BA7]"
+          style={{
+            boxShadow: '0 0 40px #9D8BA7, 0 0 80px rgba(157,139,167,0.5)',
+          }}
+        />
+        {/* Tiny ambient stars */}
+        <div
+          className="absolute size-1 rounded-full bg-[#9D8BA7]/40"
+          style={{ top: '-8px', right: '12px', boxShadow: '0 0 6px rgba(157,139,167,0.4)' }}
+        />
+        <div
+          className="absolute size-0.5 rounded-full bg-[#9D8BA7]/30"
+          style={{ bottom: '4px', left: '8px', boxShadow: '0 0 4px rgba(157,139,167,0.3)' }}
+        />
+        <div
+          className="absolute size-0.5 rounded-full bg-[#c084fc]/30"
+          style={{ top: '16px', left: '-6px', boxShadow: '0 0 4px rgba(192,132,252,0.3)' }}
+        />
       </div>
 
-      <h3 className="font-serif text-xl font-semibold text-foreground">
+      <h3 className="font-serif text-xl font-semibold" style={{ color: '#f0f0f8' }}>
         {collectionName
           ? `No memories in ${collectionName} yet`
-          : 'Your second brain is empty'}
+          : 'Your universe is empty'}
       </h3>
-      <p className="text-sm text-muted-foreground mt-2 max-w-xs leading-relaxed">
+      <p
+        className="text-sm mt-2 max-w-xs leading-relaxed"
+        style={{ color: 'rgba(240,240,248,0.45)' }}
+      >
         {collectionName
           ? `Start capturing memories to this collection and they'll appear here.`
-          : 'Start capturing your first memory — ideas, notes, links, anything you want to remember.'}
+          : 'Save your first memory and watch your constellation grow'}
       </p>
 
-      {/* Prominent CTA button for new users */}
+      {/* Glowing CTA button */}
       {!collectionName && (
         <button
           onClick={() => setCaptureModalOpen(true)}
-          className="mt-6 inline-flex items-center gap-2 bg-[#9D8BA7] hover:bg-[#7A6B85] text-white rounded-xl px-6 py-3 text-sm font-semibold shadow-lg shadow-[#9D8BA7]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[#9D8BA7]/30 hover:-translate-y-0.5 active:scale-[0.98] min-h-[44px]"
+          className="mt-6 inline-flex items-center gap-2 text-white rounded-xl px-6 py-3 text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98] min-h-[44px]"
+          style={{
+            background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+            boxShadow: '0 4px 20px rgba(157,139,167,0.3), 0 0 40px rgba(157,139,167,0.15)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.boxShadow = '0 8px 30px rgba(157,139,167,0.4), 0 0 60px rgba(157,139,167,0.2)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.boxShadow = '0 4px 20px rgba(157,139,167,0.3), 0 0 40px rgba(157,139,167,0.15)'
+          }}
         >
           <Plus className="size-4" />
-          Add Your First Memory
+          Save your first memory →
         </button>
       )}
+    </div>
+  )
+})
+
+// ---------- StatsBar ----------
+
+const StatsBar = memo(function StatsBar() {
+  const { memories, collections } = useAetherStore()
+
+  const lastSaved = useMemo(() => {
+    if (memories.length === 0) return null
+    const sorted = [...memories].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+    return sorted[0].createdAt
+  }, [memories])
+
+  return (
+    <div
+      className="font-mono select-none"
+      style={{ fontSize: '11px', color: 'rgba(240,240,248,0.3)' }}
+    >
+      ✦ {memories.length} memories · {collections.length} collections
+      {lastSaved && ` · last saved ${formatRelativeTime(lastSaved)}`}
     </div>
   )
 })
@@ -171,13 +401,21 @@ const FilterBar = memo(function FilterBar() {
       <div className="flex items-center gap-3 min-h-[44px]">
         <button
           onClick={() => setCollectionFilter(null)}
-          className="tap-feedback flex items-center gap-1.5 text-sm text-[#9D8BA7] hover:text-[#7A6B85] transition-colors font-medium active:scale-[0.98] min-h-[44px]"
+          className="tap-feedback flex items-center gap-1.5 text-sm transition-colors font-medium active:scale-[0.98] min-h-[44px]"
+          style={{ color: '#9D8BA7' }}
         >
           <ArrowLeft className="size-4" />
           All memories
         </button>
-        <div className="h-4 w-px bg-border" />
-        <div className="flex items-center gap-2 bg-[#9D8BA7]/10 text-[#9D8BA7] text-sm px-3 py-1.5 rounded-full font-medium">
+        <div className="h-4 w-px" style={{ background: 'rgba(157,139,167,0.12)' }} />
+        <div
+          className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-full font-medium"
+          style={{
+            color: '#9D8BA7',
+            background: 'rgba(157,139,167,0.08)',
+            border: '1px solid rgba(157,139,167,0.15)',
+          }}
+        >
           <FolderOpen className="size-3.5" />
           {activeCollection.name}
         </div>
@@ -193,9 +431,21 @@ const FilterBar = memo(function FilterBar() {
           onClick={() => setActiveFilter(f)}
           className={`tap-feedback text-sm px-4 py-2.5 rounded-full whitespace-nowrap min-w-fit transition-all duration-200 active:scale-[0.96] min-h-[40px] ${
             activeFilter === f
-              ? 'bg-[#9D8BA7] text-white shadow-sm'
-              : 'bg-card text-muted-foreground hover:bg-muted border border-border'
+              ? 'text-white shadow-lg'
+              : ''
           }`}
+          style={
+            activeFilter === f
+              ? {
+                  background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+                  boxShadow: '0 4px 16px rgba(157,139,167,0.2)',
+                }
+              : {
+                  background: 'rgba(15, 15, 26, 0.8)',
+                  color: 'rgba(240,240,248,0.45)',
+                  border: '1px solid rgba(157,139,167,0.06)',
+                }
+          }
         >
           {f}
         </button>
@@ -252,12 +502,10 @@ function QuickCaptureModal() {
 
   // Drag-to-dismiss logic
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    // Only allow drag from the drag handle area (top 40px of sheet)
     const sheet = sheetRef.current
     if (!sheet) return
     const rect = sheet.getBoundingClientRect()
     const touchY = e.touches[0].clientY
-    // Only start drag if touching near the top (drag handle area)
     if (touchY - rect.top < 48) {
       setIsDragging(true)
       setDragY(0)
@@ -267,14 +515,12 @@ function QuickCaptureModal() {
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isDragging) return
     const deltaY = e.touches[0].clientY - (e as any)._startY || 0
-    // Only allow dragging down
     setDragY(Math.max(0, deltaY))
   }, [isDragging])
 
   const handleTouchEnd = useCallback(() => {
     if (!isDragging) return
     setIsDragging(false)
-    // Dismiss if dragged more than 100px down
     if (dragY > 100) {
       handleClose()
     }
@@ -312,7 +558,7 @@ function QuickCaptureModal() {
     resetForm()
   }, [setCaptureModalOpen, resetForm])
 
-  // Generate AI tags based on content (for text, voice, link) — with caching
+  // Generate AI tags based on content — with caching
   const generateTags = useCallback(async (
     content: string,
     type: string,
@@ -323,7 +569,6 @@ function QuickCaptureModal() {
       return getSmartFallbackTags(content, type)
     }
 
-    // Check cache first
     const cached = getCachedTags(content, type)
     if (cached) {
       return cached
@@ -346,7 +591,6 @@ function QuickCaptureModal() {
       })
       const data = await res.json()
       const tags = data.tags || ['#memory']
-      // Cache the result
       setCachedTags(content, type, tags)
       return tags
     } catch {
@@ -355,7 +599,6 @@ function QuickCaptureModal() {
   }, [autoTagging])
 
   const handleSave = useCallback(async () => {
-    // Don't save if no content for text/link tabs
     if (activeCaptureTab === 'text' && !textContent.trim()) return
     if (activeCaptureTab === 'link' && !linkUrl.trim()) return
     if (activeCaptureTab === 'voice' && !voiceTranscript && !isTranscribing) return
@@ -366,7 +609,6 @@ function QuickCaptureModal() {
     let fallbackTags: string[] = []
     let aiSummary: string | undefined
 
-    // Step 1: Compute title, content, and smart fallback tags IMMEDIATELY (no await)
     switch (activeCaptureTab) {
       case 'text':
         title = textContent.slice(0, 50) || 'Quick note'
@@ -411,10 +653,8 @@ function QuickCaptureModal() {
         break
     }
 
-    // Check if we're offline
     const isOffline = !navigator.onLine
 
-    // Step 2: Add memory to store IMMEDIATELY with fallback tags + tagging status
     addMemory({
       id: tempId,
       type: activeCaptureTab,
@@ -422,28 +662,23 @@ function QuickCaptureModal() {
       content,
       tags: fallbackTags,
       createdAt: new Date().toISOString(),
-      taggingStatus: isOffline ? 'complete' : 'pending', // Skip AI tagging when offline
-      syncStatus: isOffline ? 'pending' : 'synced', // Mark as pending sync when offline
+      taggingStatus: isOffline ? 'complete' : 'pending',
+      syncStatus: isOffline ? 'pending' : 'synced',
       ...(aiSummary ? { aiSummary } : {}),
       ...(activeCaptureTab === 'link' && linkUrl ? { source: linkUrl } : {}),
       ...(activeCaptureTab === 'image' && imagePreview ? { imagePreview } : {}),
     })
 
-    // Step 3: Close modal immediately so user sees their memory in the feed
     setIsSaving(false)
     setCaptureModalOpen(false)
     resetForm()
 
-    // Step 4: After 2 seconds, upgrade to 'tagging' status (shows "Aether is thinking")
     const taggingTimeout = setTimeout(() => {
       updateMemory(tempId, { taggingStatus: 'tagging' })
     }, 2000)
 
-    // Step 5: In the background — save to Supabase AND generate AI tags simultaneously
-    // If offline, data.ts handles queueing — we just update the local state
     if (isOffline) {
       clearTimeout(taggingTimeout)
-      // createMemory in data.ts will save to IndexedDB and queue for sync
       try {
         await createMemory({
           type: activeCaptureTab,
@@ -461,7 +696,6 @@ function QuickCaptureModal() {
     }
 
     try {
-      // Check free plan limit first
       if (user?.plan === 'free') {
         const count = await getMemoryCount()
         if (count >= 50) {
@@ -482,7 +716,6 @@ function QuickCaptureModal() {
           ...(activeCaptureTab === 'link' && linkUrl ? { sourceUrl: linkUrl } : {}),
           ...(activeCaptureTab === 'image' && imagePreview ? { imagePreview } : {}),
         }),
-        // For image type with pre-existing tags, skip AI tagging
         activeCaptureTab === 'image' && imageTags.length > 0
           ? Promise.resolve(imageTags)
           : generateTags(content, activeCaptureTab, voiceSummary || undefined, imageDescription || undefined),
@@ -490,7 +723,6 @@ function QuickCaptureModal() {
 
       clearTimeout(taggingTimeout)
 
-      // Step 6: Update memory with real ID from Supabase and real AI tags
       updateMemory(tempId, {
         id: savedMemory.id,
         tags: aiTags,
@@ -506,12 +738,10 @@ function QuickCaptureModal() {
         updateMemory(tempId, { taggingStatus: 'complete' })
         setShowUpgradeDialog(true)
       } else {
-        // Still try to get AI tags even if Supabase save failed
         try {
           const aiTags = await generateTags(content, activeCaptureTab, voiceSummary || undefined, imageDescription || undefined)
           updateMemory(tempId, { tags: aiTags, taggingStatus: 'complete' })
         } catch {
-          // Keep fallback tags
           updateMemory(tempId, { taggingStatus: 'complete' })
         }
       }
@@ -573,7 +803,6 @@ function QuickCaptureModal() {
         stream.getTracks().forEach((t) => t.stop())
         const blob = new Blob(chunks, { type: 'audio/webm' })
 
-        // Start transcription IMMEDIATELY on stop — don't wait for save
         setIsTranscribing(true)
         const reader = new FileReader()
         reader.onloadend = async () => {
@@ -638,22 +867,18 @@ function QuickCaptureModal() {
     }
   }, [])
 
-  // Debounced link processing — start scraping/tagging as URL is typed
+  // Debounced link processing
   const handleLinkUrlChange = useCallback((value: string) => {
     setLinkUrl(value)
     setLinkPreview(value.length > 5)
 
-    // Clear previous debounce
     if (linkDebounceRef.current) {
       clearTimeout(linkDebounceRef.current)
     }
 
-    // Debounce by 500ms — start early processing
     if (value.length > 5) {
       linkDebounceRef.current = setTimeout(() => {
         setIsProcessingLink(true)
-        // Simulate early link processing (could call a link-preview API)
-        // For now, just set the processing state briefly to show the indicator
         setTimeout(() => {
           setIsProcessingLink(false)
         }, 1500)
@@ -670,6 +895,12 @@ function QuickCaptureModal() {
 
   if (!captureModalOpen) return null
 
+  // Shared deep-space modal styling
+  const modalBg = 'rgba(15, 15, 26, 0.98)'
+  const modalBorder = 'rgba(157,139,167,0.12)'
+  const inputBg = 'rgba(7, 7, 15, 0.8)'
+  const inputBorder = 'rgba(157,139,167,0.1)'
+
   // ---- Mobile Bottom Sheet ----
   if (isMobile) {
     return (
@@ -681,7 +912,7 @@ function QuickCaptureModal() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
               onClick={() => setShowUpgradeDialog(false)}
             >
               <motion.div
@@ -689,28 +920,38 @@ function QuickCaptureModal() {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 transition={{ type: 'spring', duration: 0.5 }}
-                className="bg-card rounded-3xl max-w-sm w-full mx-4 overflow-hidden shadow-2xl border border-[#9D8BA7]/20"
+                className="rounded-3xl max-w-sm w-full mx-4 overflow-hidden shadow-2xl"
+                style={{
+                  background: modalBg,
+                  border: `1px solid ${modalBorder}`,
+                  backdropFilter: 'blur(20px)',
+                }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="h-1.5 bg-gradient-to-r from-[#9D8BA7] to-[#C4B5CE]" />
+                <div className="h-1 bg-gradient-to-r from-[#9D8BA7] to-[#c084fc]" />
                 <div className="p-6 text-center">
-                  <div className="mx-auto size-16 rounded-2xl bg-[#9D8BA7]/10 flex items-center justify-center mb-4">
-                    <Sparkles className="size-8 text-[#9D8BA7]" />
+                  <div className="mx-auto size-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(157,139,167,0.1)' }}>
+                    <Sparkles className="size-8" style={{ color: '#9D8BA7' }} />
                   </div>
-                  <h3 className="font-serif text-xl font-semibold text-foreground mb-2">
-                    You've reached your Seed plan limit
+                  <h3 className="font-serif text-xl font-semibold mb-2" style={{ color: '#f0f0f8' }}>
+                    You&apos;ve reached your Seed plan limit
                   </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                    50 memories saved! Upgrade to <span className="font-semibold text-[#9D8BA7]">Bloom</span> for unlimited memories, advanced AI insights, and more.
+                  <p className="text-sm leading-relaxed mb-6" style={{ color: 'rgba(240,240,248,0.45)' }}>
+                    50 memories saved! Upgrade to <span className="font-semibold" style={{ color: '#9D8BA7' }}>Bloom</span> for unlimited memories, advanced AI insights, and more.
                   </p>
                   <button
-                    className="w-full bg-[#9D8BA7] hover:bg-[#8A7A96] text-white rounded-xl h-11 text-sm font-semibold transition-colors mb-3 min-h-[44px]"
+                    className="w-full text-white rounded-xl h-11 text-sm font-semibold transition-all duration-300 mb-3 min-h-[44px]"
+                    style={{
+                      background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+                      boxShadow: '0 4px 20px rgba(157,139,167,0.3)',
+                    }}
                     onClick={() => setShowUpgradeDialog(false)}
                   >
                     Upgrade to Bloom
                   </button>
                   <button
-                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2 min-h-[44px]"
+                    className="w-full text-sm transition-colors py-2 min-h-[44px]"
+                    style={{ color: 'rgba(240,240,248,0.45)' }}
                     onClick={() => setShowUpgradeDialog(false)}
                   >
                     Not now
@@ -726,7 +967,7 @@ function QuickCaptureModal() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-black/40"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
           onClick={handleClose}
         />
 
@@ -737,8 +978,13 @@ function QuickCaptureModal() {
           animate={{ y: isDragging ? dragY : 0, opacity: 1 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="fixed bottom-0 left-0 right-0 z-50 bg-card rounded-t-3xl h-[85dvh] flex flex-col shadow-2xl"
-          style={{ transform: isDragging ? `translateY(${dragY}px)` : undefined }}
+          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl h-[85dvh] flex flex-col shadow-2xl"
+          style={{
+            background: modalBg,
+            border: `1px solid ${modalBorder}`,
+            borderBottom: 'none',
+            backdropFilter: 'blur(20px)',
+          }}
           onTouchStart={(e) => {
             const sheet = sheetRef.current
             if (!sheet) return
@@ -771,33 +1017,42 @@ function QuickCaptureModal() {
         >
           {/* Drag Handle */}
           <div className="flex justify-center pt-3 pb-2 shrink-0">
-            <div className="w-10 h-1 rounded-full bg-muted" />
+            <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(157,139,167,0.2)' }} />
           </div>
 
           {/* Header */}
           <div className="flex items-center justify-between px-4 pb-2 shrink-0">
-            <h2 className="font-serif text-lg font-semibold text-foreground">
+            <h2 className="font-serif text-lg font-semibold" style={{ color: '#f0f0f8' }}>
               Quick Capture
             </h2>
             <button
               onClick={handleClose}
-              className="size-9 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground min-w-[44px] min-h-[44px]"
+              className="size-9 flex items-center justify-center rounded-full transition-colors min-w-[44px] min-h-[44px]"
+              style={{ color: 'rgba(240,240,248,0.45)' }}
             >
               <X className="size-4" />
             </button>
           </div>
 
-          {/* Tabs — touch-friendly with larger targets */}
+          {/* Tabs */}
           <div className="flex items-center gap-1 px-4 pb-3 shrink-0">
             {captureTabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveCaptureTab(tab.key)}
-                className={`tap-feedback flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-full transition-all duration-200 active:scale-[0.96] min-h-[44px] ${
+                className="tap-feedback flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-full transition-all duration-200 active:scale-[0.96] min-h-[44px]"
+                style={
                   activeCaptureTab === tab.key
-                    ? 'bg-[#9D8BA7] text-white'
-                    : 'bg-muted text-muted-foreground'
-                }`}
+                    ? {
+                        background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+                        color: '#fff',
+                      }
+                    : {
+                        background: 'rgba(157,139,167,0.06)',
+                        color: 'rgba(240,240,248,0.45)',
+                        border: '1px solid rgba(157,139,167,0.08)',
+                      }
+                }
               >
                 {tab.icon}
                 {tab.label}
@@ -805,7 +1060,7 @@ function QuickCaptureModal() {
             ))}
           </div>
 
-          {/* Tab content — scrollable, takes remaining space */}
+          {/* Tab content */}
           <div className="flex-1 overflow-y-auto ios-scroll px-4 pb-4 min-h-0">
             {/* Text */}
             {activeCaptureTab === 'text' && (
@@ -813,7 +1068,15 @@ function QuickCaptureModal() {
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
                 placeholder="What's on your mind?"
-                className="w-full min-h-[200px] resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#9D8BA7]/30 transition-shadow"
+                className="w-full min-h-[200px] resize-none rounded-xl px-4 py-3 text-sm focus:outline-none transition-shadow"
+                style={{
+                  background: inputBg,
+                  border: `1px solid ${inputBorder}`,
+                  color: '#f0f0f8',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
+                }}
+                onFocus={(e) => { e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 2px rgba(157,139,167,0.15)' }}
+                onBlur={(e) => { e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.2)' }}
               />
             )}
 
@@ -821,7 +1084,6 @@ function QuickCaptureModal() {
             {activeCaptureTab === 'voice' && (
               <div className="flex flex-col items-center py-4">
                 <div className="relative">
-                  {/* Pulsing ring animation when recording */}
                   {isRecording && (
                     <div className="absolute inset-0 rounded-full bg-red-500/30 animate-pulse-ring" />
                   )}
@@ -835,48 +1097,73 @@ function QuickCaptureModal() {
                     }}
                     className={`relative size-16 rounded-full flex items-center justify-center transition-all duration-300 min-w-[64px] min-h-[64px] ${
                       isRecording
-                        ? 'bg-red-500 text-white shadow-lg shadow-red-200'
-                        : 'bg-[#9D8BA7]/10 text-[#9D8BA7] hover:bg-[#9D8BA7]/20'
+                        ? 'bg-red-500 text-white shadow-lg shadow-red-500/30'
+                        : ''
                     }`}
+                    style={
+                      !isRecording
+                        ? {
+                            background: 'rgba(157,139,167,0.1)',
+                            color: '#9D8BA7',
+                          }
+                        : undefined
+                    }
                   >
                     <Mic className="size-7" />
                   </button>
                 </div>
 
                 {isRecording && (
-                  <p className="text-sm text-red-500 mt-3 font-medium">
+                  <p className="text-sm text-red-400 mt-3 font-medium">
                     Recording... tap to stop
                   </p>
                 )}
 
                 {!isRecording && !voiceTranscript && !isTranscribing && (
-                  <p className="text-sm text-muted-foreground mt-3">
+                  <p className="text-sm mt-3" style={{ color: 'rgba(240,240,248,0.45)' }}>
                     Tap to start recording
                   </p>
                 )}
 
-                {/* Show transcribing state immediately after stop */}
                 {isTranscribing && !isRecording && (
                   <div className="mt-4 w-full">
-                    <div className="rounded-xl border border-[#9D8BA7]/20 bg-[#9D8BA7]/5 p-3 flex items-center gap-2">
-                      <Loader2 className="size-4 text-[#9D8BA7] animate-spin" />
-                      <p className="text-sm text-[#9D8BA7] font-medium">Transcribing your voice...</p>
+                    <div
+                      className="rounded-xl p-3 flex items-center gap-2"
+                      style={{
+                        background: 'rgba(157,139,167,0.05)',
+                        border: '1px solid rgba(157,139,167,0.15)',
+                      }}
+                    >
+                      <Loader2 className="size-4 animate-spin" style={{ color: '#9D8BA7' }} />
+                      <p className="text-sm font-medium" style={{ color: '#9D8BA7' }}>Transcribing your voice...</p>
                     </div>
                   </div>
                 )}
 
                 {voiceTranscript && !isRecording && (
                   <div className="mt-4 w-full space-y-2">
-                    <div className="rounded-xl border border-border bg-background p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Transcription</p>
-                      <p className="text-sm text-foreground leading-relaxed">
+                    <div
+                      className="rounded-xl p-3"
+                      style={{
+                        background: inputBg,
+                        border: `1px solid ${inputBorder}`,
+                      }}
+                    >
+                      <p className="text-xs mb-1" style={{ color: 'rgba(240,240,248,0.35)' }}>Transcription</p>
+                      <p className="text-sm leading-relaxed" style={{ color: '#f0f0f8' }}>
                         {voiceTranscript}
                       </p>
                     </div>
                     {voiceSummary && (
-                      <div className="rounded-xl border border-[#9D8BA7]/20 bg-[#9D8BA7]/5 p-3">
-                        <p className="text-xs text-[#9D8BA7] font-medium mb-1">AI Summary</p>
-                        <p className="text-sm text-foreground leading-relaxed">
+                      <div
+                        className="rounded-xl p-3"
+                        style={{
+                          background: 'rgba(157,139,167,0.05)',
+                          border: '1px solid rgba(157,139,167,0.15)',
+                        }}
+                      >
+                        <p className="text-xs font-medium mb-1" style={{ color: '#9D8BA7' }}>AI Summary</p>
+                        <p className="text-sm leading-relaxed" style={{ color: '#f0f0f8' }}>
                           {voiceSummary}
                         </p>
                       </div>
@@ -897,36 +1184,59 @@ function QuickCaptureModal() {
                       handleLinkUrlChange(e.target.value)
                     }}
                     placeholder="Paste any link..."
-                    className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-14 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#9D8BA7]/30 transition-shadow min-h-[44px]"
+                    className="w-full rounded-xl px-4 py-3 pr-14 text-sm focus:outline-none transition-shadow min-h-[44px]"
+                    style={{
+                      background: inputBg,
+                      border: `1px solid ${inputBorder}`,
+                      color: '#f0f0f8',
+                      boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 2px rgba(157,139,167,0.15)' }}
+                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.2)' }}
                   />
-                  {/* Paste button */}
                   <button
                     onClick={handlePaste}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-[#9D8BA7] hover:text-[#7A6B85] bg-[#9D8BA7]/10 hover:bg-[#9D8BA7]/20 rounded-lg px-2.5 py-1.5 transition-colors min-h-[36px]"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs rounded-lg px-2.5 py-1.5 transition-colors min-h-[36px]"
+                    style={{
+                      color: '#9D8BA7',
+                      background: 'rgba(157,139,167,0.1)',
+                      border: '1px solid rgba(157,139,167,0.1)',
+                    }}
                   >
                     <ClipboardPaste className="size-3.5" />
                     <span>Paste</span>
                   </button>
                 </div>
 
-                {/* Link processing indicator */}
                 {isProcessingLink && (
-                  <div className="mt-2 rounded-xl border border-[#9D8BA7]/20 bg-[#9D8BA7]/5 p-2.5 flex items-center gap-2">
-                    <Loader2 className="size-3.5 text-[#9D8BA7] animate-spin" />
-                    <p className="text-xs text-[#9D8BA7]">Processing link...</p>
+                  <div
+                    className="mt-2 rounded-xl p-2.5 flex items-center gap-2"
+                    style={{
+                      background: 'rgba(157,139,167,0.05)',
+                      border: '1px solid rgba(157,139,167,0.15)',
+                    }}
+                  >
+                    <Loader2 className="size-3.5 animate-spin" style={{ color: '#9D8BA7' }} />
+                    <p className="text-xs" style={{ color: '#9D8BA7' }}>Processing link...</p>
                   </div>
                 )}
 
                 {linkPreview && linkUrl.length > 5 && (
-                  <div className="mt-3 rounded-xl border border-border bg-background p-3 flex gap-3">
-                    <div className="size-14 rounded-lg bg-[#9D8BA7]/10 flex items-center justify-center shrink-0">
-                      <Link2 className="size-5 text-[#9D8BA7]" />
+                  <div
+                    className="mt-3 rounded-xl p-3 flex gap-3"
+                    style={{
+                      background: inputBg,
+                      border: `1px solid ${inputBorder}`,
+                    }}
+                  >
+                    <div className="size-14 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(103,232,249,0.08)' }}>
+                      <Link2 className="size-5" style={{ color: '#67e8f9' }} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
+                      <p className="text-sm font-semibold truncate" style={{ color: '#f0f0f8' }}>
                         Article Preview
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                      <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'rgba(240,240,248,0.45)' }}>
                         A preview of the content from the link you saved. The full
                         article will be summarized and tagged automatically.
                       </p>
@@ -941,12 +1251,17 @@ function QuickCaptureModal() {
               <div>
                 {!imagePreview ? (
                   <div className="flex flex-col items-center justify-center gap-3 py-4">
-                    {/* Gallery button - opens native photo picker */}
-                    <label className="tap-feedback w-full flex items-center justify-center gap-3 min-h-[56px] rounded-xl border-2 border-dashed border-border bg-background cursor-pointer hover:border-[#9D8BA7]/40 transition-colors active:scale-[0.98]">
-                      <Upload className="size-5 text-[#9D8BA7]/70" />
+                    <label
+                      className="tap-feedback w-full flex items-center justify-center gap-3 min-h-[56px] rounded-xl cursor-pointer transition-colors active:scale-[0.98]"
+                      style={{
+                        border: '2px dashed rgba(157,139,167,0.15)',
+                        background: inputBg,
+                      }}
+                    >
+                      <Upload className="size-5" style={{ color: 'rgba(157,139,167,0.7)' }} />
                       <div>
-                        <p className="text-sm font-medium text-foreground">Choose from Gallery</p>
-                        <p className="text-xs text-muted-foreground">Select a photo from your library</p>
+                        <p className="text-sm font-medium" style={{ color: '#f0f0f8' }}>Choose from Gallery</p>
+                        <p className="text-xs" style={{ color: 'rgba(240,240,248,0.35)' }}>Select a photo from your library</p>
                       </div>
                       <input
                         ref={fileInputRef}
@@ -961,12 +1276,17 @@ function QuickCaptureModal() {
                         }}
                       />
                     </label>
-                    {/* Camera button - opens camera directly */}
-                    <label className="tap-feedback w-full flex items-center justify-center gap-3 min-h-[56px] rounded-xl bg-[#9D8BA7]/10 border border-[#9D8BA7]/20 cursor-pointer hover:bg-[#9D8BA7]/15 transition-colors active:scale-[0.98]">
-                      <Camera className="size-5 text-[#9D8BA7]" />
+                    <label
+                      className="tap-feedback w-full flex items-center justify-center gap-3 min-h-[56px] rounded-xl cursor-pointer transition-colors active:scale-[0.98]"
+                      style={{
+                        background: 'rgba(157,139,167,0.08)',
+                        border: '1px solid rgba(157,139,167,0.15)',
+                      }}
+                    >
+                      <Camera className="size-5" style={{ color: '#9D8BA7' }} />
                       <div>
-                        <p className="text-sm font-medium text-[#9D8BA7]">Take a Photo</p>
-                        <p className="text-xs text-[#9D8BA7]/60">Open camera to capture</p>
+                        <p className="text-sm font-medium" style={{ color: '#9D8BA7' }}>Take a Photo</p>
+                        <p className="text-xs" style={{ color: 'rgba(157,139,167,0.6)' }}>Open camera to capture</p>
                       </div>
                       <input
                         type="file"
@@ -984,7 +1304,6 @@ function QuickCaptureModal() {
                   </div>
                 ) : (
                   <div className="relative">
-                    {/* Full width image preview */}
                     <img
                       src={imagePreview}
                       alt="Uploaded image preview"
@@ -997,27 +1316,36 @@ function QuickCaptureModal() {
                         setImageDescription('')
                         setImageTags([])
                       }}
-                      className="absolute top-2 right-2 size-8 rounded-full bg-card/80 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors min-w-[36px] min-h-[36px]"
+                      className="absolute top-2 right-2 size-8 rounded-full flex items-center justify-center transition-colors min-w-[36px] min-h-[36px]"
+                      style={{
+                        background: 'rgba(15,15,26,0.8)',
+                        color: 'rgba(240,240,248,0.6)',
+                        backdropFilter: 'blur(4px)',
+                      }}
                     >
                       <X className="size-4" />
                     </button>
 
-                    {/* AI analysis overlay */}
                     {isAnalyzingImage && (
-                      <div className="absolute inset-0 bg-black/50 rounded-xl flex flex-col items-center justify-center gap-2">
+                      <div className="absolute inset-0 bg-black/60 rounded-xl flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
                         <Loader2 className="size-6 text-white animate-spin" />
                         <p className="text-xs text-white font-medium">Analyzing image...</p>
                       </div>
                     )}
 
-                    {/* Show AI analysis results */}
                     {!isAnalyzingImage && imageDescription && (
-                      <div className="mt-2 rounded-xl border border-[#9D8BA7]/20 bg-[#9D8BA7]/5 p-3">
+                      <div
+                        className="mt-2 rounded-xl p-3"
+                        style={{
+                          background: 'rgba(157,139,167,0.05)',
+                          border: '1px solid rgba(157,139,167,0.15)',
+                        }}
+                      >
                         <div className="flex items-center gap-1.5 mb-1.5">
-                          <Eye className="size-3.5 text-[#9D8BA7]" />
-                          <p className="text-xs text-[#9D8BA7] font-medium">AI Analysis</p>
+                          <Eye className="size-3.5" style={{ color: '#9D8BA7' }} />
+                          <p className="text-xs font-medium" style={{ color: '#9D8BA7' }}>AI Analysis</p>
                         </div>
-                        <p className="text-sm text-foreground leading-relaxed">
+                        <p className="text-sm leading-relaxed" style={{ color: '#f0f0f8' }}>
                           {imageDescription}
                         </p>
                         {imageTags.length > 0 && (
@@ -1025,7 +1353,12 @@ function QuickCaptureModal() {
                             {imageTags.map((tag) => (
                               <span
                                 key={tag}
-                                className="bg-[#9D8BA7]/10 text-[#9D8BA7] text-[10px] px-2 py-0.5 rounded-full"
+                                className="text-[10px] px-2 py-0.5 rounded-full"
+                                style={{
+                                  background: 'rgba(157,139,167,0.08)',
+                                  color: '#c084fc',
+                                  border: '1px solid rgba(157,139,167,0.15)',
+                                }}
                               >
                                 {tag}
                               </span>
@@ -1040,12 +1373,16 @@ function QuickCaptureModal() {
             )}
           </div>
 
-          {/* Save button — always visible, full width, min 48px */}
-          <div className="shrink-0 px-4 pb-5 pt-2 border-t border-border/50 bg-card">
+          {/* Save button */}
+          <div className="shrink-0 px-4 pb-5 pt-2" style={{ borderTop: '1px solid rgba(157,139,167,0.08)', background: modalBg }}>
             <Button
               onClick={handleSave}
               disabled={isSaving || isAnalyzingImage}
-              className="w-full bg-[#9D8BA7] hover:bg-[#7A6B85] text-white rounded-xl min-h-[48px] text-sm font-medium transition-colors"
+              className="w-full text-white rounded-xl min-h-[48px] text-sm font-medium transition-all duration-300"
+              style={{
+                background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+                boxShadow: '0 4px 20px rgba(157,139,167,0.25)',
+              }}
             >
               {isSaving || isAnalyzingImage ? (
                 <>
@@ -1075,7 +1412,7 @@ function QuickCaptureModal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
             onClick={() => setShowUpgradeDialog(false)}
           >
             <motion.div
@@ -1083,28 +1420,38 @@ function QuickCaptureModal() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', duration: 0.5 }}
-              className="bg-card rounded-3xl max-w-sm w-full mx-4 overflow-hidden shadow-2xl border border-[#9D8BA7]/20"
+              className="rounded-3xl max-w-sm w-full mx-4 overflow-hidden shadow-2xl"
+              style={{
+                background: modalBg,
+                border: `1px solid ${modalBorder}`,
+                backdropFilter: 'blur(20px)',
+              }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="h-1.5 bg-gradient-to-r from-[#9D8BA7] to-[#C4B5CE]" />
+              <div className="h-1 bg-gradient-to-r from-[#9D8BA7] to-[#c084fc]" />
               <div className="p-6 text-center">
-                <div className="mx-auto size-16 rounded-2xl bg-[#9D8BA7]/10 flex items-center justify-center mb-4">
-                  <Sparkles className="size-8 text-[#9D8BA7]" />
+                <div className="mx-auto size-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: 'rgba(157,139,167,0.1)' }}>
+                  <Sparkles className="size-8" style={{ color: '#9D8BA7' }} />
                 </div>
-                <h3 className="font-serif text-xl font-semibold text-foreground mb-2">
-                  You've reached your Seed plan limit
+                <h3 className="font-serif text-xl font-semibold mb-2" style={{ color: '#f0f0f8' }}>
+                  You&apos;ve reached your Seed plan limit
                 </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                  50 memories saved! Upgrade to <span className="font-semibold text-[#9D8BA7]">Bloom</span> for unlimited memories, advanced AI insights, and more.
+                <p className="text-sm leading-relaxed mb-6" style={{ color: 'rgba(240,240,248,0.45)' }}>
+                  50 memories saved! Upgrade to <span className="font-semibold" style={{ color: '#9D8BA7' }}>Bloom</span> for unlimited memories, advanced AI insights, and more.
                 </p>
                 <button
-                  className="w-full bg-[#9D8BA7] hover:bg-[#8A7A96] text-white rounded-xl h-11 text-sm font-semibold transition-colors mb-3"
+                  className="w-full text-white rounded-xl h-11 text-sm font-semibold transition-all duration-300 mb-3"
+                  style={{
+                    background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+                    boxShadow: '0 4px 20px rgba(157,139,167,0.3)',
+                  }}
                   onClick={() => setShowUpgradeDialog(false)}
                 >
                   Upgrade to Bloom
                 </button>
                 <button
-                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                  className="w-full text-sm transition-colors py-2"
+                  style={{ color: 'rgba(240,240,248,0.45)' }}
                   onClick={() => setShowUpgradeDialog(false)}
                 >
                   Not now
@@ -1117,21 +1464,27 @@ function QuickCaptureModal() {
 
       {/* Capture Modal — Desktop */}
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       >
         <div
-          className="bg-card rounded-2xl max-w-lg w-full mx-4 overflow-hidden shadow-xl"
+          className="rounded-2xl max-w-lg w-full mx-4 overflow-hidden shadow-xl"
+          style={{
+            background: modalBg,
+            border: `1px solid ${modalBorder}`,
+            backdropFilter: 'blur(20px)',
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 pt-5 pb-2">
-            <h2 className="font-serif text-lg font-semibold text-foreground">
+            <h2 className="font-serif text-lg font-semibold" style={{ color: '#f0f0f8' }}>
               Quick Capture
             </h2>
             <button
               onClick={handleClose}
-              className="size-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground"
+              className="size-8 flex items-center justify-center rounded-full transition-colors"
+              style={{ color: 'rgba(240,240,248,0.45)' }}
             >
               <X className="size-4" />
             </button>
@@ -1143,11 +1496,19 @@ function QuickCaptureModal() {
               <button
                 key={tab.key}
                 onClick={() => setActiveCaptureTab(tab.key)}
-                className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full transition-all duration-200 ${
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full transition-all duration-200"
+                style={
                   activeCaptureTab === tab.key
-                    ? 'bg-[#9D8BA7] text-white'
-                    : 'bg-muted text-muted-foreground hover:bg-muted'
-                }`}
+                    ? {
+                        background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+                        color: '#fff',
+                      }
+                    : {
+                        background: 'rgba(157,139,167,0.06)',
+                        color: 'rgba(240,240,248,0.45)',
+                        border: '1px solid rgba(157,139,167,0.08)',
+                      }
+                }
               >
                 {tab.icon}
                 {tab.label}
@@ -1163,7 +1524,15 @@ function QuickCaptureModal() {
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
                 placeholder="What's on your mind?"
-                className="w-full h-36 resize-none rounded-xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#9D8BA7]/30 transition-shadow"
+                className="w-full h-36 resize-none rounded-xl px-4 py-3 text-sm focus:outline-none transition-shadow"
+                style={{
+                  background: inputBg,
+                  border: `1px solid ${inputBorder}`,
+                  color: '#f0f0f8',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
+                }}
+                onFocus={(e) => { e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 2px rgba(157,139,167,0.15)' }}
+                onBlur={(e) => { e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.2)' }}
               />
             )}
 
@@ -1184,48 +1553,73 @@ function QuickCaptureModal() {
                     }}
                     className={`relative size-16 rounded-full flex items-center justify-center transition-all duration-300 ${
                       isRecording
-                        ? 'bg-red-500 text-white shadow-lg shadow-red-200'
-                        : 'bg-[#9D8BA7]/10 text-[#9D8BA7] hover:bg-[#9D8BA7]/20'
+                        ? 'bg-red-500 text-white shadow-lg shadow-red-500/30'
+                        : ''
                     }`}
+                    style={
+                      !isRecording
+                        ? {
+                            background: 'rgba(157,139,167,0.1)',
+                            color: '#9D8BA7',
+                          }
+                        : undefined
+                    }
                   >
                     <Mic className="size-7" />
                   </button>
                 </div>
 
                 {isRecording && (
-                  <p className="text-sm text-red-500 mt-3 font-medium">
+                  <p className="text-sm text-red-400 mt-3 font-medium">
                     Recording... click to stop
                   </p>
                 )}
 
                 {!isRecording && !voiceTranscript && !isTranscribing && (
-                  <p className="text-sm text-muted-foreground mt-3">
+                  <p className="text-sm mt-3" style={{ color: 'rgba(240,240,248,0.45)' }}>
                     Click to start recording
                   </p>
                 )}
 
-                {/* Show transcribing state immediately after stop */}
                 {isTranscribing && !isRecording && (
                   <div className="mt-4 w-full">
-                    <div className="rounded-xl border border-[#9D8BA7]/20 bg-[#9D8BA7]/5 p-3 flex items-center gap-2">
-                      <Loader2 className="size-4 text-[#9D8BA7] animate-spin" />
-                      <p className="text-sm text-[#9D8BA7] font-medium">Transcribing your voice...</p>
+                    <div
+                      className="rounded-xl p-3 flex items-center gap-2"
+                      style={{
+                        background: 'rgba(157,139,167,0.05)',
+                        border: '1px solid rgba(157,139,167,0.15)',
+                      }}
+                    >
+                      <Loader2 className="size-4 animate-spin" style={{ color: '#9D8BA7' }} />
+                      <p className="text-sm font-medium" style={{ color: '#9D8BA7' }}>Transcribing your voice...</p>
                     </div>
                   </div>
                 )}
 
                 {voiceTranscript && !isRecording && (
                   <div className="mt-4 w-full space-y-2">
-                    <div className="rounded-xl border border-border bg-background p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Transcription</p>
-                      <p className="text-sm text-foreground leading-relaxed">
+                    <div
+                      className="rounded-xl p-3"
+                      style={{
+                        background: inputBg,
+                        border: `1px solid ${inputBorder}`,
+                      }}
+                    >
+                      <p className="text-xs mb-1" style={{ color: 'rgba(240,240,248,0.35)' }}>Transcription</p>
+                      <p className="text-sm leading-relaxed" style={{ color: '#f0f0f8' }}>
                         {voiceTranscript}
                       </p>
                     </div>
                     {voiceSummary && (
-                      <div className="rounded-xl border border-[#9D8BA7]/20 bg-[#9D8BA7]/5 p-3">
-                        <p className="text-xs text-[#9D8BA7] font-medium mb-1">AI Summary</p>
-                        <p className="text-sm text-foreground leading-relaxed">
+                      <div
+                        className="rounded-xl p-3"
+                        style={{
+                          background: 'rgba(157,139,167,0.05)',
+                          border: '1px solid rgba(157,139,167,0.15)',
+                        }}
+                      >
+                        <p className="text-xs font-medium mb-1" style={{ color: '#9D8BA7' }}>AI Summary</p>
+                        <p className="text-sm leading-relaxed" style={{ color: '#f0f0f8' }}>
                           {voiceSummary}
                         </p>
                       </div>
@@ -1246,35 +1640,59 @@ function QuickCaptureModal() {
                       handleLinkUrlChange(e.target.value)
                     }}
                     placeholder="Paste any link..."
-                    className="w-full rounded-xl border border-border bg-background px-4 py-3 pr-14 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#9D8BA7]/30 transition-shadow"
+                    className="w-full rounded-xl px-4 py-3 pr-14 text-sm focus:outline-none transition-shadow"
+                    style={{
+                      background: inputBg,
+                      border: `1px solid ${inputBorder}`,
+                      color: '#f0f0f8',
+                      boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 2px rgba(157,139,167,0.15)' }}
+                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.2)' }}
                   />
                   <button
                     onClick={handlePaste}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-[#9D8BA7] hover:text-[#7A6B85] bg-[#9D8BA7]/10 hover:bg-[#9D8BA7]/20 rounded-lg px-2.5 py-1.5 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs rounded-lg px-2.5 py-1.5 transition-colors"
+                    style={{
+                      color: '#9D8BA7',
+                      background: 'rgba(157,139,167,0.1)',
+                      border: '1px solid rgba(157,139,167,0.1)',
+                    }}
                   >
                     <ClipboardPaste className="size-3.5" />
                     <span>Paste</span>
                   </button>
                 </div>
 
-                {/* Link processing indicator */}
                 {isProcessingLink && (
-                  <div className="mt-2 rounded-xl border border-[#9D8BA7]/20 bg-[#9D8BA7]/5 p-2.5 flex items-center gap-2">
-                    <Loader2 className="size-3.5 text-[#9D8BA7] animate-spin" />
-                    <p className="text-xs text-[#9D8BA7]">Processing link...</p>
+                  <div
+                    className="mt-2 rounded-xl p-2.5 flex items-center gap-2"
+                    style={{
+                      background: 'rgba(157,139,167,0.05)',
+                      border: '1px solid rgba(157,139,167,0.15)',
+                    }}
+                  >
+                    <Loader2 className="size-3.5 animate-spin" style={{ color: '#9D8BA7' }} />
+                    <p className="text-xs" style={{ color: '#9D8BA7' }}>Processing link...</p>
                   </div>
                 )}
 
                 {linkPreview && linkUrl.length > 5 && (
-                  <div className="mt-3 rounded-xl border border-border bg-background p-3 flex gap-3">
-                    <div className="size-14 rounded-lg bg-[#9D8BA7]/10 flex items-center justify-center shrink-0">
-                      <Link2 className="size-5 text-[#9D8BA7]" />
+                  <div
+                    className="mt-3 rounded-xl p-3 flex gap-3"
+                    style={{
+                      background: inputBg,
+                      border: `1px solid ${inputBorder}`,
+                    }}
+                  >
+                    <div className="size-14 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(103,232,249,0.08)' }}>
+                      <Link2 className="size-5" style={{ color: '#67e8f9' }} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
+                      <p className="text-sm font-semibold truncate" style={{ color: '#f0f0f8' }}>
                         Article Preview
                       </p>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                      <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'rgba(240,240,248,0.45)' }}>
                         A preview of the content from the link you saved. The full
                         article will be summarized and tagged automatically.
                       </p>
@@ -1288,9 +1706,15 @@ function QuickCaptureModal() {
             {activeCaptureTab === 'image' && (
               <div>
                 {!imagePreview ? (
-                  <label className="flex flex-col items-center justify-center h-36 rounded-xl border-2 border-dashed border-border bg-background cursor-pointer hover:border-[#9D8BA7]/40 transition-colors">
-                    <Upload className="size-8 text-[#9D8BA7]/50 mb-2" />
-                    <p className="text-sm text-muted-foreground">
+                  <label
+                    className="flex flex-col items-center justify-center h-36 rounded-xl cursor-pointer transition-colors"
+                    style={{
+                      border: '2px dashed rgba(157,139,167,0.15)',
+                      background: inputBg,
+                    }}
+                  >
+                    <Upload className="size-8 mb-2" style={{ color: 'rgba(157,139,167,0.5)' }} />
+                    <p className="text-sm" style={{ color: 'rgba(240,240,248,0.45)' }}>
                       Drop an image or click to upload
                     </p>
                     <input
@@ -1320,25 +1744,36 @@ function QuickCaptureModal() {
                         setImageDescription('')
                         setImageTags([])
                       }}
-                      className="absolute top-2 right-2 size-6 rounded-full bg-card/80 flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors"
+                      className="absolute top-2 right-2 size-6 rounded-full flex items-center justify-center transition-colors"
+                      style={{
+                        background: 'rgba(15,15,26,0.8)',
+                        color: 'rgba(240,240,248,0.6)',
+                        backdropFilter: 'blur(4px)',
+                      }}
                     >
                       <X className="size-3" />
                     </button>
 
                     {isAnalyzingImage && (
-                      <div className="absolute inset-0 bg-black/50 rounded-xl flex flex-col items-center justify-center gap-2">
+                      <div className="absolute inset-0 bg-black/60 rounded-xl flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
                         <Loader2 className="size-6 text-white animate-spin" />
                         <p className="text-xs text-white font-medium">Analyzing image...</p>
                       </div>
                     )}
 
                     {!isAnalyzingImage && imageDescription && (
-                      <div className="mt-2 rounded-xl border border-[#9D8BA7]/20 bg-[#9D8BA7]/5 p-3">
+                      <div
+                        className="mt-2 rounded-xl p-3"
+                        style={{
+                          background: 'rgba(157,139,167,0.05)',
+                          border: '1px solid rgba(157,139,167,0.15)',
+                        }}
+                      >
                         <div className="flex items-center gap-1.5 mb-1.5">
-                          <Eye className="size-3.5 text-[#9D8BA7]" />
-                          <p className="text-xs text-[#9D8BA7] font-medium">AI Analysis</p>
+                          <Eye className="size-3.5" style={{ color: '#9D8BA7' }} />
+                          <p className="text-xs font-medium" style={{ color: '#9D8BA7' }}>AI Analysis</p>
                         </div>
-                        <p className="text-sm text-foreground leading-relaxed">
+                        <p className="text-sm leading-relaxed" style={{ color: '#f0f0f8' }}>
                           {imageDescription}
                         </p>
                         {imageTags.length > 0 && (
@@ -1346,7 +1781,12 @@ function QuickCaptureModal() {
                             {imageTags.map((tag) => (
                               <span
                                 key={tag}
-                                className="bg-[#9D8BA7]/10 text-[#9D8BA7] text-[10px] px-2 py-0.5 rounded-full"
+                                className="text-[10px] px-2 py-0.5 rounded-full"
+                                style={{
+                                  background: 'rgba(157,139,167,0.08)',
+                                  color: '#c084fc',
+                                  border: '1px solid rgba(157,139,167,0.15)',
+                                }}
                               >
                                 {tag}
                               </span>
@@ -1366,7 +1806,11 @@ function QuickCaptureModal() {
             <Button
               onClick={handleSave}
               disabled={isSaving || isAnalyzingImage}
-              className="w-full bg-[#9D8BA7] hover:bg-[#7A6B85] text-white rounded-xl h-11 text-sm font-medium transition-colors"
+              className="w-full text-white rounded-xl h-11 text-sm font-medium transition-all duration-300"
+              style={{
+                background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+                boxShadow: '0 4px 20px rgba(157,139,167,0.25)',
+              }}
             >
               {isSaving || isAnalyzingImage ? (
                 <>
@@ -1536,18 +1980,32 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       {/* Filter Bar — horizontally scrollable on mobile */}
-      <div className="shrink-0 pb-3 px-4 sm:px-6">
+      <div className="shrink-0 pb-2 px-4 sm:px-6">
         <FilterBar />
       </div>
 
-      {/* Extracted Tasks Section — mobile-friendly touch targets */}
+      {/* Stats Bar */}
+      <div className="shrink-0 px-4 sm:px-6 pb-3">
+        <StatsBar />
+      </div>
+
+      {/* Extracted Tasks Section */}
       {extractedTasks.length > 0 && (
         <div className="shrink-0 mb-4 px-4 sm:px-6">
-          <div className="bg-card rounded-2xl p-4 shadow-sm border border-border">
+          <div
+            className="rounded-2xl p-4"
+            style={{
+              background: 'rgba(15, 15, 26, 0.8)',
+              border: '1px solid rgba(157,139,167,0.1)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              borderTop: '1px solid rgba(157,139,167,0.2)',
+            }}
+          >
             <div className="flex items-center gap-2 mb-3">
-              <CheckSquare className="size-4 text-[#9D8BA7]" />
-              <h3 className="text-sm font-semibold text-foreground">Extracted Tasks</h3>
-              <span className="text-xs text-muted-foreground ml-auto">
+              <CheckSquare className="size-4" style={{ color: '#9D8BA7' }} />
+              <h3 className="text-sm font-semibold" style={{ color: '#f0f0f8' }}>Extracted Tasks</h3>
+              <span className="text-xs ml-auto font-mono" style={{ color: 'rgba(240,240,248,0.35)' }}>
                 {completedTasks.size}/{extractedTasks.length} done
               </span>
             </div>
@@ -1559,15 +2017,23 @@ export default function Dashboard() {
                   className="tap-feedback w-full flex items-start gap-2.5 text-left py-2 active:scale-[0.98] transition-transform"
                 >
                   {completedTasks.has(task.id) ? (
-                    <CheckSquare className="size-5 text-[#9D8BA7] shrink-0 mt-0.5" />
+                    <CheckSquare className="size-5 shrink-0 mt-0.5" style={{ color: '#9D8BA7' }} />
                   ) : (
-                    <Square className="size-5 text-muted-foreground shrink-0 mt-0.5 group-hover:text-[#9D8BA7] transition-colors" />
+                    <Square className="size-5 shrink-0 mt-0.5" style={{ color: 'rgba(240,240,248,0.3)' }} />
                   )}
                   <div className="min-w-0">
-                    <p className={`text-sm leading-relaxed transition-colors ${completedTasks.has(task.id) ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                    <p
+                      className="text-sm leading-relaxed transition-colors"
+                      style={{
+                        color: completedTasks.has(task.id) ? 'rgba(240,240,248,0.35)' : '#f0f0f8',
+                        textDecoration: completedTasks.has(task.id) ? 'line-through' : 'none',
+                      }}
+                    >
                       {task.text}
                     </p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">from: {task.memoryTitle}</p>
+                    <p className="text-[10px] mt-0.5 font-mono" style={{ color: 'rgba(240,240,248,0.3)' }}>
+                      from: {task.memoryTitle}
+                    </p>
                   </div>
                 </button>
               ))}
@@ -1576,12 +2042,20 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Memory Feed — iOS-style scroll, mobile gap */}
+      {/* Memory Feed */}
       <div className="flex-1 overflow-y-auto min-h-0 ios-scroll px-4 sm:px-6 pb-20 md:pb-6">
         {isLoadingMemories ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-card rounded-2xl p-4 shadow-sm border border-border">
+              <div
+                key={i}
+                className="rounded-2xl p-4"
+                style={{
+                  background: 'rgba(15, 15, 26, 0.8)',
+                  border: '1px solid rgba(157,139,167,0.1)',
+                  borderTop: '1px solid rgba(157,139,167,0.2)',
+                }}
+              >
                 <div className="flex items-start gap-3">
                   <Skeleton className="size-9 rounded-xl shrink-0" />
                   <div className="flex-1 space-y-2">
@@ -1602,11 +2076,12 @@ export default function Dashboard() {
           </div>
         ) : sortedMemories.length > 0 ? (
           <div className="flex flex-col gap-3">
-            {sortedMemories.map((memory) => (
+            {sortedMemories.map((memory, index) => (
               <MemoryCard
                 key={memory.id}
                 memory={memory}
                 onClick={() => handleMemoryClick(memory.id)}
+                index={index}
               />
             ))}
           </div>

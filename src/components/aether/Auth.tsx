@@ -29,9 +29,9 @@ function getPasswordStrength(password: string): {
   if (/[0-9]/.test(password)) score++
   if (/[^A-Za-z0-9]/.test(password)) score++
 
-  if (score <= 1) return { score: 1, label: 'Weak', color: '#ef4444' }
-  if (score <= 3) return { score: 2, label: 'Medium', color: '#f59e0b' }
-  return { score: 3, label: 'Strong', color: '#22c55e' }
+  if (score <= 1) return { score: 1, label: 'Weak', color: '#f87171' }
+  if (score <= 3) return { score: 2, label: 'Medium', color: '#fbbf24' }
+  return { score: 3, label: 'Strong', color: '#4ade80' }
 }
 
 /* ─────────── Progressive Loading Message Hook ─────────── */
@@ -56,10 +56,36 @@ function useProgressiveLoading(loading: boolean) {
   return message
 }
 
-/* ─────────── Animated Background Orbs ─────────── */
+/* ─────────── Animated Background Orbs + Stars ─────────── */
 function AuthBackground() {
+  // Generate static stars once
+  const stars = useState(() =>
+    Array.from({ length: 200 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 1.5 + 0.5,
+      opacity: Math.random() * 0.5 + 0.15,
+    }))
+  )[0]
+
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ background: '#FFFAF5' }}>
+    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ background: '#07070f' }}>
+      {/* Static background stars */}
+      {stars.map((star) => (
+        <div
+          key={star.id}
+          className="absolute rounded-full"
+          style={{
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            background: `rgba(240, 240, 248, ${star.opacity})`,
+          }}
+        />
+      ))}
+
       {/* Primary lavender orb */}
       <div
         className="absolute animate-float"
@@ -121,7 +147,7 @@ function AetherBrainLogo() {
   return (
     <div className="flex flex-col items-center gap-3 mb-6">
       <AetherLogo size={56} />
-      <span className="font-serif text-2xl font-bold text-[#1a1a2e] tracking-tight">
+      <span className="font-serif text-2xl font-bold text-[#f0f0f8] tracking-tight">
         Aether
       </span>
     </div>
@@ -186,17 +212,17 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
       <div className="relative min-h-[100dvh] flex items-center justify-center overflow-y-auto py-4 pb-8">
         <AuthBackground />
         <div className="relative z-10 w-full max-w-md mx-4 sm:mx-auto">
-          <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 md:p-10 text-center">
+          <div className="bg-[#0f0f1a] border border-[rgba(157,139,167,0.12)] rounded-3xl shadow-2xl shadow-black/30 p-6 sm:p-8 md:p-10 text-center">
             <div className="flex flex-col items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-green-50 flex items-center justify-center">
-                <Check size={28} className="text-green-500" />
+              <div className="h-16 w-16 rounded-full bg-[rgba(74,222,128,0.1)] flex items-center justify-center">
+                <Check size={28} className="text-[#4ade80]" />
               </div>
               <div>
-                <h2 className="font-serif text-2xl font-bold text-[#1a1a2e] mb-2">
+                <h2 className="font-serif text-2xl font-bold text-[#f0f0f8] mb-2">
                   Check your email
                 </h2>
-                <p className="text-[#6c757d] text-sm leading-relaxed">
-                  We&apos;ve sent a confirmation link to <span className="font-medium text-[#1a1a2e]">{email}</span>.
+                <p className="text-[rgba(240,240,248,0.45)] text-sm leading-relaxed">
+                  We&apos;ve sent a confirmation link to <span className="font-medium text-[#f0f0f8]">{email}</span>.
                   Please check your inbox to confirm your account.
                 </p>
               </div>
@@ -218,16 +244,16 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
     <div className="relative min-h-[100dvh] flex items-center justify-center overflow-y-auto py-4 pb-8">
       <AuthBackground />
       <div className="relative z-10 w-full max-w-md mx-4 sm:mx-auto">
-        <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 md:p-10">
+        <div className="bg-[#0f0f1a] border border-[rgba(157,139,167,0.12)] rounded-3xl shadow-2xl shadow-black/30 p-6 sm:p-8 md:p-10">
           {/* Logo & Tagline */}
           <AetherBrainLogo />
-          <p className="text-center text-[#6c757d] text-sm mb-8 -mt-2">
+          <p className="text-center text-[rgba(240,240,248,0.45)] text-sm mb-8 -mt-2">
             Your mind, expanded
           </p>
 
           {/* Error Display */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm leading-relaxed">
+            <div className="mb-6 p-4 rounded-xl bg-[rgba(248,113,113,0.08)] border border-[rgba(248,113,113,0.15)] text-[#f87171] text-sm leading-relaxed">
               {error}
             </div>
           )}
@@ -236,7 +262,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name Field */}
             <div className="space-y-2">
-              <Label htmlFor="signup-name" className="text-[#1a1a2e] text-sm font-medium cursor-pointer">
+              <Label htmlFor="signup-name" className="text-[#f0f0f8] text-sm font-medium cursor-pointer">
                 Full Name
               </Label>
               <div className="relative">
@@ -251,14 +277,14 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setName(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
 
             {/* Email Field */}
             <div className="space-y-2">
-              <Label htmlFor="signup-email" className="text-[#1a1a2e] text-sm font-medium cursor-pointer">
+              <Label htmlFor="signup-email" className="text-[#f0f0f8] text-sm font-medium cursor-pointer">
                 Email
               </Label>
               <div className="relative">
@@ -273,14 +299,14 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
 
             {/* Password Field */}
             <div className="space-y-2">
-              <Label htmlFor="signup-password" className="text-[#1a1a2e] text-sm font-medium cursor-pointer">
+              <Label htmlFor="signup-password" className="text-[#f0f0f8] text-sm font-medium cursor-pointer">
                 Password
               </Label>
               <div className="relative">
@@ -296,7 +322,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   required
                   minLength={6}
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
 
@@ -312,7 +338,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                           background:
                             strength.score >= level
                               ? strength.color
-                              : '#e5e7eb',
+                              : 'rgba(157,139,167,0.12)',
                         }}
                       />
                     ))}
@@ -354,12 +380,12 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
           </form>
 
           {/* Switch to Sign In */}
-          <div className="text-center text-sm text-[#6c757d] mt-8 flex items-center justify-center min-h-[44px]">
+          <div className="text-center text-sm text-[rgba(240,240,248,0.45)] mt-8 flex items-center justify-center min-h-[44px]">
             Already have an account?{' '}
             <button
               type="button"
               onClick={() => onSwitch('signin')}
-              className="text-[#9D8BA7] font-semibold hover:text-[#6D597A] transition-colors duration-150 px-2 py-1"
+              className="text-[#9D8BA7] font-semibold hover:text-[#c084fc] transition-colors duration-150 px-2 py-1"
             >
               Sign in
             </button>
@@ -415,19 +441,19 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
     <div className="relative min-h-[100dvh] flex items-center justify-center overflow-y-auto py-4 pb-8">
       <AuthBackground />
       <div className="relative z-10 w-full max-w-md mx-4 sm:mx-auto">
-        <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 md:p-10">
+        <div className="bg-[#0f0f1a] border border-[rgba(157,139,167,0.12)] rounded-3xl shadow-2xl shadow-black/30 p-6 sm:p-8 md:p-10">
           {/* Logo & Heading */}
           <AetherBrainLogo />
-          <h1 className="text-center font-serif text-2xl font-bold text-[#1a1a2e] mb-1">
+          <h1 className="text-center font-serif text-2xl font-bold text-[#f0f0f8] mb-1">
             Welcome back
           </h1>
-          <p className="text-center text-[#6c757d] text-sm mb-8">
+          <p className="text-center text-[rgba(240,240,248,0.45)] text-sm mb-8">
             Sign in to access your second brain
           </p>
 
           {/* Error Display */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm leading-relaxed">
+            <div className="mb-6 p-4 rounded-xl bg-[rgba(248,113,113,0.08)] border border-[rgba(248,113,113,0.15)] text-[#f87171] text-sm leading-relaxed">
               {error}
             </div>
           )}
@@ -436,7 +462,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div className="space-y-2">
-              <Label htmlFor="signin-email" className="text-[#1a1a2e] text-sm font-medium cursor-pointer">
+              <Label htmlFor="signin-email" className="text-[#f0f0f8] text-sm font-medium cursor-pointer">
                 Email
               </Label>
               <div className="relative">
@@ -451,7 +477,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -459,13 +485,13 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
             {/* Password Field */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="signin-password" className="text-[#1a1a2e] text-sm font-medium cursor-pointer">
+                <Label htmlFor="signin-password" className="text-[#f0f0f8] text-sm font-medium cursor-pointer">
                   Password
                 </Label>
                 <button
                   type="button"
                   onClick={() => onSwitch('forgot')}
-                  className="text-xs text-[#9D8BA7] font-medium hover:text-[#6D597A] transition-colors duration-150 min-h-[44px] flex items-center"
+                  className="text-xs text-[#9D8BA7] font-medium hover:text-[#c084fc] transition-colors duration-150 min-h-[44px] flex items-center"
                 >
                   Forgot password?
                 </button>
@@ -482,7 +508,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -514,12 +540,12 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
           </form>
 
           {/* Switch to Sign Up */}
-          <div className="text-center text-sm text-[#6c757d] mt-8 flex items-center justify-center min-h-[44px]">
+          <div className="text-center text-sm text-[rgba(240,240,248,0.45)] mt-8 flex items-center justify-center min-h-[44px]">
             Don&apos;t have an account?{' '}
             <button
               type="button"
               onClick={() => onSwitch('signup')}
-              className="text-[#9D8BA7] font-semibold hover:text-[#6D597A] transition-colors duration-150 px-2 py-1"
+              className="text-[#9D8BA7] font-semibold hover:text-[#c084fc] transition-colors duration-150 px-2 py-1"
             >
               Sign up
             </button>
@@ -569,17 +595,17 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
       <div className="relative min-h-[100dvh] flex items-center justify-center overflow-y-auto py-4 pb-8">
         <AuthBackground />
         <div className="relative z-10 w-full max-w-md mx-4 sm:mx-auto">
-          <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 md:p-10 text-center">
+          <div className="bg-[#0f0f1a] border border-[rgba(157,139,167,0.12)] rounded-3xl shadow-2xl shadow-black/30 p-6 sm:p-8 md:p-10 text-center">
             <div className="flex flex-col items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-green-50 flex items-center justify-center">
+              <div className="h-16 w-16 rounded-full bg-[rgba(157,139,167,0.1)] flex items-center justify-center">
                 <Mail size={28} className="text-[#9D8BA7]" />
               </div>
               <div>
-                <h2 className="font-serif text-2xl font-bold text-[#1a1a2e] mb-2">
+                <h2 className="font-serif text-2xl font-bold text-[#f0f0f8] mb-2">
                   Check your email
                 </h2>
-                <p className="text-[#6c757d] text-sm leading-relaxed">
-                  We&apos;ve sent a password reset link to <span className="font-medium text-[#1a1a2e]">{email}</span>.
+                <p className="text-[rgba(240,240,248,0.45)] text-sm leading-relaxed">
+                  We&apos;ve sent a password reset link to <span className="font-medium text-[#f0f0f8]">{email}</span>.
                   Please check your inbox and follow the instructions.
                 </p>
               </div>
@@ -602,19 +628,19 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
     <div className="relative min-h-[100dvh] flex items-center justify-center overflow-y-auto py-4 pb-8">
       <AuthBackground />
       <div className="relative z-10 w-full max-w-md mx-4 sm:mx-auto">
-        <div className="bg-white rounded-3xl shadow-xl p-6 sm:p-8 md:p-10">
+        <div className="bg-[#0f0f1a] border border-[rgba(157,139,167,0.12)] rounded-3xl shadow-2xl shadow-black/30 p-6 sm:p-8 md:p-10">
           {/* Logo & Heading */}
           <AetherBrainLogo />
-          <h1 className="text-center font-serif text-2xl font-bold text-[#1a1a2e] mb-1">
+          <h1 className="text-center font-serif text-2xl font-bold text-[#f0f0f8] mb-1">
             Reset password
           </h1>
-          <p className="text-center text-[#6c757d] text-sm mb-8">
+          <p className="text-center text-[rgba(240,240,248,0.45)] text-sm mb-8">
             Enter your email and we&apos;ll send you a reset link
           </p>
 
           {/* Error Display */}
           {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm leading-relaxed">
+            <div className="mb-6 p-4 rounded-xl bg-[rgba(248,113,113,0.08)] border border-[rgba(248,113,113,0.15)] text-[#f87171] text-sm leading-relaxed">
               {error}
             </div>
           )}
@@ -623,7 +649,7 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email Field */}
             <div className="space-y-2">
-              <Label htmlFor="forgot-email" className="text-[#1a1a2e] text-sm font-medium cursor-pointer">
+              <Label htmlFor="forgot-email" className="text-[#f0f0f8] text-sm font-medium cursor-pointer">
                 Email
               </Label>
               <div className="relative">
@@ -638,7 +664,7 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[#9D8BA7]/15 bg-[#FFFAF5]/50 text-[#1a1a2e] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#9D8BA7] focus-visible:ring-[#9D8BA7]/20 transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -673,7 +699,7 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
           <button
             type="button"
             onClick={() => onSwitch('signin')}
-            className="flex items-center justify-center gap-2 w-full text-sm text-[#9D8BA7] font-medium hover:text-[#6D597A] transition-colors duration-150 mt-8 min-h-[44px]"
+            className="flex items-center justify-center gap-2 w-full text-sm text-[#9D8BA7] font-medium hover:text-[#c084fc] transition-colors duration-150 mt-8 min-h-[44px]"
           >
             <ArrowLeft size={14} />
             Back to Sign In

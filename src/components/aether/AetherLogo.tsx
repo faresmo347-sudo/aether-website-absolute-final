@@ -132,7 +132,7 @@ export function AetherLogo({
       {/* "Aether" text — shown for full variant or when showText=true */}
       {(variant === 'full' || showText) && (
         <span
-          className="font-serif font-bold text-[#1a1a2e] tracking-tight"
+          className="font-serif font-bold text-[#f0f0f8] tracking-tight"
           style={{ fontSize }}
         >
           Aether
