@@ -226,7 +226,7 @@ const MemoryCard = memo(function MemoryCard({
           <p className={`text-xs mt-0.5 line-clamp-2 leading-[1.5] ${darkMode ? 'text-white/35' : 'text-gray-500'}`} style={{ wordBreak: 'break-word' }}>
             {previewContent || <em className={darkMode ? 'text-white/15' : 'text-gray-300'}>No content</em>}
           </p>
-          <div className="flex items-center gap-1.5 mt-2 overflow-hidden flex-wrap">
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap min-w-0">
             {memory.tags.slice(0, 3).map((tag, i) => (
               <span
                 key={tag}
@@ -1123,7 +1123,7 @@ function QuickCaptureModal() {
           animate={{ y: isDragging ? dragY : 0, opacity: 1 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl h-[90vh] md:h-[85dvh] flex flex-col shadow-none md:shadow-2xl border-t border-[var(--glass-border)]"
+          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl h-[92dvh] flex flex-col overflow-hidden border-t border-[var(--glass-border)]"
           style={{ background: 'var(--modal-bg)', transform: isDragging ? `translateY(${dragY}px)` : undefined }}
           onTouchStart={(e) => {
             const sheet = sheetRef.current
@@ -1166,7 +1166,7 @@ function QuickCaptureModal() {
             </button>
           </div>
           {/* Tab content - scrollable area */}
-          <div className="flex-1 overflow-y-auto ios-scroll px-4 pb-4 min-h-0">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden ios-scroll px-4 pb-4 min-h-0">
             {activeCaptureTab === 'text' && (
               <textarea
                 value={textContent}
@@ -1333,19 +1333,19 @@ function QuickCaptureModal() {
           </div>
 
           {/* Bottom bar: tags + tab icons + send button */}
-          <div className="shrink-0 px-4 pb-4 pt-2 border-t border-white/5">
+          <div className="shrink-0 px-4 pt-2 border-t border-white/5" style={{ paddingBottom: 'max(1.5rem, calc(0.75rem + env(safe-area-inset-bottom, 0px)))' }}>
             {/* Tags row */}
             <div className="mb-3">
               <div className="flex items-center gap-2 flex-wrap">
                 {manualTags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center gap-1 min-h-[28px] px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-white/5 text-white/50 border border-white/8 whitespace-nowrap"
+                    className="inline-flex items-center gap-1 min-h-[36px] px-3 py-1 rounded-full text-xs font-medium bg-white/5 text-white/50 border border-white/8 whitespace-nowrap"
                   >
                     {tag}
                     <button
                       onClick={() => setManualTags((prev) => prev.filter((t) => t !== tag))}
-                      className="ml-0.5 size-3.5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                      className="ml-0.5 w-7 h-7 -my-1 -mr-1 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
                       aria-label={`Remove tag ${tag}`}
                     >
                       <X size={10} />
@@ -1380,7 +1380,7 @@ function QuickCaptureModal() {
                       }
                     }}
                     placeholder={manualTags.length === 0 ? 'Tags' : '#'}
-                    className="min-h-[28px] flex-1 min-w-[60px] rounded-full border border-white/8 bg-transparent px-2.5 text-[10px] text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/15 transition-all duration-300"
+                    className="min-h-[36px] flex-1 min-w-[80px] rounded-full border border-white/8 bg-transparent px-3 text-xs text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/15 transition-all duration-300"
                   />
                 )}
               </div>
@@ -1393,7 +1393,7 @@ function QuickCaptureModal() {
                 <button
                   key={tab.key}
                   onClick={() => setActiveCaptureTab(tab.key)}
-                  className={`size-8 flex items-center justify-center rounded-lg transition-all duration-200 ${
+                  className={`size-11 flex items-center justify-center rounded-xl transition-all duration-200 ${
                     activeCaptureTab === tab.key
                       ? 'text-[#9D8BA7] bg-[#9D8BA7]/10'
                       : 'text-white/30 hover:text-white/50 hover:bg-white/5'
@@ -1792,7 +1792,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
   ], [])
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden max-w-screen relative" style={darkMode ? { background: 'var(--main-bg)' } : { background: '#ffffff' }}>
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden w-full relative" style={darkMode ? { background: 'var(--main-bg)' } : { background: '#ffffff' }}>
       {/* Aurora Background — behind capture area */}
       {!prefersReducedMotion && <AuroraBackground />}
 
@@ -1804,7 +1804,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
           borderColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
         }}
       >
-        <h1 className={`text-xl font-bold ${darkMode ? 'text-white/90' : 'text-gray-900'}`}>Aether</h1>
+        <h1 className={`text-lg md:text-xl font-bold ${darkMode ? 'text-white/90' : 'text-gray-900'}`}>Aether</h1>
       </div>
 
       {/* ─── Mobile Glassmorphic Search Bar with Aurora Glow ─── */}
@@ -1884,10 +1884,12 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
             initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.1 }}
-            className="text-center py-1 mb-2"
+            className="text-center py-1 mb-2 flex items-center justify-center gap-1 flex-wrap"
           >
             <span className={`text-[11px] ${darkMode ? 'text-white/30' : 'text-gray-400'}`}>
-              {sortedMemories.length} {sortedMemories.length === 1 ? 'memory' : 'memories'} · {memoriesThisWeek} this week
+              <span>{sortedMemories.length} {sortedMemories.length === 1 ? 'memory' : 'memories'}</span>
+              <span className={`hidden sm:inline ${darkMode ? 'text-white/15' : 'text-gray-300'}`}>·</span>
+              <span>{memoriesThisWeek} this week</span>
             </span>
           </motion.div>
 
@@ -1896,7 +1898,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
             initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.15 }}
-            className="flex items-center gap-2 overflow-x-auto pb-3 mb-3 md:mb-5 scrollbar-none"
+            className="flex items-center gap-2 overflow-x-auto pb-3 mb-3 md:mb-5 scrollbar-none -mx-4 px-4 md:mx-0 md:px-0"
           >
             {filterPills.map((pill) => (
               <button
@@ -1921,7 +1923,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <div className="flex items-center justify-between mb-3 md:mb-4">
+            <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
               <h2 className={`text-xs md:text-sm font-semibold tracking-wide uppercase ${darkMode ? 'text-white/40' : 'text-gray-400'}`}>
                 Recent Memories
               </h2>

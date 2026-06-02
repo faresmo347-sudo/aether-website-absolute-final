@@ -347,18 +347,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
       {/* ═══════════════════════════════════════════════════════════
          MOBILE BOTTOM NAV — glassmorphic + center FAB
+         Safe-area padding on nav itself so items get full 64px height
          ═══════════════════════════════════════════════════════════ */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 border-t backdrop-blur-md"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-md"
         style={{
           background: darkMode ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.85)',
           borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
-        <div
-          className="relative flex items-center justify-around px-4"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-        >
+        <div className="relative flex items-center justify-around h-16 px-4">
           {mobileNavItems.map((item) => {
             const isCapture = item.view === 'capture'
 

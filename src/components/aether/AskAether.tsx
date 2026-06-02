@@ -197,21 +197,10 @@ export function AskAether() {
   const [isThinking, setIsThinking] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
 
-  // Mobile detection for input bar positioning
-  const [isMobile, setIsMobile] = useState(false)
-
   const chatEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
-
-  // Detect mobile viewport for input bar padding
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
 
   // Memoize the memory list for lookup
   const memoryLookup = useMemo(
@@ -556,7 +545,7 @@ export function AskAether() {
                 <button
                   key={question}
                   onClick={() => handleStarterClick(question)}
-                  className={`w-full px-3 py-3 rounded-xl border text-[13px] transition-all duration-200 min-h-[44px] flex items-center gap-1.5 whitespace-nowrap active:scale-[0.97] cursor-pointer ${
+                  className={`w-full px-3 py-3 rounded-xl border text-[13px] transition-all duration-200 min-h-[44px] flex items-center gap-1.5 text-left active:scale-[0.97] cursor-pointer ${
                     darkMode
                       ? 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-800'
                       : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
@@ -638,18 +627,13 @@ export function AskAether() {
         </div>
       </div>
 
-      {/* Input Bar — flat on mobile, glass on desktop */}
+      {/* Input Bar — padding-bottom handled by AppShell mobile-bottom-pad on <main> */}
       <div
         className={`shrink-0 z-30 border-t ${
           darkMode
             ? 'bg-[#0a0a0f] border-gray-800'
             : 'bg-white border-gray-200'
         }`}
-        style={{
-          paddingBottom: isMobile
-            ? `calc(64px + env(safe-area-inset-bottom, 0px))`
-            : `max(0.5rem, env(safe-area-inset-bottom, 0px))`,
-        }}
       >
         <div className="md:max-w-3xl md:mx-auto px-3 md:px-6 py-2 md:py-3">
           <div className="flex items-center gap-2">
