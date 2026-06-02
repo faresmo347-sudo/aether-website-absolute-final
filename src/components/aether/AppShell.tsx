@@ -23,12 +23,12 @@ const desktopNavItems: NavItem[] = [
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
 
-/* Mobile bottom nav: 4 items + center FAB */
+/* Mobile bottom nav: 4 nav items + center FAB */
 const mobileNavItems: NavItem[] = [
   { label: 'Home', icon: Home, view: 'dashboard' },
   { label: 'Search', icon: Search, view: 'ask-aether' },
   { label: 'Capture', icon: Plus, view: 'capture' },
-  { label: 'Collections', icon: Sparkles, view: 'constellations' },
+  { label: 'Explore', icon: Sparkles, view: 'constellations' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
 
@@ -346,40 +346,36 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </button>
 
       {/* ═══════════════════════════════════════════════════════════
-         MOBILE BOTTOM NAV — 4 items + center FAB
+         MOBILE BOTTOM NAV — glassmorphic + center FAB
          ═══════════════════════════════════════════════════════════ */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 border-t backdrop-blur-md"
         style={{
-          background: darkMode ? '#0a0a0f' : '#ffffff',
-          borderColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+          background: darkMode ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.85)',
+          borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)',
         }}
       >
         <div
-          className="relative flex items-center justify-around"
-          style={{ height: '56px', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          className="relative flex items-center justify-around px-4"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           {mobileNavItems.map((item) => {
             const isCapture = item.view === 'capture'
 
-            // ─── CENTER FAB: Giant capture button ───
+            // ─── CENTER FAB: Large glowing capture button ───
             if (isCapture) {
               return (
                 <button
                   key="capture-fab"
                   onClick={() => setCaptureModalOpen(true)}
-                  className="relative -mt-7 cursor-pointer flex items-center justify-center transition-transform duration-150 active:scale-90 z-10"
+                  className="relative -mt-6 cursor-pointer flex items-center justify-center transition-transform duration-150 active:scale-90 z-10"
                   style={{ width: '20%' }}
                   aria-label="Capture new memory"
                 >
                   <div
-                    className="h-14 w-14 rounded-full flex items-center justify-center shadow-lg"
-                    style={{
-                      background: 'linear-gradient(135deg, #6366f1, #818cf8)',
-                      boxShadow: '0 4px 20px rgba(99, 102, 241, 0.5), 0 0 0 4px rgba(99, 102, 241, 0.15)',
-                    }}
+                    className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/50 bg-indigo-600"
                   >
-                    <Plus size={26} className="text-white" strokeWidth={2.5} />
+                    <Plus size={24} className="text-white" strokeWidth={2.5} />
                   </div>
                 </button>
               )

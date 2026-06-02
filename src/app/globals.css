@@ -495,27 +495,34 @@ html, body {
   transform: scale(0.95);
 }
 
-/* ─────────── STRIP ALL BLUR ON MOBILE FOR PERFORMANCE ─────────── */
+/* ─────────── REDUCE BLUR ON MOBILE (keep glassmorphism, less GPU) ─────────── */
 @media (max-width: 767px) {
-  .backdrop-blur-xl,
-  .backdrop-blur-lg,
-  .backdrop-blur-md,
-  .backdrop-blur-sm {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
+  .backdrop-blur-xl {
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
   }
-  /* Kill all animated aurora/gradient orbs on mobile */
+  .backdrop-blur-lg {
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+  }
+  /* Keep backdrop-blur-md and backdrop-blur-sm as-is — they're light enough */
+  /* Reduce aurora animation intensity on mobile (slower, less movement) */
   .animate-aurora-1,
   .animate-aurora-2,
-  .animate-aurora-3,
+  .animate-aurora-3 {
+    animation-duration: 30s !important;
+    opacity: 0.5 !important;
+  }
   .animate-float,
   .animate-float-delayed,
-  .animate-float-slow,
+  .animate-float-slow {
+    animation-duration: 15s !important;
+  }
   .animate-orb-1,
   .animate-orb-2,
   .animate-orb-3 {
-    animation: none !important;
-    opacity: 0 !important;
+    animation-duration: 35s !important;
+    opacity: 0.4 !important;
   }
 }
 
@@ -550,13 +557,11 @@ section {
   }
 }
 
-/* ─────────── FLAT MOBILE BACKGROUNDS ─────────── */
+/* ─────────── MOBILE BACKGROUNDS (keep themed, not flat) ─────────── */
 @media (max-width: 767px) {
+  /* Use the CSS variable background so glassmorphism works properly */
   body {
-    background-color: #050505 !important;
-  }
-  [data-theme="light"] body {
-    background-color: #f9fafb !important;
+    background-color: var(--main-bg) !important;
   }
 }
 

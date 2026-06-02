@@ -192,16 +192,18 @@ const MemoryCard = memo(function MemoryCard({
       onClick={onClick}
       whileHover={{ scale: 1.02, y: -2 }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className="relative w-full text-left p-3 cursor-pointer group active:scale-[0.98] rounded-xl min-h-[44px]"
+      className="relative w-full text-left p-3 md:p-4 cursor-pointer group active:scale-[0.98] rounded-xl min-h-[44px]"
       style={darkMode
         ? {
             background: 'rgba(255,255,255,0.04)',
             border: '1px solid rgba(255,255,255,0.06)',
           }
         : {
-            background: '#ffffff',
+            background: 'rgba(255,255,255,0.85)',
             border: '1px solid rgba(0,0,0,0.06)',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
           }
       }
     >
@@ -228,10 +230,10 @@ const MemoryCard = memo(function MemoryCard({
             {memory.tags.slice(0, 3).map((tag, i) => (
               <span
                 key={tag}
-                className={`text-xs px-2 py-0.5 rounded whitespace-nowrap ${
+                className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
                   isTagging
-                    ? 'animate-pulse ' + (darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-400')
-                    : darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'
+                    ? 'animate-pulse ' + (darkMode ? 'bg-white/10 text-white/40' : 'bg-gray-100 text-gray-400')
+                    : darkMode ? 'bg-white/10 text-white/40' : 'bg-gray-100 text-gray-500'
                 }`}
                 style={isTagging ? { animationDelay: `${i * 200}ms` } : undefined}
               >
@@ -239,7 +241,7 @@ const MemoryCard = memo(function MemoryCard({
               </span>
             ))}
             {isSyncing && !isTagging && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-amber-500/60 px-1.5 py-0.5 rounded whitespace-nowrap">
+              <span className="inline-flex items-center gap-1 text-[10px] text-amber-500/60 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                 <span className="relative flex size-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400/30 opacity-75" />
                   <span className="relative inline-flex rounded-full size-1.5 bg-amber-500/50" />
@@ -248,7 +250,7 @@ const MemoryCard = memo(function MemoryCard({
               </span>
             )}
             {isTagging && (
-              <span className="inline-flex items-center gap-1 text-[10px] text-gray-500 px-1.5 py-0.5 rounded whitespace-nowrap">
+              <span className="inline-flex items-center gap-1 text-[10px] text-gray-500 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                 <span className="relative flex size-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-400/20 opacity-75" />
                   <span className="relative inline-flex rounded-full size-1.5 bg-gray-400/30" />
@@ -1790,24 +1792,49 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
   ], [])
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden max-w-screen relative bg-white dark:bg-gray-900 md:bg-transparent md:dark:bg-transparent" style={darkMode ? { background: 'var(--main-bg)' } : { background: '#ffffff' }}>
-      {/* Aurora Background — behind capture area (desktop only) */}
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden max-w-screen relative" style={darkMode ? { background: 'var(--main-bg)' } : { background: '#ffffff' }}>
+      {/* Aurora Background — behind capture area */}
       {!prefersReducedMotion && <AuroraBackground />}
 
-      {/* ─── Mobile Header ─── */}
-      <div className="md:hidden sticky top-0 z-20 bg-white dark:bg-gray-900 px-4 pt-3 pb-2 border-b border-gray-100 dark:border-gray-800">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white/90">Aether</h1>
+      {/* ─── Mobile Header — glassmorphic ─── */}
+      <div
+        className="md:hidden sticky top-0 z-20 px-4 pt-3 pb-2 backdrop-blur-xl border-b"
+        style={{
+          background: darkMode ? 'rgba(7,7,15,0.8)' : 'rgba(255,255,255,0.85)',
+          borderColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+        }}
+      >
+        <h1 className={`text-xl font-bold ${darkMode ? 'text-white/90' : 'text-gray-900'}`}>Aether</h1>
       </div>
 
-      {/* ─── Mobile Flat Search Bar ─── */}
-      <div className="md:hidden px-4 py-2 bg-white dark:bg-gray-900">
+      {/* ─── Mobile Glassmorphic Search Bar with Aurora Glow ─── */}
+      <div className="md:hidden px-4 py-2 relative">
+        {/* Aurora glow behind search — smaller blur for mobile performance */}
+        <div
+          className="absolute inset-0 pointer-events-none overflow-hidden"
+          aria-hidden="true"
+        >
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[100px] rounded-full blur-3xl"
+            style={{
+              background: darkMode
+                ? 'rgba(157, 139, 167, 0.20)'
+                : 'rgba(157, 139, 167, 0.08)',
+            }}
+          />
+        </div>
         <button
           onClick={() => setCurrentView('ask-aether')}
-          className="cursor-pointer w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 min-h-[44px]"
+          className="cursor-pointer w-full flex items-center gap-2.5 rounded-xl p-3 text-sm backdrop-blur-xl min-h-[44px] relative z-10"
+          style={{
+            background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
+            border: darkMode ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(0,0,0,0.08)',
+            boxShadow: darkMode ? '0 2px 12px rgba(0,0,0,0.2)' : '0 1px 4px rgba(0,0,0,0.06)',
+          }}
           aria-label="Search memories"
         >
-          <Search size={16} className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
-          <span className="flex-1 text-left text-sm text-gray-400 dark:text-gray-500">
+          <Search size={16} className={`flex-shrink-0 ${darkMode ? 'text-[#9D8BA7]/60' : 'text-[#9D8BA7]/50'}`} />
+          <span className={`flex-1 text-left text-sm ${darkMode ? 'text-white/30' : 'text-gray-400'}`}>
             What do you remember?
           </span>
         </button>
@@ -1815,7 +1842,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto min-h-0 ios-scroll relative z-10">
-        <div className="p-4 md:px-6 md:pt-8 md:pb-6 pb-24 max-w-2xl mx-auto">
+        <div className="px-4 md:px-6 md:pt-8 md:pb-6 pb-24 max-w-2xl mx-auto">
 
           {/* ─── Desktop Search Bar (hidden on mobile) ─── */}
           <motion.section
@@ -1961,19 +1988,6 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
           </motion.section>
         </div>
       </div>
-
-      {/* ─── Mobile FAB — Quick Capture ─── */}
-      <button
-        onClick={() => setCaptureModalOpen(true)}
-        className="md:hidden fixed z-40 bottom-20 right-4 size-14 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-xl"
-        style={{
-          background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
-          boxShadow: '0 4px 24px rgba(157, 139, 167, 0.4)',
-        }}
-        aria-label="Quick capture"
-      >
-        <Plus size={24} className="stroke-[2.5] text-white" />
-      </button>
 
       {/* Quick Capture Modal — for voice, link, image captures */}
       <QuickCaptureModal />
