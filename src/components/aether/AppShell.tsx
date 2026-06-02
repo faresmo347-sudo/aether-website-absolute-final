@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, memo, useMemo, useEffect, useCallback } from 'react'
-import { Settings, Plus, WifiOff, Cloud, CheckCircle2, Sparkles, CalendarDays, Sun, Moon, Home, Brain } from 'lucide-react'
+import { Settings, Plus, WifiOff, Cloud, CheckCircle2, Sparkles, CalendarDays, Sun, Moon, Home, Brain, Search } from 'lucide-react'
 import { useAetherStore } from '@/store/aether-store'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 import { AetherLogo } from '@/components/aether/AetherLogo'
@@ -23,27 +23,28 @@ const desktopNavItems: NavItem[] = [
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
 
+/* Mobile bottom nav: 4 items + center FAB */
 const mobileNavItems: NavItem[] = [
   { label: 'Home', icon: Home, view: 'dashboard' },
-  { label: 'Ask Aether', icon: Brain, view: 'ask-aether' },
+  { label: 'Search', icon: Search, view: 'ask-aether' },
   { label: 'Capture', icon: Plus, view: 'capture' },
-  { label: 'Collections', icon: Home, view: 'constellations' },
+  { label: 'Collections', icon: Sparkles, view: 'constellations' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
 
 /* SVG icon map for reliable mobile bottom nav rendering */
 const navIconSvgs: Record<string, (color: string) => React.ReactNode> = {
   dashboard: (color) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
   ),
   'ask-aether': (color) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
   ),
   constellations: (color) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
   ),
   settings: (color) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
   ),
 }
 
@@ -70,7 +71,6 @@ const desktopIconSvgs: Record<string, (isActive: boolean) => React.ReactNode> = 
 function ThemeToggle() {
   const { darkMode, setDarkMode } = useAetherStore()
 
-  // Sync theme on mount from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem('aether-theme')
@@ -84,7 +84,6 @@ function ThemeToggle() {
           document.documentElement.classList.remove('dark')
         }
       } else {
-        // Apply current store state
         document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
         if (darkMode) {
           document.documentElement.classList.add('dark')
@@ -120,7 +119,6 @@ function ThemeToggle() {
       }}
       aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
     >
-      {/* Sliding knob */}
       <span
         className="absolute top-[2px] flex items-center justify-center w-[24px] h-[24px] rounded-full transition-all duration-300 ease-in-out shadow-md"
         style={{
@@ -159,7 +157,6 @@ const SidebarNavItem = memo(function SidebarNavItem({
       aria-label={item.label}
       title={item.label}
     >
-      {/* Active glowing pill background */}
       {isActive && (
         <span
           className="absolute inset-0 rounded-full transition-all duration-300"
@@ -169,8 +166,6 @@ const SidebarNavItem = memo(function SidebarNavItem({
           }}
         />
       )}
-
-      {/* Icon */}
       <span
         className="relative z-10 transition-all duration-200"
         style={isActive ? { filter: 'drop-shadow(0 0 6px #9D8BA7)' } : undefined}
@@ -250,7 +245,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="h-dvh bg-background text-foreground flex overflow-hidden max-w-screen overflow-x-hidden">
-      {/* ─── Left Sidebar (Desktop) — Slim Frosted Glass ─── */}
+      {/* ─── Left Sidebar (Desktop ONLY) ─── */}
       <aside
         className="hidden md:flex md:flex-col md:w-[72px] fixed inset-y-0 left-0 z-40 items-center"
         style={{
@@ -260,15 +255,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
           borderRight: `1px solid ${sidebarBorder}`,
         }}
       >
-        {/* Logo at top — icon only */}
+        {/* Logo at top */}
         <div className="flex items-center justify-center py-5">
           <AetherLogo size={36} />
         </div>
 
-        {/* Divider */}
         <div className="w-8 h-px mb-2" style={{ background: sidebarBorder }} />
 
-        {/* Navigation — Icons only, centered */}
         <nav className="flex-1 flex flex-col items-center gap-2 py-4 overflow-y-auto scrollbar-none">
           {desktopNavItems.map((item) => (
             <SidebarNavItem
@@ -280,10 +273,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
 
-        {/* Divider */}
         <div className="w-8 h-px mb-3" style={{ background: sidebarBorder }} />
 
-        {/* Theme Toggle at bottom */}
         <div className="pb-5 flex flex-col items-center gap-3">
           <ThemeToggle />
         </div>
@@ -294,20 +285,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {/* Offline/Sync Banner */}
         <OfflineBanner />
 
-        {/* ─── Mobile Header — Simplified (logo only) ─── */}
-        <header
-          className="md:hidden shrink-0 z-30 backdrop-blur-xl border-b"
-          style={{
-            background: darkMode ? 'rgba(10, 10, 15, 0.6)' : 'rgba(255, 255, 255, 0.7)',
-            borderColor: sidebarBorder,
-          }}
-        >
-          <div className="flex items-center justify-center h-11 safe-area-top">
-            <AetherLogo size={28} />
-          </div>
-        </header>
+        {/* ─── MOBILE: NO separate header — each view handles its own ─── */}
 
-        {/* ─── Desktop Header — Hero Search Bar ─── */}
+        {/* ─── DESKTOP Header — Hero Search Bar ─── */}
         <header
           className="hidden md:flex shrink-0 z-30 items-center justify-center backdrop-blur-xl border-b"
           style={{
@@ -316,7 +296,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
             height: '60px',
           }}
         >
-          {/* Hero Search Bar with gradient border animation */}
           <div className="animate-gradient-border p-[2px] rounded-2xl max-w-2xl w-full mx-6">
             <button
               onClick={() => setCurrentView('ask-aether')}
@@ -351,7 +330,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      {/* ─── Desktop FAB — Premium Glassmorphic ─── */}
+      {/* ─── Desktop FAB ─── */}
       <button
         onClick={() => setCaptureModalOpen(true)}
         className="cursor-pointer hidden md:flex fixed z-40 bottom-8 right-8 h-12 w-12 rounded-full items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 animate-capture-button-pulse"
@@ -366,46 +345,50 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <Plus size={22} className="stroke-[2.5] text-white" />
       </button>
 
-      {/* ─── Bottom Navigation Bar (Mobile) — Icon-Only Redesign ─── */}
+      {/* ═══════════════════════════════════════════════════════════
+         MOBILE BOTTOM NAV — 4 items + center FAB
+         ═══════════════════════════════════════════════════════════ */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t safe-area-bottom"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t"
         style={{
-          background: darkMode ? 'rgba(13,13,22,0.98)' : 'rgba(255,255,255,0.95)',
-          borderColor: 'rgba(157,139,167,0.1)',
+          background: darkMode ? '#0a0a0f' : '#ffffff',
+          borderColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
         }}
       >
         <div
-          className="flex items-center justify-around"
-          style={{ height: '64px', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          className="relative flex items-center justify-around"
+          style={{ height: '56px', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
           {mobileNavItems.map((item) => {
             const isCapture = item.view === 'capture'
 
+            // ─── CENTER FAB: Giant capture button ───
             if (isCapture) {
               return (
                 <button
-                  key="capture"
+                  key="capture-fab"
                   onClick={() => setCaptureModalOpen(true)}
-                  className="relative -mt-6 cursor-pointer flex items-center justify-center transition-transform duration-150 active:scale-95"
+                  className="relative -mt-7 cursor-pointer flex items-center justify-center transition-transform duration-150 active:scale-90 z-10"
                   style={{ width: '20%' }}
-                  aria-label="Capture"
+                  aria-label="Capture new memory"
                 >
                   <div
-                    className="h-12 w-12 rounded-full flex items-center justify-center"
+                    className="h-14 w-14 rounded-full flex items-center justify-center shadow-lg"
                     style={{
-                      background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
-                      boxShadow: '0 4px 24px rgba(157,139,167,0.4)',
+                      background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+                      boxShadow: '0 4px 20px rgba(99, 102, 241, 0.5), 0 0 0 4px rgba(99, 102, 241, 0.15)',
                     }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    <Plus size={26} className="text-white" strokeWidth={2.5} />
                   </div>
                 </button>
               )
             }
 
+            // ─── Regular nav items ───
             const isActive = activeNavView === item.view
-            const activeColor = '#c084fc'
-            const inactiveColor = darkMode ? 'rgba(240,240,248,0.4)' : 'rgba(0,0,0,0.3)'
+            const activeColor = '#818cf8'
+            const inactiveColor = darkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
             const iconColor = isActive ? activeColor : inactiveColor
             const svgIcon = navIconSvgs[item.view as string]
 
@@ -413,7 +396,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <button
                 key={item.view}
                 onClick={() => setCurrentView(item.view as AppView)}
-                className={`cursor-pointer flex items-center justify-center transition-all duration-150 active:bg-white/5 ${isActive ? 'scale-110' : ''}`}
+                className={`cursor-pointer flex flex-col items-center justify-center transition-all duration-150 ${isActive ? '' : 'active:opacity-60'}`}
                 style={{
                   width: '20%',
                   height: '100%',
@@ -421,7 +404,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 }}
                 aria-label={item.label}
               >
-                {svgIcon ? svgIcon(iconColor) : <item.icon size={24} className="transition-colors duration-150" />}
+                <span className={`transition-transform duration-150 ${isActive ? 'scale-110' : ''}`}>
+                  {svgIcon ? svgIcon(iconColor) : <item.icon size={22} className="transition-colors duration-150" />}
+                </span>
+                <span
+                  className="text-[10px] mt-0.5 font-medium transition-colors duration-150"
+                  style={{ color: iconColor }}
+                >
+                  {item.label}
+                </span>
               </button>
             )
           })}

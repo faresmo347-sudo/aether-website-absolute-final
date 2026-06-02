@@ -526,15 +526,19 @@ export function AskAether() {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden max-w-screen bg-background">
-      {/* Header — compact on mobile */}
-      <div className="flex-shrink-0 px-4 md:px-6 pt-3 md:pt-5 pb-2 md:pb-3 border-b border-border bg-background/80 backdrop-blur-sm">
+      {/* Header — compact on mobile, flat bg */}
+      <div className={`flex-shrink-0 px-4 md:px-6 pt-3 md:pt-5 pb-2 md:pb-3 border-b ${
+        darkMode
+          ? 'bg-[#0a0a0f] border-gray-800'
+          : 'bg-white border-gray-200'
+      }`}>
         <div className="md:max-w-3xl md:mx-auto">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 md:h-10 md:w-10 rounded-2xl bg-gradient-to-br from-[#9D8BA7] to-[#6D597A] flex items-center justify-center shadow-lg shadow-[#9D8BA7]/20">
               <Brain size={16} className="text-white md:size-5" />
             </div>
             <div>
-              <h1 className="text-base md:text-xl font-bold text-foreground">Ask Aether</h1>
+              <h1 className={`text-base md:text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Ask Aether</h1>
               <p className="hidden sm:block text-xs text-muted-foreground">
                 Search your memories or just ask me anything
               </p>
@@ -543,19 +547,19 @@ export function AskAether() {
         </div>
       </div>
 
-      {/* Suggested Questions — vertically stacked on mobile, horizontal scroll on desktop */}
+      {/* Suggested Questions — vertically stacked on mobile */}
       {messages.length === 0 && (
-        <div className="flex-shrink-0 py-2 px-3 md:px-4 border-b border-border/50 bg-background/60">
+        <div className={`flex-shrink-0 py-2 px-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
           <div className="md:max-w-3xl md:mx-auto">
-            <div className="flex flex-col md:flex-row md:overflow-x-auto md:flex-nowrap md:scrollbar-none gap-2">
+            <div className="flex flex-col gap-2">
               {displayStarters.map((question) => (
                 <button
                   key={question}
                   onClick={() => handleStarterClick(question)}
-                  className={`w-full md:w-auto px-3 py-3 md:py-2 rounded-[12px] border text-[13px] md:text-sm transition-all duration-300 min-h-[44px] flex items-center gap-1.5 whitespace-nowrap active:scale-[0.97] cursor-pointer ${
+                  className={`w-full px-3 py-3 rounded-xl border text-[13px] transition-all duration-200 min-h-[44px] flex items-center gap-1.5 whitespace-nowrap active:scale-[0.97] cursor-pointer ${
                     darkMode
-                      ? 'border-[#9D8BA7]/15 bg-card text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/30 shadow-sm'
-                      : 'border-[#9D8BA7]/20 bg-white text-gray-700 shadow-sm hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/30'
+                      ? 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-800'
+                      : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <span className="text-[#9D8BA7]">&ldquo;</span>
@@ -568,17 +572,10 @@ export function AskAether() {
         </div>
       )}
 
-      {/* Chat Area — fills remaining space with holographic grid */}
+      {/* Chat Area — clean flat bg on mobile */}
       <div
         ref={chatContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto ios-scroll px-3 md:px-6 py-3 md:py-5 pb-4 md:pb-6"
-        style={{
-          backgroundImage: darkMode
-            ? `linear-gradient(rgba(157,139,167,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(157,139,167,0.04) 1px, transparent 1px)`
-            : `linear-gradient(rgba(157,139,167,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(157,139,167,0.03) 1px, transparent 1px)`,
-          backgroundSize: '50px 50px',
-          animation: 'grid-scan 20s linear infinite',
-        }}
+        className={`flex-1 min-h-0 overflow-y-auto ios-scroll px-4 md:px-6 py-3 md:py-5 pb-4 md:pb-6 ${darkMode ? 'bg-[#050505]' : 'bg-gray-50'}`}
       >
         <div className="md:max-w-3xl md:mx-auto flex flex-col min-h-full gap-2 md:gap-4">
           {/* Empty state — no memories yet */}
@@ -641,12 +638,12 @@ export function AskAether() {
         </div>
       </div>
 
-      {/* Input Bar — mobile-first with bottom nav offset */}
+      {/* Input Bar — flat on mobile, glass on desktop */}
       <div
-        className={`shrink-0 z-30 backdrop-blur-none md:backdrop-blur-sm border-t ${
+        className={`shrink-0 z-30 border-t ${
           darkMode
-            ? 'bg-[#07070f]/95 border-white/6'
-            : 'bg-white/95 border-gray-200'
+            ? 'bg-[#0a0a0f] border-gray-800'
+            : 'bg-white border-gray-200'
         }`}
         style={{
           paddingBottom: isMobile
@@ -654,7 +651,7 @@ export function AskAether() {
             : `max(0.5rem, env(safe-area-inset-bottom, 0px))`,
         }}
       >
-        <div className="md:max-w-3xl md:mx-auto px-2 md:px-6 py-2 md:py-3">
+        <div className="md:max-w-3xl md:mx-auto px-3 md:px-6 py-2 md:py-3">
           <div className="flex items-center gap-2">
             {/* Input field */}
             <div className="flex-1 relative">
@@ -671,10 +668,10 @@ export function AskAether() {
                 placeholder="Ask Aether anything..."
                 disabled={isThinking}
                 aria-label="Ask Aether a question"
-                className={`w-full rounded-2xl p-3 md:p-4 text-sm focus:outline-none focus:border-[#9D8BA7]/40 focus:shadow-[0_0_20px_rgba(157,139,167,0.1)] transition-all duration-300 disabled:opacity-50 h-12 md:min-h-[44px] resize-none ${
+                className={`w-full rounded-xl p-3 text-sm focus:outline-none focus:border-[#9D8BA7]/40 transition-all duration-200 disabled:opacity-50 h-12 resize-none ${
                   darkMode
-                    ? 'bg-white/5 border border-white/10 text-white placeholder:text-gray-400'
-                    : 'bg-white border border-gray-200 text-gray-900 placeholder:text-gray-500 shadow-sm'
+                    ? 'bg-gray-800 border border-gray-700 text-white placeholder:text-gray-500'
+                    : 'bg-gray-100 border border-gray-200 text-gray-900 placeholder:text-gray-400'
                 }`}
               />
               {/* Microphone button inside input */}

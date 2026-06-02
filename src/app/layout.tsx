@@ -98,7 +98,7 @@ export default function RootLayout({
         `}} />
       </head>
       <body
-        className={`${inter.variable} ${playfair.variable} ${dmMono.variable} antialiased overflow-x-hidden`}
+        className={`${inter.variable} ${playfair.variable} ${dmMono.variable} antialiased overflow-x-hidden max-w-screen`}
       >
         {children}
         <Toaster />

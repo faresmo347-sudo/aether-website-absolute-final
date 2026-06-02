@@ -720,36 +720,35 @@ const CategoryCard = memo(function CategoryCard({
       }}
       whileHover={{ scale: 1.03, y: -4 }}
       whileTap={{ scale: 0.98 }}
-      className="relative w-full cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9D8BA7]/40 rounded-2xl overflow-hidden min-h-[120px] md:min-h-[200px]"
+      className="relative w-full cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9D8BA7]/40 rounded-xl md:rounded-2xl overflow-hidden min-h-[80px] md:min-h-[200px]"
       aria-label={`${group.name} — ${memoryLabel}`}
     >
-      {/* Card glass background — Dual Universe */}
+      {/* Card background — flat on mobile, glass on desktop */}
       <div
-        className="absolute inset-0 rounded-2xl transition-all duration-500 backdrop-blur-none md:backdrop-blur-xl"
+        className="absolute inset-0 rounded-xl md:rounded-2xl transition-all duration-500 backdrop-blur-none md:backdrop-blur-xl"
         style={darkMode
           ? {
-              background: 'var(--glass-bg)',
-              border: '1px solid var(--glass-border)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.06)',
             }
           : {
-              background: 'rgba(255,255,255,0.6)',
-              border: '1px solid rgba(255,255,255,0.7)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)',
+              background: '#ffffff',
+              border: '1px solid rgba(0,0,0,0.06)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
             }
         }
       />
 
-      {/* Category gradient overlay */}
+      {/* Category gradient overlay — hidden on mobile */}
       <motion.div
-        className="absolute inset-0 rounded-2xl"
+        className="hidden md:block absolute inset-0 rounded-2xl"
         style={{ background: cardGradient }}
         animate={{ opacity: isHovered ? 1 : 0.7 }}
         transition={{ duration: 0.4 }}
       />
 
-      {/* Mini constellation SVG */}
-      <div className="absolute inset-0 opacity-60 group-hover:opacity-90 transition-opacity duration-500">
+      {/* Mini constellation SVG — hidden on mobile */}
+      <div className="hidden md:block absolute inset-0 opacity-60 group-hover:opacity-90 transition-opacity duration-500">
         <MiniConstellationSVG
           theme={theme}
           seed={group.id.length * 137 + index * 42}
@@ -758,9 +757,9 @@ const CategoryCard = memo(function CategoryCard({
         />
       </div>
 
-      {/* Nebula / sunlight glow behind card on hover */}
+      {/* Nebula glow — hidden on mobile */}
       <motion.div
-        className="absolute -inset-8 rounded-full pointer-events-none"
+        className="hidden md:block absolute -inset-8 rounded-full pointer-events-none"
         style={{
           background: `radial-gradient(ellipse, ${nebulaColor} 0%, transparent 65%)`,
           filter: 'blur(40px)',
@@ -773,46 +772,41 @@ const CategoryCard = memo(function CategoryCard({
       />
 
       {/* Content overlay */}
-      <div className="relative z-10 p-3 md:p-4 flex flex-col justify-between h-full text-left min-h-[120px] md:min-h-[200px]">
-        {/* Top: Emoji + Name */}
-        <div>
+      <div className="relative z-10 p-3 md:p-4 flex flex-row md:flex-col md:justify-between h-full text-left min-h-[80px] md:min-h-[200px] items-center">
+        {/* Emoji + Name + Count — horizontal on mobile */}
+        <div className="flex items-center gap-3 md:flex-col md:items-start md:gap-0 flex-1 min-w-0">
           <div
-            className="inline-flex items-center justify-center size-8 md:size-12 rounded-xl mb-2 md:mb-3 transition-transform duration-300 group-hover:scale-110 text-lg md:text-xl"
+            className="flex items-center justify-center size-10 md:size-12 rounded-xl md:mb-2 md:mb-3 shrink-0 text-lg md:text-xl"
             style={{
               background: `${accentColor}18`,
-              boxShadow: isHovered ? `0 0 16px ${accentLightColor}25` : 'none',
             }}
           >
             {group.emoji}
           </div>
-          <h3
-            className={`font-semibold text-sm md:text-lg leading-tight ${darkMode ? 'text-white/90' : 'text-sky-900'}`}
-            style={{ fontFamily: "'Playfair Display', serif" }}
-          >
-            {group.name}
-          </h3>
-          <p className={`text-[10px] md:text-xs mt-0.5 md:mt-1 ${darkMode ? 'text-white/25' : 'text-sky-800/40'}`}>
-            {group.count === 0 ? 'No memories yet' : `${group.count} ${group.count === 1 ? 'memory' : 'memories'} auto-sorted`}
-          </p>
+          <div className="min-w-0">
+            <h3
+              className={`font-semibold text-sm md:text-lg leading-tight truncate ${darkMode ? 'text-white/90' : 'text-gray-900'}`}
+              style={{ fontFamily: "'Playfair Display', serif" }}
+            >
+              {group.name}
+            </h3>
+            <p className={`text-xs mt-0.5 ${darkMode ? 'text-white/25' : 'text-gray-500'}`}>
+              {group.count === 0 ? 'No memories yet' : `${group.count} ${group.count === 1 ? 'memory' : 'memories'}`}
+            </p>
+          </div>
         </div>
 
-        {/* Bottom: Memory count badge */}
-        <div className="mt-auto pt-3 flex items-center gap-2">
-          <span
-            className="text-[10px] md:text-xs font-medium px-2 py-0.5 md:px-2.5 md:py-1 rounded-full"
-            style={{
-              background: `${accentColor}15`,
-              color: accentColor,
-            }}
-          >
-            {memoryLabel}
-          </span>
-        </div>
+        {/* Memory count badge */}
+        <span
+          className={`text-xs font-medium px-2.5 py-1 rounded-full shrink-0 ${darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'}`}
+        >
+          {memoryLabel}
+        </span>
       </div>
 
-      {/* Shimmer effect on hover */}
+      {/* Shimmer effect — hidden on mobile */}
       <motion.div
-        className="absolute inset-0 rounded-2xl pointer-events-none"
+        className="hidden md:block absolute inset-0 rounded-2xl pointer-events-none"
         style={{
           background: darkMode
             ? 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.03) 55%, transparent 60%)'
@@ -1241,10 +1235,10 @@ function ConstellationsInner() {
   }, [setCurrentView, setCaptureModalOpen])
 
   return (
-    <div className="relative flex-1 min-h-0 overflow-y-auto ios-scroll">
-      {/* ─── Dual Universe Background ─── */}
+    <div className={`relative flex-1 min-h-0 overflow-y-auto ios-scroll ${darkMode ? 'bg-[#050505]' : 'bg-gray-50'}`}>
+      {/* ─── Desktop Background (hidden on mobile) ─── */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="hidden md:block absolute inset-0 pointer-events-none"
         style={{
           background: darkMode
             ? 'linear-gradient(180deg, #030308 0%, #070714 40%, #050510 100%)'
@@ -1253,52 +1247,38 @@ function ConstellationsInner() {
         }}
       />
 
-      <StarfieldCanvas darkMode={darkMode} />
-      <NebulaBlurs darkMode={darkMode} />
+      <div className="hidden md:block">
+        <StarfieldCanvas darkMode={darkMode} />
+        <NebulaBlurs darkMode={darkMode} />
+      </div>
 
       {/* ─── Content Layer ─── */}
       <div className="relative max-w-5xl mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-8 pb-24 md:pb-0" style={{ zIndex: 10 }}>
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-4 md:mb-8"
-        >
+        <div className="mb-4 md:mb-8">
           <div>
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-              className="flex items-center gap-2 mb-2"
-            >
-              <Sparkles className={`size-5 ${darkMode ? 'text-[#9D8BA7]' : 'text-sky-700/70'}`} />
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className={`size-4 ${darkMode ? 'text-[#9D8BA7]' : 'text-sky-700/70'}`} />
               <span className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-[#9D8BA7]/70' : 'text-sky-800/60'}`}>
-                Your Universe
+                Collections
               </span>
-            </motion.div>
-            <motion.h1
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className={`text-2xl md:text-4xl font-bold leading-tight ${darkMode ? 'text-white/90' : 'text-sky-900'}`}
+            </div>
+            <h1
+              className={`text-xl md:text-4xl font-bold leading-tight ${darkMode ? 'text-white/90' : 'text-gray-900'}`}
               style={{ fontFamily: "'Playfair Display', serif" }}
             >
-              Your Universe of Memories
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className={`text-sm md:text-base mt-1.5 md:mt-2 max-w-lg ${darkMode ? 'text-white/35' : 'text-sky-800/60'}`}
+              Your Collections
+            </h1>
+            <p
+              className={`text-sm mt-1 max-w-lg ${darkMode ? 'text-white/35' : 'text-gray-500'}`}
             >
               {totalMemories === 0
                 ? 'Save memories with tags and watch your constellations form automatically.'
                 : `${totalMemories} ${totalMemories === 1 ? 'memory' : 'memories'} auto-sorted across 5 constellations`
               }
-            </motion.p>
+            </p>
           </div>
-        </motion.div>
+        </div>
 
         {/* Content or Empty State */}
         {totalMemories === 0 ? (
@@ -1307,7 +1287,7 @@ function ConstellationsInner() {
           <>
             {/* ─── 5 FIXED CONSTELLATION CARDS ─── */}
             {/* 2x2+1 grid on desktop, single column on mobile */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+            <div className="flex flex-col md:grid md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
               <AnimatePresence>
                 {categories.map((group, index) => (
                   <CategoryCard
@@ -1329,10 +1309,10 @@ function ConstellationsInner() {
               className="mt-4 md:mt-8"
             >
               <div
-                className={`rounded-2xl p-3 md:p-4 ${
+                className={`rounded-xl md:rounded-2xl p-3 md:p-4 ${
                   darkMode
-                    ? 'bg-white/3 border border-white/5'
-                    : 'bg-white/50 border border-black/5'
+                    ? 'bg-gray-900 border border-gray-800'
+                    : 'bg-white border border-gray-200'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-3">

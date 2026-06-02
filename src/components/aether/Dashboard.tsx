@@ -192,64 +192,54 @@ const MemoryCard = memo(function MemoryCard({
       onClick={onClick}
       whileHover={{ scale: 1.02, y: -2 }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className="relative w-full text-left p-3 md:p-4 cursor-pointer group active:scale-[0.98] rounded-2xl backdrop-blur-none md:backdrop-blur-md min-h-[44px]"
-      style={{
-        background: 'var(--glass-bg)',
-        border: '1px solid var(--glass-border)',
-        boxShadow: 'var(--card-shadow)',
-      }}
+      className="relative w-full text-left p-3 cursor-pointer group active:scale-[0.98] rounded-xl min-h-[44px]"
+      style={darkMode
+        ? {
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.06)',
+          }
+        : {
+            background: '#ffffff',
+            border: '1px solid rgba(0,0,0,0.06)',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+          }
+      }
     >
-      {/* Hover glow */}
-      <div
-        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-        style={{
-          boxShadow: `0 4px 24px var(--card-glow), 0 0 0 1px var(--glass-border)`,
-        }}
-      />
-
-      <div className="flex items-start gap-3.5">
-        {/* Type icon */}
+      <div className="flex items-start gap-3">
         <div
-          className="flex items-center justify-center size-8 rounded-lg shrink-0 mt-0.5"
+          className="flex items-center justify-center size-7 rounded-lg shrink-0 mt-0.5"
           style={{ background: accent.bg }}
         >
           {typeIcon(memory.type, 'size-3.5')}
         </div>
-
-        {/* Content */}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-medium text-white/90 text-sm leading-snug truncate">
+            <h3 className={`font-medium text-sm leading-snug truncate ${darkMode ? 'text-white/90' : 'text-gray-900'}`}>
               {displayTitle}
             </h3>
-            <span className="text-[10px] text-white/25 whitespace-nowrap shrink-0 mt-0.5">
+            <span className={`text-[10px] whitespace-nowrap shrink-0 mt-0.5 ${darkMode ? 'text-white/25' : 'text-gray-400'}`}>
               {formatRelativeDate(memory.createdAt)}
             </span>
           </div>
-
-          <p className="text-white/35 text-xs mt-1 line-clamp-3 leading-[1.6]" style={{ wordBreak: 'break-word' }}>
-            {previewContent || <em className="text-white/15">No content</em>}
+          <p className={`text-xs mt-0.5 line-clamp-2 leading-[1.5] ${darkMode ? 'text-white/35' : 'text-gray-500'}`} style={{ wordBreak: 'break-word' }}>
+            {previewContent || <em className={darkMode ? 'text-white/15' : 'text-gray-300'}>No content</em>}
           </p>
-
-          {/* Tags row */}
-          <div className="flex items-center gap-1.5 mt-2.5 overflow-hidden flex-wrap">
+          <div className="flex items-center gap-1.5 mt-2 overflow-hidden flex-wrap">
             {memory.tags.slice(0, 3).map((tag, i) => (
               <span
                 key={tag}
-                className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap transition-all duration-500 ${
+                className={`text-xs px-2 py-0.5 rounded whitespace-nowrap ${
                   isTagging
-                    ? 'bg-white/3 text-white/20 animate-pulse'
-                    : 'bg-white/5 text-white/40'
+                    ? 'animate-pulse ' + (darkMode ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-400')
+                    : darkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-500'
                 }`}
                 style={isTagging ? { animationDelay: `${i * 200}ms` } : undefined}
               >
                 {tag}
               </span>
             ))}
-
-            {/* Sync indicator */}
             {isSyncing && !isTagging && (
-              <span className="inline-flex items-center gap-1 text-[9px] text-amber-500/60 bg-amber-500/5 px-2 py-0.5 rounded-full whitespace-nowrap">
+              <span className="inline-flex items-center gap-1 text-[10px] text-amber-500/60 px-1.5 py-0.5 rounded whitespace-nowrap">
                 <span className="relative flex size-1.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400/30 opacity-75" />
                   <span className="relative inline-flex rounded-full size-1.5 bg-amber-500/50" />
@@ -257,15 +247,13 @@ const MemoryCard = memo(function MemoryCard({
                 Syncing
               </span>
             )}
-
-            {/* Aether is thinking */}
             {isTagging && (
-              <span className="inline-flex items-center gap-1 text-[9px] text-white/20 bg-white/3 px-2 py-0.5 rounded-full whitespace-nowrap">
+              <span className="inline-flex items-center gap-1 text-[10px] text-gray-500 px-1.5 py-0.5 rounded whitespace-nowrap">
                 <span className="relative flex size-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/10 opacity-75" />
-                  <span className="relative inline-flex rounded-full size-1.5 bg-white/20" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-400/20 opacity-75" />
+                  <span className="relative inline-flex rounded-full size-1.5 bg-gray-400/30" />
                 </span>
-                Aether is thinking...
+                Thinking...
               </span>
             )}
           </div>
@@ -280,37 +268,20 @@ const MemoryCard = memo(function MemoryCard({
 // ────────────────────────────────────────────────────────────
 
 const EmptyState = memo(function EmptyState() {
-  const { setCaptureModalOpen } = useAetherStore()
+  const { setCaptureModalOpen, darkMode } = useAetherStore()
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 md:py-20 px-4 text-center">
-      {/* Glowing brain icon */}
-      <div className="relative mb-8">
-        <div
-          className="absolute inset-0 -m-16 rounded-full"
-          style={{ background: 'radial-gradient(circle, var(--aurora-purple) 0%, transparent 65%)' }}
-        />
-        <div
-          className="relative h-12 w-12 md:h-20 md:w-20 rounded-2xl flex items-center justify-center backdrop-blur-none md:backdrop-blur-sm"
-          style={{
-            background: 'var(--glass-bg)',
-            border: '1px solid var(--glass-border)',
-          }}
-        >
-          <Brain className="size-6 md:size-9 text-[var(--text-subtle)]" />
-        </div>
-      </div>
-
-      <h3 className="text-lg md:text-xl font-semibold text-white/80">
+    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <Brain className={`size-10 mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+      <h3 className={`text-lg font-semibold ${darkMode ? 'text-white/80' : 'text-gray-800'}`}>
         Your second brain is empty
       </h3>
-      <p className="text-sm text-white/30 mt-2 max-w-xs leading-relaxed">
+      <p className={`text-sm mt-2 max-w-xs leading-relaxed ${darkMode ? 'text-white/30' : 'text-gray-500'}`}>
         Start capturing your first memory — ideas, notes, links, anything you want to remember.
       </p>
-
       <button
         onClick={() => setCaptureModalOpen(true)}
-        className="mt-6 md:mt-8 w-full md:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#9D8BA7] to-[#c084fc] hover:from-[#8A7A96] hover:to-[#a76bf0] text-white rounded-xl px-5 py-2.5 md:px-6 md:py-3 text-sm font-semibold shadow-lg shadow-[#9D8BA7]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[#9D8BA7]/30 hover:-translate-y-0.5 active:scale-[0.98] min-h-[48px]"
+        className="mt-6 w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#9D8BA7] to-[#c084fc] text-white rounded-xl px-5 py-2.5 text-sm font-semibold min-h-[48px] active:scale-[0.98]"
       >
         <Plus className="size-4" />
         Add Your First Memory
@@ -1819,24 +1790,43 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
   ], [])
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden max-w-screen relative" style={{ background: 'var(--main-bg)' }}>
-      {/* Aurora Background — behind capture area */}
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden max-w-screen relative bg-white dark:bg-gray-900 md:bg-transparent md:dark:bg-transparent" style={darkMode ? { background: 'var(--main-bg)' } : { background: '#ffffff' }}>
+      {/* Aurora Background — behind capture area (desktop only) */}
       {!prefersReducedMotion && <AuroraBackground />}
+
+      {/* ─── Mobile Header ─── */}
+      <div className="md:hidden sticky top-0 z-20 bg-white dark:bg-gray-900 px-4 pt-3 pb-2 border-b border-gray-100 dark:border-gray-800">
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white/90">Aether</h1>
+      </div>
+
+      {/* ─── Mobile Flat Search Bar ─── */}
+      <div className="md:hidden px-4 py-2 bg-white dark:bg-gray-900">
+        <button
+          onClick={() => setCurrentView('ask-aether')}
+          className="cursor-pointer w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 min-h-[44px]"
+          aria-label="Search memories"
+        >
+          <Search size={16} className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
+          <span className="flex-1 text-left text-sm text-gray-400 dark:text-gray-500">
+            What do you remember?
+          </span>
+        </button>
+      </div>
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto min-h-0 ios-scroll relative z-10">
-        <div className="px-4 md:px-6 lg:px-8 pt-4 md:pt-8 pb-28 md:pb-6 max-w-2xl mx-auto">
+        <div className="p-4 md:px-6 md:pt-8 md:pb-6 pb-24 max-w-2xl mx-auto">
 
-          {/* ─── Search Bar (navigates to Ask Aether) ─── */}
+          {/* ─── Desktop Search Bar (hidden on mobile) ─── */}
           <motion.section
             initial={prefersReducedMotion ? false : { opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mb-3 md:mb-6"
+            className="hidden md:block mb-6"
           >
             <button
               onClick={() => setCurrentView('ask-aether')}
-              className="cursor-pointer w-full flex items-center gap-2.5 rounded-xl px-4 text-sm md:text-base transition-all duration-200 group min-h-[40px] md:min-h-[44px]"
+              className="cursor-pointer w-full flex items-center gap-2.5 rounded-xl px-4 text-sm md:text-base transition-all duration-200 group min-h-[44px]"
               style={{
                 background: 'var(--glass-bg)',
                 border: '1px solid var(--glass-border)',
@@ -1869,7 +1859,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
             transition={{ duration: 0.4, delay: 0.1 }}
             className="text-center py-1 mb-2"
           >
-            <span className="text-[11px]" style={{ color: 'var(--text-subtle)' }}>
+            <span className={`text-[11px] ${darkMode ? 'text-white/30' : 'text-gray-400'}`}>
               {sortedMemories.length} {sortedMemories.length === 1 ? 'memory' : 'memories'} · {memoriesThisWeek} this week
             </span>
           </motion.div>
@@ -1905,7 +1895,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <div className="flex items-center justify-between mb-3 md:mb-4">
-              <h2 className="text-xs md:text-sm font-semibold tracking-wide uppercase" style={{ color: 'var(--section-header)' }}>
+              <h2 className={`text-xs md:text-sm font-semibold tracking-wide uppercase ${darkMode ? 'text-white/40' : 'text-gray-400'}`}>
                 Recent Memories
               </h2>
               <div className="flex items-center gap-2">
@@ -1936,26 +1926,25 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div
                     key={i}
-                    className="rounded-2xl p-3 md:p-5"
+                    className="rounded-xl p-3 md:p-5"
                     style={{
                       background: 'var(--glass-bg)',
                       border: '1px solid var(--glass-border-subtle)',
                     }}
                   >
-                    <div className="flex items-start gap-3.5">
-                      <div className="size-8 rounded-lg animate-pulse" style={{ background: 'var(--glass-bg-hover)' }} />
-                      <div className="flex-1 space-y-2.5">
-                        <div className="h-3.5 w-3/4 rounded animate-pulse" style={{ background: 'var(--glass-bg-hover)' }} />
+                    <div className="flex items-start gap-3">
+                      <div className="size-7 rounded-lg animate-pulse" style={{ background: 'var(--glass-bg-hover)' }} />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 w-3/4 rounded animate-pulse" style={{ background: 'var(--glass-bg-hover)' }} />
                         <div className="h-3 w-full rounded animate-pulse" style={{ background: 'var(--glass-input-bg)' }} />
-                        <div className="h-3 w-1/2 rounded animate-pulse" style={{ background: 'var(--glass-input-bg)' }} />
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : sortedMemories.length > 0 ? (
-              /* Memory feed — grid on larger screens */
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+              /* Memory feed — single column on mobile, grid on larger screens */
+              <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
                 {sortedMemories.map((memory, index) => (
                   <MemoryCard
                     key={memory.id}

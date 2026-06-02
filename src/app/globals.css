@@ -495,13 +495,27 @@ html, body {
   transform: scale(0.95);
 }
 
-/* ─────────── Reduced Blur on Mobile for Performance ─────────── */
-@media (max-width: 768px) {
-  .backdrop-blur-xl {
-    backdrop-filter: blur(8px) !important;
-  }
+/* ─────────── STRIP ALL BLUR ON MOBILE FOR PERFORMANCE ─────────── */
+@media (max-width: 767px) {
+  .backdrop-blur-xl,
+  .backdrop-blur-lg,
+  .backdrop-blur-md,
   .backdrop-blur-sm {
-    backdrop-filter: blur(4px) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  /* Kill all animated aurora/gradient orbs on mobile */
+  .animate-aurora-1,
+  .animate-aurora-2,
+  .animate-aurora-3,
+  .animate-float,
+  .animate-float-delayed,
+  .animate-float-slow,
+  .animate-orb-1,
+  .animate-orb-2,
+  .animate-orb-3 {
+    animation: none !important;
+    opacity: 0 !important;
   }
 }
 
@@ -533,6 +547,16 @@ section {
 @media (min-width: 768px) {
   .mobile-bottom-pad {
     padding-bottom: 0;
+  }
+}
+
+/* ─────────── FLAT MOBILE BACKGROUNDS ─────────── */
+@media (max-width: 767px) {
+  body {
+    background-color: #050505 !important;
+  }
+  [data-theme="light"] body {
+    background-color: #f9fafb !important;
   }
 }
 
