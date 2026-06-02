@@ -129,11 +129,16 @@ export function Settings() {
     setDarkMode(enabled)
     if (enabled) {
       document.documentElement.classList.add('dark')
-      document.documentElement.classList.remove('light')
+      document.documentElement.setAttribute('data-theme', 'dark')
     } else {
       document.documentElement.classList.remove('dark')
-      document.documentElement.classList.add('light')
+      document.documentElement.setAttribute('data-theme', 'light')
     }
+    // Persist to localStorage so the preference survives page refresh
+    try {
+      localStorage.setItem('aether-theme', enabled ? 'dark' : 'light')
+      localStorage.setItem('aether-dark-mode', String(enabled))
+    } catch {}
   }, [setDarkMode])
 
   // ──── Bloom upgrade handler ────

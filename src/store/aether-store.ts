@@ -60,7 +60,7 @@ const initialSettings = loadFromStorage<{
   autoTagging: boolean
   defaultCapture: CaptureTab
 }>(STORAGE_KEYS.settings, {
-  darkMode: false,
+  darkMode: true, // Default to dark mode to match the blocking script in layout.tsx
   dailySummary: true,
   weeklyRecap: true,
   autoTagging: true,

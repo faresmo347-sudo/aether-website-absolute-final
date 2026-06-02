@@ -1132,11 +1132,16 @@ export default function Home() {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark')
-      document.documentElement.classList.remove('light')
+      document.documentElement.setAttribute('data-theme', 'dark')
     } else {
       document.documentElement.classList.remove('dark')
-      document.documentElement.classList.add('light')
+      document.documentElement.setAttribute('data-theme', 'light')
     }
+    // Also persist to localStorage so refresh respects the preference
+    try {
+      localStorage.setItem('aether-theme', darkMode ? 'dark' : 'light')
+      localStorage.setItem('aether-dark-mode', String(darkMode))
+    } catch {}
   }, [darkMode])
 
   // Load user data from Supabase — called once per auth session

@@ -4,6 +4,7 @@ import { ReactNode, memo, useMemo, useEffect, useCallback } from 'react'
 import { Settings, Plus, WifiOff, Cloud, CheckCircle2, Sparkles, CalendarDays, Sun, Moon, Home, Brain, Search } from 'lucide-react'
 import { useAetherStore } from '@/store/aether-store'
 import { useOnlineStatus } from '@/hooks/use-online-status'
+import { useMobileKeyboard } from '@/hooks/use-mobile-keyboard'
 import { AetherLogo } from '@/components/aether/AetherLogo'
 import type { AppView } from '@/components/aether/types'
 import { getSyncQueueCount } from '@/lib/offline-db'
@@ -71,41 +72,20 @@ const desktopIconSvgs: Record<string, (isActive: boolean) => React.ReactNode> = 
 function ThemeToggle() {
   const { darkMode, setDarkMode } = useAetherStore()
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('aether-theme')
-      if (stored) {
-        const isDark = stored === 'dark'
-        setDarkMode(isDark)
-        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
-        if (isDark) {
-          document.documentElement.classList.add('dark')
-        } else {
-          document.documentElement.classList.remove('dark')
-        }
-      } else {
-        document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
-        if (darkMode) {
-          document.documentElement.classList.add('dark')
-        } else {
-          document.documentElement.classList.remove('dark')
-        }
-      }
-    } catch {
-      // localStorage unavailable
-    }
-  }, [])
-
   const handleToggle = useCallback(() => {
     const newDark = !darkMode
     setDarkMode(newDark)
-    document.documentElement.setAttribute('data-theme', newDark ? 'dark' : 'light')
     if (newDark) {
       document.documentElement.classList.add('dark')
+      document.documentElement.setAttribute('data-theme', 'dark')
     } else {
       document.documentElement.classList.remove('dark')
+      document.documentElement.setAttribute('data-theme', 'light')
     }
-    localStorage.setItem('aether-theme', newDark ? 'dark' : 'light')
+    try {
+      localStorage.setItem('aether-theme', newDark ? 'dark' : 'light')
+      localStorage.setItem('aether-dark-mode', String(newDark))
+    } catch {}
   }, [darkMode, setDarkMode])
 
   return (
@@ -223,6 +203,7 @@ function OfflineBanner() {
 /* ─────────── Main AppShell Component ─────────── */
 export default function AppShell({ children }: { children: ReactNode }) {
   const { currentView, setCurrentView, setCaptureModalOpen, darkMode, profile, user } = useAetherStore()
+  const isKeyboardOpen = useMobileKeyboard()
 
   // Determine which nav item is active
   const activeNavView = useMemo((): AppView => {
@@ -244,7 +225,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     : 'rgba(157, 139, 167, 0.12)'
 
   return (
-    <div className="h-dvh bg-background text-foreground flex overflow-hidden max-w-screen overflow-x-hidden">
+    <div className="h-[100dvh] md:h-screen bg-background text-foreground flex overflow-hidden max-w-screen overflow-x-hidden">
       {/* ─── Left Sidebar (Desktop ONLY) ─── */}
       <aside
         className="hidden md:flex md:flex-col md:w-[72px] fixed inset-y-0 left-0 z-40 items-center"
@@ -281,7 +262,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
       {/* ─── Main Content Area ─── */}
-      <div className="flex-1 md:pl-[72px] flex flex-col h-dvh overflow-hidden">
+      <div className="flex-1 md:pl-[72px] flex flex-col h-[100dvh] md:h-screen overflow-hidden">
         {/* Offline/Sync Banner */}
         <OfflineBanner />
 
@@ -325,7 +306,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 min-h-0 flex flex-col overflow-hidden mobile-bottom-pad">
+        <main className={`flex-1 min-h-0 flex flex-col overflow-hidden ${isKeyboardOpen ? 'pb-4' : 'mobile-bottom-pad'}`}>
           {children}
         </main>
       </div>
@@ -347,10 +328,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
       {/* ═══════════════════════════════════════════════════════════
          MOBILE BOTTOM NAV — glassmorphic + center FAB
-         Safe-area padding on nav itself so items get full 64px height
+         Hidden when mobile keyboard is open to prevent overlap
          ═══════════════════════════════════════════════════════════ */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-md"
+        className={`md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-md transition-transform duration-200 ${isKeyboardOpen ? 'translate-y-full' : 'translate-y-0'}`}
         style={{
           background: darkMode ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.85)',
           borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)',

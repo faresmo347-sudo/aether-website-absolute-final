@@ -27,6 +27,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
 };
 
 export const metadata: Metadata = {
@@ -78,27 +79,34 @@ export default function RootLayout({
         {/* Blocking script: Force dark mode BEFORE first paint to prevent flash */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            // Read theme preference from localStorage
-            var theme = localStorage.getItem('aether-theme');
-            // Also check the aether-dark-mode key used by the store
-            var darkMode = localStorage.getItem('aether-dark-mode');
-            
-            var isDark = true; // Default to dark
-            if (theme === 'light') isDark = false;
-            if (darkMode === 'false') isDark = false;
-            
-            if (isDark) {
+            try {
+              var theme = localStorage.getItem('aether-theme');
+              var darkMode = localStorage.getItem('aether-dark-mode');
+              var isDark = true; // Default to dark
+              if (theme === 'light') isDark = false;
+              else if (theme === 'dark') isDark = true;
+              else if (darkMode === 'false') isDark = false;
+              else if (darkMode === 'true') isDark = true;
+              // If no explicit preference stored, check system preference
+              else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) isDark = false;
+
+              if (isDark) {
+                document.documentElement.classList.add('dark');
+                document.documentElement.setAttribute('data-theme', 'dark');
+              } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.setAttribute('data-theme', 'light');
+              }
+            } catch(e) {
+              // Fallback to dark mode
               document.documentElement.classList.add('dark');
               document.documentElement.setAttribute('data-theme', 'dark');
-            } else {
-              document.documentElement.classList.remove('dark');
-              document.documentElement.setAttribute('data-theme', 'light');
             }
           })();
         `}} />
       </head>
       <body
-        className={`${inter.variable} ${playfair.variable} ${dmMono.variable} antialiased overflow-x-hidden max-w-screen`}
+        className={`${inter.variable} ${playfair.variable} ${dmMono.variable} antialiased overflow-x-hidden max-w-screen h-[100dvh] md:h-screen`}
       >
         {children}
         <Toaster />
