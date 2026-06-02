@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, memo, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, Loader2, Eye, Sparkles, ClipboardPaste, Camera, ArrowUp, Mail } from 'lucide-react'
+import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, Loader2, Eye, Sparkles, ClipboardPaste, Camera, ArrowUp, Mail, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAetherStore } from '@/store/aether-store'
 import { createMemory, getMemoryCount, updateMemoryById } from '@/lib/supabase/data'
@@ -192,7 +192,7 @@ const MemoryCard = memo(function MemoryCard({
       onClick={onClick}
       whileHover={{ scale: 1.02, y: -2 }}
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className="relative w-full text-left p-3 md:p-4 cursor-pointer group active:scale-[0.98] rounded-2xl backdrop-blur-none md:backdrop-blur-md"
+      className="relative w-full text-left p-3 md:p-4 cursor-pointer group active:scale-[0.98] rounded-2xl backdrop-blur-none md:backdrop-blur-md min-h-[44px]"
       style={{
         background: 'var(--glass-bg)',
         border: '1px solid var(--glass-border)',
@@ -222,12 +222,12 @@ const MemoryCard = memo(function MemoryCard({
             <h3 className="font-medium text-white/90 text-sm leading-snug truncate">
               {displayTitle}
             </h3>
-            <span className="text-[11px] text-white/25 whitespace-nowrap shrink-0 mt-0.5">
+            <span className="text-[10px] text-white/25 whitespace-nowrap shrink-0 mt-0.5">
               {formatRelativeDate(memory.createdAt)}
             </span>
           </div>
 
-          <p className="text-white/35 text-xs mt-1 line-clamp-2 leading-[1.6]" style={{ wordBreak: 'break-word' }}>
+          <p className="text-white/35 text-xs mt-1 line-clamp-3 leading-[1.6]" style={{ wordBreak: 'break-word' }}>
             {previewContent || <em className="text-white/15">No content</em>}
           </p>
 
@@ -310,7 +310,7 @@ const EmptyState = memo(function EmptyState() {
 
       <button
         onClick={() => setCaptureModalOpen(true)}
-        className="mt-6 md:mt-8 inline-flex items-center gap-2 bg-gradient-to-r from-[#9D8BA7] to-[#c084fc] hover:from-[#8A7A96] hover:to-[#a76bf0] text-white rounded-xl px-5 py-2.5 md:px-6 md:py-3 text-sm font-semibold shadow-lg shadow-[#9D8BA7]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[#9D8BA7]/30 hover:-translate-y-0.5 active:scale-[0.98] min-h-[44px]"
+        className="mt-6 md:mt-8 w-full md:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#9D8BA7] to-[#c084fc] hover:from-[#8A7A96] hover:to-[#a76bf0] text-white rounded-xl px-5 py-2.5 md:px-6 md:py-3 text-sm font-semibold shadow-lg shadow-[#9D8BA7]/20 transition-all duration-300 hover:shadow-xl hover:shadow-[#9D8BA7]/30 hover:-translate-y-0.5 active:scale-[0.98] min-h-[48px]"
       >
         <Plus className="size-4" />
         Add Your First Memory
@@ -1150,7 +1150,7 @@ function QuickCaptureModal() {
           animate={{ y: isDragging ? dragY : 0, opacity: 1 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl h-[85dvh] flex flex-col shadow-none md:shadow-2xl border-t border-[var(--glass-border)]"
+          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl h-[90vh] md:h-[85dvh] flex flex-col shadow-none md:shadow-2xl border-t border-[var(--glass-border)]"
           style={{ background: 'var(--modal-bg)', transform: isDragging ? `translateY(${dragY}px)` : undefined }}
           onTouchStart={(e) => {
             const sheet = sheetRef.current
@@ -1183,8 +1183,8 @@ function QuickCaptureModal() {
           <div className="flex justify-center pt-3 pb-2 shrink-0">
             <div className="w-10 h-1 rounded-full bg-white/15" />
           </div>
-          <div className="flex items-center justify-between px-5 pb-2 shrink-0">
-            <h2 className="text-lg font-semibold text-white/80">Quick Capture</h2>
+          <div className="flex items-center justify-between px-4 pb-2 shrink-0">
+            <h2 className="text-base font-semibold text-white/80">Quick Capture</h2>
             <button
               onClick={handleClose}
               className="size-9 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors text-white/30 min-w-[44px] min-h-[44px]"
@@ -1192,9 +1192,259 @@ function QuickCaptureModal() {
               <X className="size-4" />
             </button>
           </div>
-          {tabButtons}
-          {tabContent}
-          {tagAndSaveSection}
+          {/* Tab content - scrollable area */}
+          <div className="flex-1 overflow-y-auto ios-scroll px-4 pb-4 min-h-0">
+            {activeCaptureTab === 'text' && (
+              <textarea
+                value={textContent}
+                onChange={(e) => setTextContent(e.target.value)}
+                placeholder="What's on your mind?"
+                className="w-full min-h-[160px] resize-none rounded-xl border border-white/8 bg-white/3 px-4 py-3 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-[#9D8BA7]/30 transition-shadow"
+              />
+            )}
+
+            {activeCaptureTab === 'voice' && (
+              <div className="flex flex-col items-center py-4">
+                <div className="relative">
+                  {isRecording && (
+                    <div className="absolute inset-0 rounded-full bg-red-500/30 animate-ping" />
+                  )}
+                  <button
+                    onClick={() => { if (!isRecording) startRecording(); else stopRecording() }}
+                    className={`relative size-16 rounded-full flex items-center justify-center transition-all duration-300 min-w-[64px] min-h-[64px] ${
+                      isRecording
+                        ? 'bg-red-500 text-white shadow-lg shadow-red-200'
+                        : 'bg-white/5 text-[#9D8BA7] hover:bg-white/10 border border-white/8'
+                    }`}
+                  >
+                    <Mic className="size-7" />
+                  </button>
+                </div>
+                {isRecording && <p className="text-sm text-red-400 mt-3 font-medium">Recording... tap to stop</p>}
+                {!isRecording && !voiceTranscript && !isTranscribing && (
+                  <p className="text-sm text-white/30 mt-3">Tap to start recording</p>
+                )}
+                {isTranscribing && !isRecording && (
+                  <div className="mt-4 w-full">
+                    <div className="rounded-xl border border-[#9D8BA7]/20 bg-[#9D8BA7]/5 p-3 flex items-center gap-2">
+                      <Loader2 className="size-4 text-[#9D8BA7] animate-spin" />
+                      <p className="text-sm text-[#9D8BA7] font-medium">Transcribing your voice...</p>
+                    </div>
+                  </div>
+                )}
+                {voiceTranscript && !isRecording && (
+                  <div className="mt-4 w-full space-y-2">
+                    <div className="rounded-xl border border-white/8 bg-white/3 p-3">
+                      <p className="text-xs text-white/25 mb-1">Transcription</p>
+                      <p className="text-sm text-white/70 leading-relaxed">{voiceTranscript}</p>
+                    </div>
+                    {voiceSummary && (
+                      <div className="rounded-xl border border-[#9D8BA7]/15 bg-[#9D8BA7]/5 p-3">
+                        <p className="text-xs text-[#9D8BA7]/70 font-medium mb-1">AI Summary</p>
+                        <p className="text-sm text-white/70 leading-relaxed">{voiceSummary}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeCaptureTab === 'link' && (
+              <div>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={linkUrl}
+                    onChange={(e) => handleLinkUrlChange(e.target.value)}
+                    placeholder="Paste any link..."
+                    className="w-full rounded-xl border border-white/8 bg-white/3 px-4 py-3 pr-14 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:ring-1 focus:ring-[#9D8BA7]/30 transition-shadow min-h-[44px]"
+                  />
+                  <button
+                    onClick={handlePaste}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-[#9D8BA7] hover:text-[#c084fc] bg-[#9D8BA7]/10 hover:bg-[#9D8BA7]/20 rounded-lg px-2.5 py-1.5 transition-colors min-h-[36px]"
+                  >
+                    <ClipboardPaste className="size-3.5" />
+                    <span>Paste</span>
+                  </button>
+                </div>
+                {isProcessingLink && (
+                  <div className="mt-2 rounded-xl border border-[#9D8BA7]/15 bg-[#9D8BA7]/5 p-2.5 flex items-center gap-2">
+                    <Loader2 className="size-3.5 text-[#9D8BA7] animate-spin" />
+                    <p className="text-xs text-[#9D8BA7]">Processing link...</p>
+                  </div>
+                )}
+                {linkPreview && linkUrl.length > 5 && (
+                  <div className="mt-3 rounded-xl border border-white/8 bg-white/3 p-3 flex gap-3">
+                    <div className="size-14 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                      <Link2 className="size-5 text-[#9D8BA7]/50" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white/70 truncate">Article Preview</p>
+                      <p className="text-xs text-white/25 mt-0.5 line-clamp-2">
+                        A preview of the content from the link you saved. The full article will be summarized and tagged automatically.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeCaptureTab === 'image' && (
+              <div>
+                {!imagePreview ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-4">
+                    <label className="w-full flex items-center justify-center gap-3 min-h-[56px] rounded-xl border-2 border-dashed border-white/10 bg-white/2 cursor-pointer hover:border-[#9D8BA7]/25 transition-colors active:scale-[0.98]">
+                      <Upload className="size-5 text-[#9D8BA7]/50" />
+                      <div>
+                        <p className="text-sm font-medium text-white/50">Choose from Gallery</p>
+                        <p className="text-xs text-white/20">Select a photo from your library</p>
+                      </div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => { const file = e.target.files?.[0]; if (file) handleImageUpload(file) }}
+                      />
+                    </label>
+                    <label className="w-full flex items-center justify-center gap-3 min-h-[56px] rounded-xl bg-[#9D8BA7]/8 border border-[#9D8BA7]/15 cursor-pointer hover:bg-[#9D8BA7]/12 transition-colors active:scale-[0.98]">
+                      <Camera className="size-5 text-[#9D8BA7]" />
+                      <div>
+                        <p className="text-sm font-medium text-[#9D8BA7]">Take a Photo</p>
+                        <p className="text-xs text-[#9D8BA7]/40">Open camera to capture</p>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(e) => { const file = e.target.files?.[0]; if (file) handleImageUpload(file) }}
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <img src={imagePreview} alt="Uploaded image preview" className="w-full rounded-xl object-cover max-h-[300px]" />
+                    <button
+                      onClick={() => { setImagePreview(null); setImageBase64(null); setImageDescription(''); setImageTags([]) }}
+                      className="absolute top-2 right-2 size-8 rounded-full bg-black/50 flex items-center justify-center text-white/60 hover:text-red-400 transition-colors min-w-[36px] min-h-[36px]"
+                    >
+                      <X className="size-4" />
+                    </button>
+                    {isAnalyzingImage && (
+                      <div className="absolute inset-0 bg-black/50 rounded-xl flex flex-col items-center justify-center gap-2">
+                        <Loader2 className="size-6 text-white animate-spin" />
+                        <p className="text-xs text-white font-medium">Analyzing image...</p>
+                      </div>
+                    )}
+                    {!isAnalyzingImage && imageDescription && (
+                      <div className="mt-2 rounded-xl border border-[#9D8BA7]/15 bg-[#9D8BA7]/5 p-3">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Eye className="size-3.5 text-[#9D8BA7]" />
+                          <p className="text-xs text-[#9D8BA7] font-medium">AI Analysis</p>
+                        </div>
+                        <p className="text-sm text-white/70 leading-relaxed">{imageDescription}</p>
+                        {imageTags.length > 0 && (
+                          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                            {imageTags.map((tag) => (
+                              <span key={tag} className="bg-[#9D8BA7]/10 text-[#9D8BA7] text-[10px] px-2 py-0.5 rounded-full">{tag}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom bar: tags + tab icons + send button */}
+          <div className="shrink-0 px-4 pb-4 pt-2 border-t border-white/5">
+            {/* Tags row */}
+            <div className="mb-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                {manualTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 min-h-[28px] px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-white/5 text-white/50 border border-white/8 whitespace-nowrap"
+                  >
+                    {tag}
+                    <button
+                      onClick={() => setManualTags((prev) => prev.filter((t) => t !== tag))}
+                      className="ml-0.5 size-3.5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                      aria-label={`Remove tag ${tag}`}
+                    >
+                      <X size={10} />
+                    </button>
+                  </span>
+                ))}
+                {manualTags.length < 6 && (
+                  <input
+                    ref={tagInputRef}
+                    type="text"
+                    value={manualTagInput}
+                    onChange={(e) => setManualTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ',') && manualTagInput.trim()) {
+                        e.preventDefault()
+                        let tag = manualTagInput.trim().replace(/^#+/, '')
+                        tag = `#${tag}`
+                        if (!manualTags.includes(tag)) setManualTags((prev) => [...prev, tag])
+                        setManualTagInput('')
+                        setTimeout(() => tagInputRef.current?.focus(), 0)
+                      }
+                      if (e.key === ' ' && manualTagInput.trim() && manualTagInput.trim().length >= 2) {
+                        e.preventDefault()
+                        let tag = manualTagInput.trim().replace(/^#+/, '')
+                        tag = `#${tag}`
+                        if (!manualTags.includes(tag)) setManualTags((prev) => [...prev, tag])
+                        setManualTagInput('')
+                        setTimeout(() => tagInputRef.current?.focus(), 0)
+                      }
+                      if (e.key === 'Backspace' && !manualTagInput && manualTags.length > 0) {
+                        setManualTags((prev) => prev.slice(0, -1))
+                      }
+                    }}
+                    placeholder={manualTags.length === 0 ? 'Tags' : '#'}
+                    className="min-h-[28px] flex-1 min-w-[60px] rounded-full border border-white/8 bg-transparent px-2.5 text-[10px] text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/15 transition-all duration-300"
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Tab icons + Send button row */}
+            <div className="flex items-center gap-1.5">
+              {/* Tab icon buttons */}
+              {captureTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveCaptureTab(tab.key)}
+                  className={`size-8 flex items-center justify-center rounded-lg transition-all duration-200 ${
+                    activeCaptureTab === tab.key
+                      ? 'text-[#9D8BA7] bg-[#9D8BA7]/10'
+                      : 'text-white/30 hover:text-white/50 hover:bg-white/5'
+                  }`}
+                  aria-label={tab.label}
+                >
+                  {tab.icon}
+                </button>
+              ))}
+
+              {/* Spacer */}
+              <div className="flex-1" />
+
+              {/* Send button — 48px circle with purple gradient */}
+              <button
+                onClick={handleSave}
+                disabled={isSaving || isAnalyzingImage || (activeCaptureTab === 'text' && !textContent.trim()) || (activeCaptureTab === 'link' && !linkUrl.trim()) || (activeCaptureTab === 'voice' && !voiceTranscript && !isTranscribing)}
+                className="size-12 rounded-full bg-gradient-to-r from-[#9D8BA7] to-[#c084fc] flex items-center justify-center text-white shadow-lg shadow-[#9D8BA7]/25 disabled:opacity-40 disabled:shadow-none transition-all duration-200 active:scale-95 shrink-0"
+                aria-label="Save memory"
+              >
+                {isSaving ? <Loader2 className="size-5 animate-spin" /> : <ArrowUp className="size-5" />}
+              </button>
+            </div>
+          </div>
         </motion.div>
       </>
     )
@@ -1260,6 +1510,8 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
     searchQuery,
     isLoadingMemories,
     darkMode,
+    activeFilter,
+    setActiveFilter,
   } = useAetherStore()
 
   const { toast } = useToast()
@@ -1281,7 +1533,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
     }
   }, [])
 
-  // Filter + sort memories (search only, no type filter on home screen)
+  // Filter + sort memories (search + type filter)
   const sortedMemories = useMemo(() => {
     let filtered = memories
     if (searchQuery) {
@@ -1292,10 +1544,17 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
         m.tags.some((t) => t.toLowerCase().includes(q))
       )
     }
+    if (activeFilter && activeFilter !== 'All') {
+      const typeMap: Record<string, string> = { 'Text': 'text', 'Voice': 'voice', 'Links': 'link', 'Images': 'image' }
+      const filterType = typeMap[activeFilter]
+      if (filterType) {
+        filtered = filtered.filter((m) => m.type === filterType)
+      }
+    }
     return [...filtered].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
-  }, [memories, searchQuery])
+  }, [memories, searchQuery, activeFilter])
 
   const handleMemoryClick = useCallback((id: string) => {
     if (onMemoryClick) {
@@ -1543,6 +1802,22 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
     }
   }, [user, isSendingRecap, recapCooldown, toast])
 
+  // Count memories this week for stats bar
+  const memoriesThisWeek = useMemo(() => {
+    const now = new Date()
+    const weekAgo = new Date(now.getTime() - 7 * 86400000)
+    return memories.filter((m) => new Date(m.createdAt) >= weekAgo).length
+  }, [memories])
+
+  // Filter pills configuration
+  const filterPills = useMemo(() => [
+    { key: 'All', label: 'All' },
+    { key: 'Text', label: 'Text' },
+    { key: 'Voice', label: 'Voice' },
+    { key: 'Links', label: 'Links' },
+    { key: 'Images', label: 'Images' },
+  ], [])
+
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden max-w-screen relative" style={{ background: 'var(--main-bg)' }}>
       {/* Aurora Background — behind capture area */}
@@ -1550,18 +1825,18 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto min-h-0 ios-scroll relative z-10">
-        <div className="px-4 md:px-6 lg:px-8 pt-4 md:pt-8 pb-24 md:pb-6 max-w-2xl mx-auto">
+        <div className="px-4 md:px-6 lg:px-8 pt-4 md:pt-8 pb-28 md:pb-6 max-w-2xl mx-auto">
 
-          {/* ─── Quick Capture Hero Section ─── */}
+          {/* ─── Search Bar (navigates to Ask Aether) ─── */}
           <motion.section
             initial={prefersReducedMotion ? false : { opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="mb-6 md:mb-10"
+            className="mb-3 md:mb-6"
           >
-            {/* Glassmorphic capture card */}
-            <div
-              className="relative rounded-2xl overflow-hidden"
+            <button
+              onClick={() => setCurrentView('ask-aether')}
+              className="cursor-pointer w-full flex items-center gap-2.5 rounded-xl px-4 text-sm md:text-base transition-all duration-200 group min-h-[40px] md:min-h-[44px]"
               style={{
                 background: 'var(--glass-bg)',
                 border: '1px solid var(--glass-border)',
@@ -1569,93 +1844,71 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
                 WebkitBackdropFilter: 'blur(24px)',
                 boxShadow: 'var(--card-shadow)',
               }}
+              aria-label="Search memories"
             >
-              {/* Inner glow at top */}
-              <div
-                className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px"
-                style={{
-                  background: 'linear-gradient(90deg, transparent, var(--aurora-purple), var(--aurora-pink), transparent)',
-                }}
+              <Search
+                size={16}
+                className="flex-shrink-0 text-[#9D8BA7]/60 group-hover:text-[#9D8BA7] transition-colors duration-150"
               />
-
-              <div className="p-3 md:p-5">
-                {/* Input row */}
-                <div className="flex items-center gap-3">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={captureInput}
-                    onChange={(e) => setCaptureInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault()
-                        handleQuickCapture()
-                      }
-                    }}
-                    placeholder="Dump a thought, link, or idea..."
-                    className="flex-1 bg-transparent text-foreground text-sm sm:text-base placeholder:text-muted-foreground focus:outline-none min-h-[44px]"
-                    disabled={isCapturing}
-                  />
-
-                  {/* Mic button */}
-                  <button
-                    onClick={handleMicClick}
-                    className="size-9 sm:size-10 rounded-xl flex items-center justify-center transition-all duration-200 hover:bg-[var(--glass-bg-hover)] shrink-0 min-w-[36px] min-h-[36px]"
-                    style={{
-                      background: 'var(--glass-bg)',
-                      border: '1px solid var(--glass-border)',
-                    }}
-                    aria-label="Voice capture"
-                  >
-                    <Mic className="size-4 text-muted-foreground" />
-                  </button>
-
-                  {/* Add Memory button */}
-                  <button
-                    onClick={handleQuickCapture}
-                    disabled={!captureInput.trim() || isCapturing}
-                    className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 min-h-[40px] min-w-[44px] shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
-                    style={{
-                      background: captureInput.trim()
-                        ? 'linear-gradient(135deg, #9D8BA7, #c084fc)'
-                        : 'var(--glass-bg)',
-                      color: captureInput.trim() ? 'white' : 'var(--text-subtle)',
-                      boxShadow: captureInput.trim() ? '0 4px 16px rgba(157,139,167,0.25)' : 'none',
-                    }}
-                  >
-                    {isCapturing ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <ArrowUp className="size-4" />
-                    )}
-                    <span className="hidden sm:inline">Add Memory</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Subtle hint text */}
-            <p className="text-[11px] mt-2.5 text-center" style={{ color: 'var(--text-subtle)' }}>
-              Press <kbd className="px-1.5 py-0.5 rounded text-[10px] font-mono" style={{ background: 'var(--glass-tag-bg)', color: 'var(--glass-tag-text)' }}>Enter</kbd> to save · Click <Mic className="inline size-3" style={{ color: 'var(--text-subtle)' }} /> for voice notes
-            </p>
+              <span className="flex-1 text-left text-sm md:text-base" style={{ color: 'var(--text-subtle)' }}>
+                What do you remember?
+              </span>
+              <kbd
+                className="hidden md:inline-flex px-1.5 py-0.5 rounded text-[10px] font-mono"
+                style={{ background: 'var(--glass-tag-bg)', color: 'var(--glass-tag-text)' }}
+              >
+                ⌘K
+              </kbd>
+            </button>
           </motion.section>
+
+          {/* ─── Stats Bar ─── */}
+          <motion.div
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="text-center py-1 mb-2"
+          >
+            <span className="text-[11px]" style={{ color: 'var(--text-subtle)' }}>
+              {sortedMemories.length} {sortedMemories.length === 1 ? 'memory' : 'memories'} · {memoriesThisWeek} this week
+            </span>
+          </motion.div>
+
+          {/* ─── Filter Pills ─── */}
+          <motion.div
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.15 }}
+            className="flex items-center gap-2 overflow-x-auto pb-3 mb-3 md:mb-5 scrollbar-none"
+          >
+            {filterPills.map((pill) => (
+              <button
+                key={pill.key}
+                onClick={() => setActiveFilter(pill.key)}
+                className={`shrink-0 h-8 px-3 rounded-full text-xs font-medium transition-all duration-200 min-w-[44px] ${
+                  activeFilter === pill.key
+                    ? 'bg-[#9D8BA7]/15 text-[#9D8BA7]'
+                    : darkMode
+                      ? 'bg-white/5 text-white/40 hover:bg-white/8 hover:text-white/60'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                }`}
+              >
+                {pill.label}
+              </button>
+            ))}
+          </motion.div>
 
           {/* ─── Recent Memories Section ─── */}
           <motion.section
             initial={prefersReducedMotion ? false : { opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <div className="flex items-center justify-between mb-3 md:mb-5">
+            <div className="flex items-center justify-between mb-3 md:mb-4">
               <h2 className="text-xs md:text-sm font-semibold tracking-wide uppercase" style={{ color: 'var(--section-header)' }}>
                 Recent Memories
               </h2>
               <div className="flex items-center gap-2">
-                {sortedMemories.length > 0 && (
-                  <span className="text-[11px]" style={{ color: 'var(--text-subtle)' }}>
-                    {sortedMemories.length} {sortedMemories.length === 1 ? 'memory' : 'memories'}
-                  </span>
-                )}
                 <button
                   onClick={handleSendRecap}
                   disabled={isSendingRecap || recapCooldown}
@@ -1679,7 +1932,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
 
             {isLoadingMemories ? (
               /* Loading skeletons */
-              <div className="space-y-2 md:space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <div
                     key={i}
@@ -1701,8 +1954,8 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
                 ))}
               </div>
             ) : sortedMemories.length > 0 ? (
-              /* Memory feed */
-              <div className="space-y-2 md:space-y-3">
+              /* Memory feed — grid on larger screens */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {sortedMemories.map((memory, index) => (
                   <MemoryCard
                     key={memory.id}
@@ -1719,6 +1972,19 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
           </motion.section>
         </div>
       </div>
+
+      {/* ─── Mobile FAB — Quick Capture ─── */}
+      <button
+        onClick={() => setCaptureModalOpen(true)}
+        className="md:hidden fixed z-40 bottom-20 right-4 size-14 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-xl"
+        style={{
+          background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+          boxShadow: '0 4px 24px rgba(157, 139, 167, 0.4)',
+        }}
+        aria-label="Quick capture"
+      >
+        <Plus size={24} className="stroke-[2.5] text-white" />
+      </button>
 
       {/* Quick Capture Modal — for voice, link, image captures */}
       <QuickCaptureModal />

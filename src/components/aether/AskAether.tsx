@@ -46,10 +46,14 @@ const typeIconMap: Record<MemoryType, typeof FileText> = {
 }
 
 /* ─────────── Typing Indicator (memoized) ─────────── */
-const TypingIndicator = memo(function TypingIndicator() {
+const TypingIndicator = memo(function TypingIndicator({ darkMode }: { darkMode: boolean }) {
   return (
     <div className="flex justify-start">
-      <div className="bg-[#9D8BA7]/5 border border-[#9D8BA7]/10 rounded-2xl rounded-bl-sm px-4 sm:px-5 py-3.5 max-w-[85%]">
+      <div className={`rounded-2xl rounded-bl-sm px-4 sm:px-5 py-3.5 max-w-[85%] sm:max-w-[70%] ${
+        darkMode
+          ? 'bg-[#9D8BA7]/5 border border-[#9D8BA7]/10'
+          : 'bg-[#9D8BA7]/5 border border-[#9D8BA7]/15'
+      }`}>
         <div className="flex items-center gap-2 mb-2">
           <div className="h-5 w-5 rounded-full bg-gradient-to-br from-[#9D8BA7] to-[#6D597A] flex items-center justify-center">
             <Brain size={10} className="text-white animate-pulse-glow" />
@@ -80,17 +84,23 @@ const TypingIndicator = memo(function TypingIndicator() {
 })
 
 /* ─────────── Inline Memory Card (memoized) ─────────── */
-const InlineMemoryCard = memo(function InlineMemoryCard({ memory }: { memory: { id: string; title: string; content: string; type: MemoryType } }) {
+const InlineMemoryCard = memo(function InlineMemoryCard({ memory, darkMode }: { memory: { id: string; title: string; content: string; type: MemoryType }; darkMode: boolean }) {
   const Icon = typeIconMap[memory.type]
   return (
-    <div className="rounded-xl border border-border bg-background p-3 mt-2 hover:border-[#9D8BA7]/20 transition-all duration-300">
+    <div className={`rounded-xl border p-3 mt-2 hover:border-[#9D8BA7]/20 transition-all duration-300 ${
+      darkMode
+        ? 'border-border bg-background'
+        : 'border-gray-200 bg-gray-50/50'
+    }`}>
       <div className="flex items-start gap-2.5">
         <div className="h-7 w-7 rounded-lg bg-[#9D8BA7]/8 flex items-center justify-center flex-shrink-0 mt-0.5">
           <Icon size={13} className="text-[#9D8BA7]" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-foreground truncate">{memory.title}</p>
-          <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">{memory.content}</p>
+          <p className={`text-[11px] line-clamp-2 mt-0.5 leading-relaxed ${
+            darkMode ? 'text-muted-foreground' : 'text-gray-500'
+          }`}>{memory.content}</p>
         </div>
       </div>
     </div>
@@ -102,17 +112,19 @@ const ChatBubble = memo(function ChatBubble({
   message,
   memories,
   isStreaming,
+  darkMode,
 }: {
   message: ChatMessage
   memories: { id: string; title: string; content: string; type: MemoryType }[]
   isStreaming?: boolean
+  darkMode: boolean
 }) {
   const isUser = message.role === 'user'
 
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="bg-[#9D8BA7] text-white rounded-2xl rounded-br-sm px-4 sm:px-5 py-3 max-w-[75%] sm:max-w-[70%] ml-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+        <div className="bg-[#9D8BA7] text-white rounded-2xl rounded-br-sm px-3 sm:px-5 py-2.5 sm:py-3 max-w-[85%] sm:max-w-[70%] ml-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
           <p className="text-sm leading-relaxed">{message.content}</p>
         </div>
       </div>
@@ -125,7 +137,11 @@ const ChatBubble = memo(function ChatBubble({
 
   return (
     <div className="flex justify-start">
-      <div className="bg-[#9D8BA7]/8 border border-[#9D8BA7]/12 rounded-2xl rounded-bl-sm px-4 sm:px-5 py-3.5 sm:py-4 max-w-[85%] sm:max-w-[70%] relative overflow-hidden">
+      <div className={`rounded-2xl rounded-bl-sm px-3 sm:px-5 py-2.5 sm:py-4 max-w-[85%] sm:max-w-[70%] relative overflow-hidden ${
+        darkMode
+          ? 'bg-[#9D8BA7]/8 border border-[#9D8BA7]/12'
+          : 'bg-[#9D8BA7]/5 border border-[#9D8BA7]/12'
+      }`}>
         {/* Left accent bar */}
         <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#9D8BA7]/30 rounded-l-2xl" />
 
@@ -148,7 +164,7 @@ const ChatBubble = memo(function ChatBubble({
         {referencedMems.length > 0 && (
           <div className="mt-3 space-y-2">
             {referencedMems.map((mem) => (
-              <InlineMemoryCard key={mem.id} memory={mem} />
+              <InlineMemoryCard key={mem.id} memory={mem} darkMode={darkMode} />
             ))}
           </div>
         )}
@@ -156,7 +172,9 @@ const ChatBubble = memo(function ChatBubble({
         {message.confidence === 'low' && (
           <div className="mt-2 flex items-start gap-1.5">
             <AlertCircle size={11} className="text-muted-foreground/50 mt-0.5 flex-shrink-0" />
-            <span className="text-[11px] text-muted-foreground/50 leading-relaxed">
+            <span className={`text-[11px] leading-relaxed ${
+              darkMode ? 'text-muted-foreground/50' : 'text-gray-400'
+            }`}>
               I couldn&apos;t find anything about that in your memories — it might not be saved yet
             </span>
           </div>
@@ -179,10 +197,21 @@ export function AskAether() {
   const [isThinking, setIsThinking] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
 
+  // Mobile detection for input bar positioning
+  const [isMobile, setIsMobile] = useState(false)
+
   const chatEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+
+  // Detect mobile viewport for input bar padding
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   // Memoize the memory list for lookup
   const memoryLookup = useMemo(
@@ -514,16 +543,20 @@ export function AskAether() {
         </div>
       </div>
 
-      {/* Suggested Questions — horizontally scrollable on all viewports */}
+      {/* Suggested Questions — vertically stacked on mobile, horizontal scroll on desktop */}
       {messages.length === 0 && (
         <div className="flex-shrink-0 py-2 px-3 md:px-4 border-b border-border/50 bg-background/60">
           <div className="md:max-w-3xl md:mx-auto">
-            <div className="overflow-x-auto flex-nowrap scrollbar-none gap-2 flex">
+            <div className="flex flex-col md:flex-row md:overflow-x-auto md:flex-nowrap md:scrollbar-none gap-2">
               {displayStarters.map((question) => (
                 <button
                   key={question}
                   onClick={() => handleStarterClick(question)}
-                  className="px-3.5 py-2 rounded-2xl border border-[#9D8BA7]/15 bg-card text-sm text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/30 transition-all duration-300 shadow-sm min-h-[40px] flex items-center gap-1.5 whitespace-nowrap active:scale-[0.97] cursor-pointer"
+                  className={`w-full md:w-auto px-3 py-3 md:py-2 rounded-[12px] border text-[13px] md:text-sm transition-all duration-300 min-h-[44px] flex items-center gap-1.5 whitespace-nowrap active:scale-[0.97] cursor-pointer ${
+                    darkMode
+                      ? 'border-[#9D8BA7]/15 bg-card text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/30 shadow-sm'
+                      : 'border-[#9D8BA7]/20 bg-white text-gray-700 shadow-sm hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/30'
+                  }`}
                 >
                   <span className="text-[#9D8BA7]">&ldquo;</span>
                   {question.replace(/^"|"$/g, '')}
@@ -540,10 +573,9 @@ export function AskAether() {
         ref={chatContainerRef}
         className="flex-1 min-h-0 overflow-y-auto ios-scroll px-3 md:px-6 py-3 md:py-5 pb-4 md:pb-6"
         style={{
-          backgroundImage: `
-            linear-gradient(rgba(157,139,167,0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(157,139,167,0.04) 1px, transparent 1px)
-          `,
+          backgroundImage: darkMode
+            ? `linear-gradient(rgba(157,139,167,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(157,139,167,0.04) 1px, transparent 1px)`
+            : `linear-gradient(rgba(157,139,167,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(157,139,167,0.03) 1px, transparent 1px)`,
           backgroundSize: '50px 50px',
           animation: 'grid-scan 20s linear infinite',
         }}
@@ -552,11 +584,11 @@ export function AskAether() {
           {/* Empty state — no memories yet */}
           {memories.length === 0 && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center flex-1 px-4 text-center">
-              <div className="h-14 w-14 md:h-20 md:w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-4 md:mb-6 shadow-sm">
-                <Brain size={28} className="text-[#9D8BA7]" />
+              <div className="h-14 w-14 md:h-20 md:w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-3 md:mb-6 shadow-sm">
+                <Brain size={24} className="text-[#9D8BA7] md:size-8" />
               </div>
-              <h2 className="text-lg md:text-xl font-bold text-foreground mb-2 md:mb-3">Ask Aether</h2>
-              <p className="text-xs md:text-sm text-muted-foreground max-w-xs mb-4 md:mb-6 leading-relaxed">
+              <h2 className="text-base md:text-lg font-bold text-foreground mb-1.5 md:mb-3">Ask Aether</h2>
+              <p className="text-sm text-muted-foreground max-w-xs mb-3 md:mb-6 leading-relaxed">
                 Your AI companion — search your memories, ask questions, or just chat. I&apos;ll understand what you need.
               </p>
               <Button
@@ -573,10 +605,10 @@ export function AskAether() {
           {/* Empty state — has memories but no chat messages */}
           {memories.length > 0 && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center flex-1 px-4 text-center">
-              <div className="h-14 w-14 md:h-20 md:w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-4 md:mb-5 shadow-sm">
-                <Brain size={24} className="text-[#9D8BA7]/70" />
+              <div className="h-14 w-14 md:h-20 md:w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-3 md:mb-5 shadow-sm">
+                <Brain size={22} className="text-[#9D8BA7]/70 md:size-7" />
               </div>
-              <h3 className="text-base md:text-lg font-semibold text-foreground mb-1.5 md:mb-2">What would you like to know?</h3>
+              <h3 className="text-base md:text-lg font-semibold text-foreground mb-1 md:mb-2">What would you like to know?</h3>
               <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
                 Ask about your memories or just say hi — I&apos;ll understand what you need.
               </p>
@@ -596,27 +628,35 @@ export function AskAether() {
                   message={msg}
                   memories={memoryLookup}
                   isStreaming={streamingMessageId === msg.id}
+                  darkMode={darkMode}
                 />
               </motion.div>
             ))}
           </AnimatePresence>
 
           {/* Typing indicator */}
-          {isThinking && <TypingIndicator />}
+          {isThinking && <TypingIndicator darkMode={darkMode} />}
 
           <div ref={chatEndRef} />
         </div>
       </div>
 
-      {/* Input Bar — futuristic design */}
+      {/* Input Bar — mobile-first with bottom nav offset */}
       <div
-        className={`shrink-0 z-30 backdrop-blur-none md:backdrop-blur-sm border-t ${darkMode ? 'bg-[#07070f]/95 border-white/6' : 'bg-white/95 border-gray-200'}`}
+        className={`shrink-0 z-30 backdrop-blur-none md:backdrop-blur-sm border-t ${
+          darkMode
+            ? 'bg-[#07070f]/95 border-white/6'
+            : 'bg-white/95 border-gray-200'
+        }`}
         style={{
-          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))',
+          paddingBottom: isMobile
+            ? `calc(64px + env(safe-area-inset-bottom, 0px))`
+            : `max(0.5rem, env(safe-area-inset-bottom, 0px))`,
         }}
       >
-        <div className="md:max-w-3xl md:mx-auto px-3 md:px-6 py-2 md:py-3">
-          <div className="flex items-center gap-2 sm:gap-3">
+        <div className="md:max-w-3xl md:mx-auto px-2 md:px-6 py-2 md:py-3">
+          <div className="flex items-center gap-2">
+            {/* Input field */}
             <div className="flex-1 relative">
               <input
                 type="text"
@@ -631,19 +671,21 @@ export function AskAether() {
                 placeholder="Ask Aether anything..."
                 disabled={isThinking}
                 aria-label="Ask Aether a question"
-                className={`w-full rounded-xl md:rounded-2xl p-3 md:p-4 text-sm md:text-base focus:outline-none focus:border-[#9D8BA7]/40 focus:shadow-[0_0_20px_rgba(157,139,167,0.1)] transition-all duration-300 disabled:opacity-50 min-h-[44px] resize-none ${
+                className={`w-full rounded-2xl p-3 md:p-4 text-sm focus:outline-none focus:border-[#9D8BA7]/40 focus:shadow-[0_0_20px_rgba(157,139,167,0.1)] transition-all duration-300 disabled:opacity-50 h-12 md:min-h-[44px] resize-none ${
                   darkMode
-                    ? 'bg-white/5 border-white/10 text-white placeholder:text-gray-400'
-                    : 'bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 shadow-sm'
+                    ? 'bg-white/5 border border-white/10 text-white placeholder:text-gray-400'
+                    : 'bg-white border border-gray-200 text-gray-900 placeholder:text-gray-500 shadow-sm'
                 }`}
               />
               {/* Microphone button inside input */}
               <button
                 onClick={toggleRecording}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                className={`absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
                   isRecording
                     ? 'text-red-500 bg-red-500/10'
-                    : 'text-muted-foreground hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 active:bg-[#9D8BA7]/10'
+                    : darkMode
+                      ? 'text-muted-foreground hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 active:bg-[#9D8BA7]/10'
+                      : 'text-gray-400 hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 active:bg-[#9D8BA7]/10'
                 }`}
                 aria-label={isRecording ? 'Stop recording' : 'Voice input'}
               >
@@ -664,12 +706,17 @@ export function AskAether() {
                 </span>
               )}
             </div>
+            {/* Send button */}
             <Button
               onClick={handleSend}
               disabled={!input.trim() || isThinking}
               size="icon"
               aria-label="Send message"
-              className="h-12 w-12 rounded-xl md:rounded-2xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-white/90 shadow-lg shadow-slate-900/20 dark:shadow-white/10 transition-all duration-300 hover:shadow-xl disabled:opacity-40 disabled:shadow-none flex-shrink-0 active:scale-95 cursor-pointer"
+              className={`h-12 w-12 rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl disabled:opacity-40 disabled:shadow-none flex-shrink-0 active:scale-95 cursor-pointer ${
+                darkMode
+                  ? 'bg-white text-black hover:bg-white/90 shadow-white/10'
+                  : 'bg-slate-900 text-white hover:bg-slate-800 shadow-slate-900/20'
+              }`}
             >
               {isThinking ? (
                 <Loader2 size={18} className="animate-spin" />

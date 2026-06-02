@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, memo, useMemo, useEffect, useCallback } from 'react'
-import { Brain, Settings, Search, Plus, Home, WifiOff, Cloud, CheckCircle2, Sparkles, CalendarDays, Sun, Moon } from 'lucide-react'
+import { Settings, Plus, WifiOff, Cloud, CheckCircle2, Sparkles, CalendarDays, Sun, Moon, Home, Brain } from 'lucide-react'
 import { useAetherStore } from '@/store/aether-store'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 import { AetherLogo } from '@/components/aether/AetherLogo'
@@ -12,7 +12,7 @@ import { getSyncQueueCount } from '@/lib/offline-db'
 interface NavItem {
   label: string
   icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>
-  view: AppView
+  view: AppView | 'capture'
 }
 
 const desktopNavItems: NavItem[] = [
@@ -25,24 +25,25 @@ const desktopNavItems: NavItem[] = [
 
 const mobileNavItems: NavItem[] = [
   { label: 'Home', icon: Home, view: 'dashboard' },
-  { label: 'Search', icon: Search, view: 'ask-aether' },
-  { label: 'Stars', icon: Sparkles, view: 'constellations' },
+  { label: 'Ask Aether', icon: Brain, view: 'ask-aether' },
+  { label: 'Capture', icon: Plus, view: 'capture' },
+  { label: 'Collections', icon: Home, view: 'constellations' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
 
 /* SVG icon map for reliable mobile bottom nav rendering */
-const navIconSvgs: Record<string, (isActive: boolean) => React.ReactNode> = {
-  dashboard: (isActive) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+const navIconSvgs: Record<string, (color: string) => React.ReactNode> = {
+  dashboard: (color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
   ),
-  'ask-aether': (isActive) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+  'ask-aether': (color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/></svg>
   ),
-  constellations: (isActive) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+  constellations: (color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
   ),
-  settings: (isActive) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+  settings: (color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
   ),
 }
 
@@ -61,7 +62,7 @@ const desktopIconSvgs: Record<string, (isActive: boolean) => React.ReactNode> = 
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
   ),
   settings: (isActive) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1-1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
   ),
 }
 
@@ -180,42 +181,6 @@ const SidebarNavItem = memo(function SidebarNavItem({
   )
 })
 
-/* ─────────── Bottom Nav Item (Mobile) ─────────── */
-const BottomNavItem = memo(function BottomNavItem({
-  item,
-  isActive,
-  onClick,
-  darkMode,
-}: {
-  item: NavItem
-  isActive: boolean
-  onClick: () => void
-  darkMode: boolean
-}) {
-  const svgIcon = navIconSvgs[item.view]
-
-  return (
-    <button
-      onClick={onClick}
-      className={`cursor-pointer
-        tap-feedback relative flex flex-col items-center justify-center gap-0.5
-        min-w-[48px] min-h-[44px] transition-all duration-150
-        ${
-          isActive
-            ? 'text-[#9D8BA7] scale-[1.05] bg-[#9D8BA7]/12 rounded-xl'
-            : darkMode
-              ? 'text-[rgba(240,240,248,0.5)] active:text-[rgba(240,240,248,0.8)]'
-              : 'text-muted-foreground active:text-foreground'
-        }
-      `}
-      aria-label={item.label}
-    >
-      {svgIcon ? svgIcon(isActive) : <item.icon size={22} className="transition-colors duration-150" />}
-      <span className={`text-[10px] font-medium leading-tight ${isActive ? 'text-[#9D8BA7]' : ''}`}>{item.label}</span>
-    </button>
-  )
-})
-
 /* ─────────── Offline Banner ─────────── */
 function OfflineBanner() {
   const isOnline = useOnlineStatus()
@@ -283,14 +248,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
     ? 'rgba(157, 139, 167, 0.08)'
     : 'rgba(157, 139, 167, 0.12)'
 
-  const iconColor = darkMode
-    ? 'rgba(240, 240, 248, 0.5)'
-    : 'rgba(0, 0, 0, 0.4)'
-
-  const iconHoverColor = darkMode
-    ? 'rgba(240, 240, 248, 0.8)'
-    : 'rgba(0, 0, 0, 0.7)'
-
   return (
     <div className="h-dvh bg-background text-foreground flex overflow-hidden max-w-screen overflow-x-hidden">
       {/* ─── Left Sidebar (Desktop) — Slim Frosted Glass ─── */}
@@ -318,7 +275,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               key={item.view}
               item={item}
               isActive={activeNavView === item.view}
-              onClick={() => setCurrentView(item.view)}
+              onClick={() => setCurrentView(item.view as AppView)}
             />
           ))}
         </nav>
@@ -337,7 +294,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {/* Offline/Sync Banner */}
         <OfflineBanner />
 
-        {/* ─── Mobile Header ─── */}
+        {/* ─── Mobile Header — Simplified (logo only) ─── */}
         <header
           className="md:hidden shrink-0 z-30 backdrop-blur-xl border-b"
           style={{
@@ -345,29 +302,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
             borderColor: sidebarBorder,
           }}
         >
-          <div className="flex items-center gap-2 px-3 h-11 safe-area-top">
-            {/* Brain logo */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <AetherLogo size={28} />
-            </div>
-
-            {/* Glassmorphic search bar — mobile (no gradient border) */}
-            <button
-              onClick={() => setCurrentView('ask-aether')}
-              className="cursor-pointer flex-1 flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all duration-200 group min-h-[44px]"
-              style={{
-                background: darkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.5)',
-                border: `1px solid ${darkMode ? 'rgba(157,139,167,0.15)' : 'rgba(157,139,167,0.2)'}`,
-              }}
-            >
-              <Search
-                size={14}
-                className="flex-shrink-0 text-[#9D8BA7]/60 group-hover:text-[#9D8BA7] transition-colors duration-150"
-              />
-              <span className={`truncate text-[11px] md:text-xs ${darkMode ? 'text-[rgba(240,240,248,0.4)]' : 'text-[rgba(0,0,0,0.4)]'}`}>
-                What do you need to remember?
-              </span>
-            </button>
+          <div className="flex items-center justify-center h-11 safe-area-top">
+            <AetherLogo size={28} />
           </div>
         </header>
 
@@ -392,10 +328,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               }}
               aria-label="Search memories"
             >
-              <Search
-                size={18}
-                className="flex-shrink-0 text-[#9D8BA7]/60 group-hover:text-[#9D8BA7] transition-colors duration-150"
-              />
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-[#9D8BA7]/60 group-hover:text-[#9D8BA7] transition-colors duration-150"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
               <span className={`truncate flex-1 text-left ${darkMode ? 'text-[rgba(240,240,248,0.4)]' : 'text-[rgba(0,0,0,0.35)]'}`}>
                 What do you need to remember?
               </span>
@@ -433,27 +366,65 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <Plus size={22} className="stroke-[2.5] text-white" />
       </button>
 
-      {/* ─── Bottom Navigation Bar (Mobile) ─── */}
+      {/* ─── Bottom Navigation Bar (Mobile) — Icon-Only Redesign ─── */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-none md:backdrop-blur-lg border-t mobile-gpu safe-area-bottom"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t safe-area-bottom"
         style={{
-          background: darkMode ? 'rgba(10, 10, 15, 0.9)' : 'rgba(255, 255, 255, 0.85)',
-          borderColor: sidebarBorder,
+          background: darkMode ? 'rgba(13,13,22,0.98)' : 'rgba(255,255,255,0.95)',
+          borderColor: 'rgba(157,139,167,0.1)',
         }}
       >
         <div
-          className="relative flex items-center justify-around px-1 pt-1.5"
-          style={{ height: 'calc(64px + env(safe-area-inset-bottom, 0px))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          className="flex items-center justify-around"
+          style={{ height: '64px', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         >
-          {mobileNavItems.map((item) => (
-            <BottomNavItem
-              key={item.view}
-              item={item}
-              isActive={activeNavView === item.view}
-              onClick={() => setCurrentView(item.view)}
-              darkMode={darkMode}
-            />
-          ))}
+          {mobileNavItems.map((item) => {
+            const isCapture = item.view === 'capture'
+
+            if (isCapture) {
+              return (
+                <button
+                  key="capture"
+                  onClick={() => setCaptureModalOpen(true)}
+                  className="relative -mt-6 cursor-pointer flex items-center justify-center transition-transform duration-150 active:scale-95"
+                  style={{ width: '20%' }}
+                  aria-label="Capture"
+                >
+                  <div
+                    className="h-12 w-12 rounded-full flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+                      boxShadow: '0 4px 24px rgba(157,139,167,0.4)',
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  </div>
+                </button>
+              )
+            }
+
+            const isActive = activeNavView === item.view
+            const activeColor = '#c084fc'
+            const inactiveColor = darkMode ? 'rgba(240,240,248,0.4)' : 'rgba(0,0,0,0.3)'
+            const iconColor = isActive ? activeColor : inactiveColor
+            const svgIcon = navIconSvgs[item.view as string]
+
+            return (
+              <button
+                key={item.view}
+                onClick={() => setCurrentView(item.view as AppView)}
+                className={`cursor-pointer flex items-center justify-center transition-all duration-150 active:bg-white/5 ${isActive ? 'scale-110' : ''}`}
+                style={{
+                  width: '20%',
+                  height: '100%',
+                  color: iconColor,
+                }}
+                aria-label={item.label}
+              >
+                {svgIcon ? svgIcon(iconColor) : <item.icon size={24} className="transition-colors duration-150" />}
+              </button>
+            )
+          })}
         </div>
       </nav>
     </div>

@@ -720,7 +720,7 @@ const CategoryCard = memo(function CategoryCard({
       }}
       whileHover={{ scale: 1.03, y: -4 }}
       whileTap={{ scale: 0.98 }}
-      className="relative w-full cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9D8BA7]/40 rounded-2xl overflow-hidden min-h-[140px] md:min-h-[200px]"
+      className="relative w-full cursor-pointer group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9D8BA7]/40 rounded-2xl overflow-hidden min-h-[120px] md:min-h-[200px]"
       aria-label={`${group.name} — ${memoryLabel}`}
     >
       {/* Card glass background — Dual Universe */}
@@ -773,7 +773,7 @@ const CategoryCard = memo(function CategoryCard({
       />
 
       {/* Content overlay */}
-      <div className="relative z-10 p-3 md:p-4 flex flex-col justify-between h-full text-left min-h-[140px] md:min-h-[200px]">
+      <div className="relative z-10 p-3 md:p-4 flex flex-col justify-between h-full text-left min-h-[120px] md:min-h-[200px]">
         {/* Top: Emoji + Name */}
         <div>
           <div
@@ -902,7 +902,7 @@ function ConstellationPanel({ group, darkMode, onClose }: ConstellationPanelProp
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed top-0 right-0 bottom-0 z-50 w-full sm:w-[440px] overflow-y-auto ios-scroll backdrop-blur-none md:backdrop-blur-xl shadow-none md:shadow-2xl"
+        className="fixed top-0 right-0 bottom-0 z-50 w-full md:w-[440px] overflow-y-auto ios-scroll backdrop-blur-none md:backdrop-blur-xl shadow-none md:shadow-2xl"
         style={darkMode
           ? {
               background: 'rgba(255,255,255,0.05)',
@@ -936,7 +936,7 @@ function ConstellationPanel({ group, darkMode, onClose }: ConstellationPanelProp
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.5 }}
-            className="mb-6"
+            className="mb-4 md:mb-6"
           >
             <div
               className="inline-flex items-center justify-center size-12 md:size-16 rounded-2xl mb-2 md:mb-3 text-2xl md:text-3xl"
@@ -962,7 +962,7 @@ function ConstellationPanel({ group, darkMode, onClose }: ConstellationPanelProp
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="mb-5 md:mb-8"
+            className="mb-4 md:mb-8"
           >
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className={`size-4 ${darkMode ? 'text-purple-400' : 'text-purple-600'}`} />
@@ -1307,7 +1307,7 @@ function ConstellationsInner() {
           <>
             {/* ─── 5 FIXED CONSTELLATION CARDS ─── */}
             {/* 2x2+1 grid on desktop, single column on mobile */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
               <AnimatePresence>
                 {categories.map((group, index) => (
                   <CategoryCard

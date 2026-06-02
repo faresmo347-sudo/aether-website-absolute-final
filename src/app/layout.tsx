@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -21,6 +21,13 @@ const dmMono = DM_Mono({
   weight: ["400", "500"],
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+};
 
 export const metadata: Metadata = {
   title: "Aether — Your AI-Powered Second Brain",
@@ -91,7 +98,7 @@ export default function RootLayout({
         `}} />
       </head>
       <body
-        className={`${inter.variable} ${playfair.variable} ${dmMono.variable} antialiased`}
+        className={`${inter.variable} ${playfair.variable} ${dmMono.variable} antialiased overflow-x-hidden`}
       >
         {children}
         <Toaster />
