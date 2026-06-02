@@ -74,10 +74,37 @@ export function Recaps() {
     return memories.filter((m) => new Date(m.createdAt) >= startOfDay)
   }, [memories, today])
 
-  const recentMemories = useMemo(() => {
-    const startOfDay = new Date(today)
-    startOfDay.setHours(0, 0, 0, 0)
-    return memories.filter((m) => new Date(m.createdAt) >= startOfDay).slice(0, 4)
+  // 5 most recent captures regardless of date (replaces recentMemories)
+  const recentCaptures = useMemo(() => {
+    return memories.slice(0, 5)
+  }, [memories])
+
+  // Memories from exactly 7 days ago
+  const lastWeekMemories = useMemo(() => {
+    const sevenDaysAgo = new Date(today)
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const start = new Date(sevenDaysAgo)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(sevenDaysAgo)
+    end.setHours(23, 59, 59, 999)
+    return memories.filter((m) => {
+      const d = new Date(m.createdAt)
+      return d >= start && d <= end
+    })
+  }, [memories, today])
+
+  // Memories from exactly 30 days ago
+  const lastMonthMemories = useMemo(() => {
+    const thirtyDaysAgo = new Date(today)
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const start = new Date(thirtyDaysAgo)
+    start.setHours(0, 0, 0, 0)
+    const end = new Date(thirtyDaysAgo)
+    end.setHours(23, 59, 59, 999)
+    return memories.filter((m) => {
+      const d = new Date(m.createdAt)
+      return d >= start && d <= end
+    })
   }, [memories, today])
 
   // Weekly memories — past 7 days
@@ -139,8 +166,12 @@ export function Recaps() {
 
   // Dynamic AI Insight based on actual data
   const aiInsight = useMemo(() => {
+    if (recentCaptures.length === 0) {
+      return 'Nothing to recap yet \u2014 save a few memories and I\u2019ll start surfacing highlights for you'
+    }
+
     if (todayMemories.length === 0) {
-      return 'No memories captured yet \u2014 your recap will appear once you start saving memories'
+      return `You haven\u2019t saved any memories today, but you have ${memories.length} total memor${memories.length === 1 ? 'y' : 'ies'} to revisit`
     }
 
     // Count today's memories by type
@@ -175,7 +206,7 @@ export function Recaps() {
     }
 
     return parts.join(' — ') + '.'
-  }, [todayMemories, weekDays])
+  }, [recentCaptures, todayMemories, memories, weekDays])
 
   // Most active day - derived from real weekDays data
   const mostActiveDay = useMemo(() => {
@@ -210,7 +241,7 @@ export function Recaps() {
   }
 
   // Check empty states
-  const isDailyEmpty = recentMemories.length === 0 && displayTasks.length === 0
+  const isDailyEmpty = recentCaptures.length === 0 && displayTasks.length === 0
   const isWeeklyEmpty = totalWeekMemories === 0 && topThemes.length === 0
 
   // Memory lane items - create a few cards from older memories
@@ -305,10 +336,10 @@ export function Recaps() {
                   className="text-lg font-bold text-foreground mb-2"
                   style={{ fontFamily: "'Playfair Display', serif" }}
                 >
-                  No memories captured yet
+                  Nothing to recap yet
                 </h3>
                 <p className="text-sm text-muted-foreground max-w-xs mb-6">
-                  Your recap will appear once you start saving memories
+                  Save a few memories and I&apos;ll start surfacing highlights for you
                 </p>
                 <Button
                   onClick={handleCaptureMemory}
@@ -320,17 +351,17 @@ export function Recaps() {
               </motion.div>
             ) : (
               <>
-                {/* Key Memories */}
-                {recentMemories.length > 0 && (
+                {/* Recent Captures */}
+                {recentCaptures.length > 0 && (
                   <div>
                     <h3
                       className="text-sm sm:text-lg font-bold mb-2 sm:mb-3 text-foreground"
                       style={{ fontFamily: "'Playfair Display', serif" }}
                     >
-                      Key Memories
+                      Recent Captures
                     </h3>
                     <div className="space-y-3">
-                      {recentMemories.map((memory, index) => (
+                      {recentCaptures.map((memory, index) => (
                         <motion.div
                           key={memory.id}
                           initial={{ opacity: 0, x: -10 }}
@@ -363,14 +394,102 @@ export function Recaps() {
                   </div>
                 )}
 
-                {/* Tasks Extracted */}
+                {/* From Last Week */}
+                {lastWeekMemories.length > 0 && (
+                  <div>
+                    <h3
+                      className="text-sm sm:text-lg font-bold mb-2 sm:mb-3 text-foreground"
+                      style={{ fontFamily: "'Playfair Display', serif" }}
+                    >
+                      <Clock className="inline size-4 mr-1.5 -mt-0.5" style={{ color: '#9D8BA7' }} />
+                      From Last Week
+                    </h3>
+                    <div className="space-y-3">
+                      {lastWeekMemories.map((memory, index) => (
+                        <motion.div
+                          key={memory.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.08, duration: 0.25 }}
+                          className="bg-card rounded-2xl px-3 sm:px-5 py-4 shadow-sm border border-border"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="size-8 rounded-lg flex items-center justify-center shrink-0 bg-[#9D8BA7]/12"
+                            >
+                              {memory.type === 'voice' ? <Mic className="size-4" style={{ color: '#9D8BA7' }} /> : memory.type === 'link' ? <Link2 className="size-4" style={{ color: '#9D8BA7' }} /> : memory.type === 'image' ? <ImageIcon className="size-4" style={{ color: '#9D8BA7' }} /> : <FileText className="size-4" style={{ color: '#9D8BA7' }} />}
+                            </div>
+                            <div className="min-w-0">
+                              <h4
+                                className="font-semibold text-sm truncate text-foreground"
+                              >
+                                {memory.title}
+                              </h4>
+                              <p
+                                className="text-xs mt-0.5 line-clamp-2 text-muted-foreground"
+                              >
+                                {memory.content}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* From Last Month */}
+                {lastMonthMemories.length > 0 && (
+                  <div>
+                    <h3
+                      className="text-sm sm:text-lg font-bold mb-2 sm:mb-3 text-foreground"
+                      style={{ fontFamily: "'Playfair Display', serif" }}
+                    >
+                      <Clock className="inline size-4 mr-1.5 -mt-0.5" style={{ color: '#9D8BA7' }} />
+                      From Last Month
+                    </h3>
+                    <div className="space-y-3">
+                      {lastMonthMemories.map((memory, index) => (
+                        <motion.div
+                          key={memory.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.08, duration: 0.25 }}
+                          className="bg-card rounded-2xl px-3 sm:px-5 py-4 shadow-sm border border-border"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div
+                              className="size-8 rounded-lg flex items-center justify-center shrink-0 bg-[#9D8BA7]/12"
+                            >
+                              {memory.type === 'voice' ? <Mic className="size-4" style={{ color: '#9D8BA7' }} /> : memory.type === 'link' ? <Link2 className="size-4" style={{ color: '#9D8BA7' }} /> : memory.type === 'image' ? <ImageIcon className="size-4" style={{ color: '#9D8BA7' }} /> : <FileText className="size-4" style={{ color: '#9D8BA7' }} />}
+                            </div>
+                            <div className="min-w-0">
+                              <h4
+                                className="font-semibold text-sm truncate text-foreground"
+                              >
+                                {memory.title}
+                              </h4>
+                              <p
+                                className="text-xs mt-0.5 line-clamp-2 text-muted-foreground"
+                              >
+                                {memory.content}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Task Reminders */}
                 {displayTasks.length > 0 && (
                   <div>
                     <h3
                       className="text-sm sm:text-lg font-bold mb-2 sm:mb-3 text-foreground"
                       style={{ fontFamily: "'Playfair Display', serif" }}
                     >
-                      Tasks Extracted
+                      Task Reminders
                     </h3>
                     <div className="bg-card rounded-2xl px-3 sm:px-6 py-4 sm:py-5 shadow-sm border border-border space-y-3">
                       {displayTasks.map((task, index) => (
@@ -452,10 +571,10 @@ export function Recaps() {
                   className="text-lg font-bold text-foreground mb-2"
                   style={{ fontFamily: "'Playfair Display', serif" }}
                 >
-                  No memories this week yet
+                  Nothing to recap yet
                 </h3>
                 <p className="text-sm text-muted-foreground max-w-xs mb-6">
-                  Start capturing to see your activity
+                  Save a few memories and I&apos;ll start surfacing highlights for you
                 </p>
                 <Button
                   onClick={handleCaptureMemory}

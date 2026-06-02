@@ -1,69 +1,145 @@
 'use client'
 
-import { ReactNode, memo, useMemo, useEffect } from 'react'
-import { Brain, FolderOpen, Settings, Search, Plus, Home, WifiOff, Cloud, CheckCircle2, Sparkles } from 'lucide-react'
+import { ReactNode, memo, useMemo, useEffect, useCallback } from 'react'
+import { Brain, Settings, Search, Plus, Home, WifiOff, Cloud, CheckCircle2, Sparkles, CalendarDays, Sun, Moon } from 'lucide-react'
 import { useAetherStore } from '@/store/aether-store'
 import { useOnlineStatus } from '@/hooks/use-online-status'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { AetherLogo } from '@/components/aether/AetherLogo'
 import type { AppView } from '@/components/aether/types'
 import { getSyncQueueCount } from '@/lib/offline-db'
-
-/* ─────────── Capture Pulse Animation Styles ─────────── */
-const pulseStyles = `
-@keyframes capture-pulse {
-  0%, 100% {
-    box-shadow: 0 4px 24px rgba(157,139,167,0.4), 0 0 0 0 rgba(157,139,167,0.4);
-  }
-  50% {
-    box-shadow: 0 4px 24px rgba(157,139,167,0.4), 0 0 0 8px rgba(157,139,167,0);
-  }
-}
-.animate-capture-pulse {
-  animation: capture-pulse 3s ease-in-out infinite;
-}
-`
 
 /* ─────────── Navigation Configuration ─────────── */
 interface NavItem {
   label: string
   icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>
   view: AppView
-  isCapture?: boolean
 }
 
 const desktopNavItems: NavItem[] = [
   { label: 'Home', icon: Home, view: 'dashboard' },
   { label: 'Ask Aether', icon: Brain, view: 'ask-aether' },
-  { label: 'Collections', icon: FolderOpen, view: 'collections' },
+  { label: 'Constellations', icon: Sparkles, view: 'constellations' },
+  { label: 'Recaps', icon: CalendarDays, view: 'recaps' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
 
 const mobileNavItems: NavItem[] = [
   { label: 'Home', icon: Home, view: 'dashboard' },
-  { label: 'Ask', icon: Brain, view: 'ask-aether' },
-  { label: 'Capture', icon: Plus, view: 'dashboard', isCapture: true },
-  { label: 'Collections', icon: FolderOpen, view: 'collections' },
+  { label: 'Search', icon: Search, view: 'ask-aether' },
+  { label: 'Stars', icon: Sparkles, view: 'constellations' },
   { label: 'Settings', icon: Settings, view: 'settings' },
 ]
 
 /* SVG icon map for reliable mobile bottom nav rendering */
 const navIconSvgs: Record<string, (isActive: boolean) => React.ReactNode> = {
   dashboard: (isActive) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#c084fc' : 'none'} stroke={isActive ? '#c084fc' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
   ),
   'ask-aether': (isActive) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#c084fc' : 'none'} stroke={isActive ? '#c084fc' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
   ),
-  collections: (isActive) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#c084fc' : 'none'} stroke={isActive ? '#c084fc' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+  constellations: (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
   ),
   settings: (isActive) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#c084fc' : 'none'} stroke={isActive ? '#c084fc' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
   ),
 }
 
-/* ─────────── Sidebar Nav Item (Desktop) ─────────── */
+/* ─────────── Desktop Sidebar Icon Map ─────────── */
+const desktopIconSvgs: Record<string, (isActive: boolean) => React.ReactNode> = {
+  dashboard: (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+  ),
+  'ask-aether': (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/></svg>
+  ),
+  recaps: (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/></svg>
+  ),
+  constellations: (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg>
+  ),
+  settings: (isActive) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={isActive ? '#9D8BA7' : 'none'} stroke={isActive ? '#9D8BA7' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+  ),
+}
+
+/* ─────────── Theme Toggle Component ─────────── */
+function ThemeToggle() {
+  const { darkMode, setDarkMode } = useAetherStore()
+
+  // Sync theme on mount from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('aether-theme')
+      if (stored) {
+        const isDark = stored === 'dark'
+        setDarkMode(isDark)
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
+        if (isDark) {
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+        }
+      } else {
+        // Apply current store state
+        document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
+        if (darkMode) {
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+        }
+      }
+    } catch {
+      // localStorage unavailable
+    }
+  }, [])
+
+  const handleToggle = useCallback(() => {
+    const newDark = !darkMode
+    setDarkMode(newDark)
+    document.documentElement.setAttribute('data-theme', newDark ? 'dark' : 'light')
+    if (newDark) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+    localStorage.setItem('aether-theme', newDark ? 'dark' : 'light')
+  }, [darkMode, setDarkMode])
+
+  return (
+    <button
+      onClick={handleToggle}
+      className="cursor-pointer relative flex items-center w-[52px] h-[28px] rounded-full transition-all duration-300 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9D8BA7]/40"
+      style={{
+        background: darkMode
+          ? 'rgba(157, 139, 167, 0.2)'
+          : 'rgba(157, 139, 167, 0.15)',
+      }}
+      aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {/* Sliding knob */}
+      <span
+        className="absolute top-[2px] flex items-center justify-center w-[24px] h-[24px] rounded-full transition-all duration-300 ease-in-out shadow-md"
+        style={{
+          left: darkMode ? '26px' : '2px',
+          background: darkMode
+            ? 'linear-gradient(135deg, #9D8BA7, #c084fc)'
+            : 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+        }}
+      >
+        {darkMode ? (
+          <Sun size={13} className="text-white" strokeWidth={2.5} />
+        ) : (
+          <Moon size={13} className="text-amber-900" strokeWidth={2.5} />
+        )}
+      </span>
+    </button>
+  )
+}
+
+/* ─────────── Sidebar Nav Item (Desktop) — Icons Only ─────────── */
 const SidebarNavItem = memo(function SidebarNavItem({
   item,
   isActive,
@@ -73,31 +149,33 @@ const SidebarNavItem = memo(function SidebarNavItem({
   isActive: boolean
   onClick: () => void
 }) {
-  const Icon = item.icon
+  const svgIcon = desktopIconSvgs[item.view]
 
   return (
     <button
       onClick={onClick}
-      className={`
-        group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5
-        text-sm font-medium transition-all duration-150
-        ${
-          isActive
-            ? 'text-[#c084fc] bg-[#9D8BA7]/10 border-l-2 border-[#9D8BA7]'
-            : 'text-[rgba(240,240,248,0.5)] border-l-2 border-transparent hover:text-[rgba(240,240,248,0.8)] hover:bg-[rgba(157,139,167,0.06)]'
-        }
-      `}
+      className="cursor-pointer group relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200"
+      aria-label={item.label}
+      title={item.label}
     >
-      <Icon
-        size={20}
-        className={`flex-shrink-0 transition-all duration-150 ${
-          isActive
-            ? 'text-[#c084fc]'
-            : 'text-[rgba(240,240,248,0.5)] group-hover:text-[rgba(240,240,248,0.8)]'
-        }`}
+      {/* Active glowing pill background */}
+      {isActive && (
+        <span
+          className="absolute inset-0 rounded-full transition-all duration-300"
+          style={{
+            background: 'rgba(157, 139, 167, 0.15)',
+            boxShadow: '0 0 12px rgba(157, 139, 167, 0.25), 0 0 4px rgba(157, 139, 167, 0.15)',
+          }}
+        />
+      )}
+
+      {/* Icon */}
+      <span
+        className="relative z-10 transition-all duration-200"
         style={isActive ? { filter: 'drop-shadow(0 0 6px #9D8BA7)' } : undefined}
-      />
-      <span className="truncate">{item.label}</span>
+      >
+        {svgIcon ? svgIcon(isActive) : <item.icon size={20} />}
+      </span>
     </button>
   )
 })
@@ -107,32 +185,33 @@ const BottomNavItem = memo(function BottomNavItem({
   item,
   isActive,
   onClick,
+  darkMode,
 }: {
   item: NavItem
   isActive: boolean
   onClick: () => void
+  darkMode: boolean
 }) {
-  // Use reliable inline SVGs for mobile bottom nav
   const svgIcon = navIconSvgs[item.view]
 
   return (
     <button
       onClick={onClick}
-      className={`
+      className={`cursor-pointer
         tap-feedback relative flex flex-col items-center justify-center gap-0.5
         min-w-[48px] min-h-[44px] transition-all duration-150
         ${
           isActive
-            ? 'text-[#c084fc] scale-[1.05]'
-            : 'text-[rgba(240,240,248,0.5)] active:text-[rgba(240,240,248,0.8)]'
+            ? 'text-[#9D8BA7] scale-[1.05] bg-[#9D8BA7]/12 rounded-xl'
+            : darkMode
+              ? 'text-[rgba(240,240,248,0.5)] active:text-[rgba(240,240,248,0.8)]'
+              : 'text-muted-foreground active:text-foreground'
         }
       `}
       aria-label={item.label}
     >
-      <span style={isActive ? { filter: 'drop-shadow(0 0 6px #9D8BA7)' } : undefined}>
-        {svgIcon ? svgIcon(isActive) : <item.icon size={22} className="transition-colors duration-150" />}
-      </span>
-      <span className={`text-[10px] font-medium leading-tight ${isActive ? 'text-[#c084fc]' : ''}`}>{item.label}</span>
+      {svgIcon ? svgIcon(isActive) : <item.icon size={22} className="transition-colors duration-150" />}
+      <span className={`text-[10px] font-medium leading-tight ${isActive ? 'text-[#9D8BA7]' : ''}`}>{item.label}</span>
     </button>
   )
 })
@@ -140,9 +219,8 @@ const BottomNavItem = memo(function BottomNavItem({
 /* ─────────── Offline Banner ─────────── */
 function OfflineBanner() {
   const isOnline = useOnlineStatus()
-  const { isSyncing, pendingSyncCount, setIsOnline, setIsSyncing, setPendingSyncCount } = useAetherStore()
+  const { isSyncing, pendingSyncCount, setIsOnline, setIsSyncing, setPendingSyncCount, darkMode } = useAetherStore()
 
-  // Sync online status and pending count
   useEffect(() => {
     setIsOnline(isOnline)
     if (isOnline) {
@@ -152,30 +230,27 @@ function OfflineBanner() {
 
   if (isOnline && !isSyncing && pendingSyncCount === 0) return null
 
-  // Offline banner
   if (!isOnline) {
     return (
-      <div className="bg-amber-900/20 border-b border-amber-500/20 px-4 py-2 flex items-center justify-center gap-2 text-xs text-amber-300">
+      <div className={`border-b px-4 py-2 flex items-center justify-center gap-2 text-xs text-amber-500 ${darkMode ? 'bg-[#1e1c29] border-[#9D8BA7]/10' : 'bg-amber-50 border-amber-200'}`}>
         <WifiOff size={14} className="shrink-0" />
         <span>You are offline — showing cached memories</span>
       </div>
     )
   }
 
-  // Syncing banner
   if (isSyncing) {
     return (
-      <div className="bg-[#9D8BA7]/5 border-b border-[#9D8BA7]/10 px-4 py-2 flex items-center justify-center gap-2 text-xs text-[#9D8BA7]">
+      <div className={`border-b px-4 py-2 flex items-center justify-center gap-2 text-xs text-[#9D8BA7] ${darkMode ? 'bg-[#9D8BA7]/5 border-[#9D8BA7]/10' : 'bg-[#9D8BA7]/5 border-[#9D8BA7]/10'}`}>
         <Cloud size={14} className="shrink-0 animate-pulse" />
         <span>Syncing your memories...</span>
       </div>
     )
   }
 
-  // Pending items but not actively syncing
   if (pendingSyncCount > 0) {
     return (
-      <div className="bg-emerald-900/20 border-b border-emerald-500/20 px-4 py-2 flex items-center justify-center gap-2 text-xs text-emerald-300">
+      <div className={`border-b px-4 py-2 flex items-center justify-center gap-2 text-xs text-emerald-600 ${darkMode ? 'bg-[#1e1c29] border-[#9D8BA7]/10 text-emerald-400' : 'bg-emerald-50 border-emerald-200'}`}>
         <CheckCircle2 size={14} className="shrink-0" />
         <span>{pendingSyncCount} memories queued to sync</span>
       </div>
@@ -187,40 +262,57 @@ function OfflineBanner() {
 
 /* ─────────── Main AppShell Component ─────────── */
 export default function AppShell({ children }: { children: ReactNode }) {
-  const { currentView, setCurrentView, setCaptureModalOpen, profile, user } = useAetherStore()
+  const { currentView, setCurrentView, setCaptureModalOpen, darkMode, profile, user } = useAetherStore()
 
-  // Determine which nav item is active based on current view
+  // Determine which nav item is active
   const activeNavView = useMemo((): AppView => {
     if (currentView === 'memory-detail') return 'dashboard'
     if (currentView === 'landing') return 'dashboard'
+    if (currentView === 'signup') return 'dashboard'
+    if (currentView === 'signin') return 'dashboard'
+    if (currentView === 'forgot-password') return 'dashboard'
     return currentView
   }, [currentView])
 
-  return (
-    <div className="h-dvh bg-background text-foreground flex overflow-hidden">
-      {/* Inject capture pulse animation */}
-      <style dangerouslySetInnerHTML={{ __html: pulseStyles }} />
+  // Sidebar background based on theme
+  const sidebarBg = darkMode
+    ? 'rgba(10, 10, 15, 0.8)'
+    : 'rgba(255, 255, 255, 0.7)'
 
-      {/* ── Left Sidebar (Desktop) ── */}
+  const sidebarBorder = darkMode
+    ? 'rgba(157, 139, 167, 0.08)'
+    : 'rgba(157, 139, 167, 0.12)'
+
+  const iconColor = darkMode
+    ? 'rgba(240, 240, 248, 0.5)'
+    : 'rgba(0, 0, 0, 0.4)'
+
+  const iconHoverColor = darkMode
+    ? 'rgba(240, 240, 248, 0.8)'
+    : 'rgba(0, 0, 0, 0.7)'
+
+  return (
+    <div className="h-dvh bg-background text-foreground flex overflow-hidden max-w-screen overflow-x-hidden">
+      {/* ─── Left Sidebar (Desktop) — Slim Frosted Glass ─── */}
       <aside
-        className="hidden md:flex md:flex-col md:w-64 fixed inset-y-0 left-0 z-40"
+        className="hidden md:flex md:flex-col md:w-[72px] fixed inset-y-0 left-0 z-40 items-center"
         style={{
-          background: 'rgba(7, 7, 15, 0.95)',
-          backdropFilter: 'blur(20px)',
-          borderRight: '1px solid rgba(157,139,167,0.08)',
+          background: sidebarBg,
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderRight: `1px solid ${sidebarBorder}`,
         }}
       >
-        {/* Logo with purple glow */}
-        <div className="relative flex items-center gap-3 px-5 py-6 border-b border-[rgba(157,139,167,0.08)]">
-          {/* Subtle purple glow behind logo */}
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 h-16 w-16 bg-[#9D8BA7]/5 rounded-full blur-xl pointer-events-none" />
-          <div className="relative z-10">
-            <AetherLogo size={36} showText />
-          </div>
+        {/* Logo at top — icon only */}
+        <div className="flex items-center justify-center py-5">
+          <AetherLogo size={36} />
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-none">
+        {/* Divider */}
+        <div className="w-8 h-px mb-2" style={{ background: sidebarBorder }} />
+
+        {/* Navigation — Icons only, centered */}
+        <nav className="flex-1 flex flex-col items-center gap-2 py-4 overflow-y-auto scrollbar-none">
           {desktopNavItems.map((item) => (
             <SidebarNavItem
               key={item.view}
@@ -231,146 +323,137 @@ export default function AppShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
 
-        {/* Sidebar footer — user avatar */}
-        <div className="px-4 py-4 border-t border-[rgba(157,139,167,0.08)]">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-9 w-9 ring-2 ring-[#9D8BA7]/30">
-              <AvatarFallback className="bg-[#9D8BA7]/10 text-[#9D8BA7] text-sm font-semibold">
-                {profile.initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{profile.name}</p>
-              <p className="text-xs text-[rgba(240,240,248,0.45)] truncate">{user?.plan === 'pro' ? 'Bloom Plan' : 'Seed Plan'}</p>
-            </div>
-          </div>
+        {/* Divider */}
+        <div className="w-8 h-px mb-3" style={{ background: sidebarBorder }} />
+
+        {/* Theme Toggle at bottom */}
+        <div className="pb-5 flex flex-col items-center gap-3">
+          <ThemeToggle />
         </div>
       </aside>
 
-      {/* ── Main Content Area ── */}
-      <div className="flex-1 md:pl-64 flex flex-col h-dvh overflow-hidden">
+      {/* ─── Main Content Area ─── */}
+      <div className="flex-1 md:pl-[72px] flex flex-col h-dvh overflow-hidden">
         {/* Offline/Sync Banner */}
         <OfflineBanner />
 
-        {/* ── Top Header - Mobile ── */}
-        <header className="md:hidden shrink-0 z-30 bg-transparent border-b border-[rgba(157,139,167,0.06)]">
-          <div className="flex items-center gap-3 px-4 h-12 safe-area-top">
+        {/* ─── Mobile Header ─── */}
+        <header
+          className="md:hidden shrink-0 z-30 backdrop-blur-xl border-b"
+          style={{
+            background: darkMode ? 'rgba(10, 10, 15, 0.6)' : 'rgba(255, 255, 255, 0.7)',
+            borderColor: sidebarBorder,
+          }}
+        >
+          <div className="flex items-center gap-2 px-3 h-11 safe-area-top">
             {/* Brain logo */}
             <div className="flex items-center gap-2 flex-shrink-0">
               <AetherLogo size={28} />
             </div>
 
-            {/* Futuristic search pill — tappable to open Ask Aether */}
+            {/* Glassmorphic search bar — mobile (no gradient border) */}
             <button
               onClick={() => setCurrentView('ask-aether')}
-              className="flex-1 flex items-center gap-2 rounded-xl px-3 py-1.5 text-sm text-[rgba(240,240,248,0.45)] transition-all duration-200 group min-h-[44px]"
+              className="cursor-pointer flex-1 flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all duration-200 group min-h-[44px]"
               style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(157,139,167,0.15)',
+                background: darkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.5)',
+                border: `1px solid ${darkMode ? 'rgba(157,139,167,0.15)' : 'rgba(157,139,167,0.2)'}`,
               }}
             >
-              <Sparkles
+              <Search
                 size={14}
                 className="flex-shrink-0 text-[#9D8BA7]/60 group-hover:text-[#9D8BA7] transition-colors duration-150"
               />
-              <span className="truncate text-xs">Search memories or ask Aether...</span>
+              <span className={`truncate text-[11px] md:text-xs ${darkMode ? 'text-[rgba(240,240,248,0.4)]' : 'text-[rgba(0,0,0,0.4)]'}`}>
+                What do you need to remember?
+              </span>
             </button>
           </div>
         </header>
 
-        {/* ── Top Header - Desktop ── */}
-        <header className="hidden md:block shrink-0 z-30 bg-transparent border-b border-[rgba(157,139,167,0.06)]">
-          <div className="flex items-center gap-4 px-6 h-14">
-            {/* Futuristic Search Bar */}
+        {/* ─── Desktop Header — Hero Search Bar ─── */}
+        <header
+          className="hidden md:flex shrink-0 z-30 items-center justify-center backdrop-blur-xl border-b"
+          style={{
+            background: darkMode ? 'rgba(10, 10, 15, 0.6)' : 'rgba(255, 255, 255, 0.7)',
+            borderColor: sidebarBorder,
+            height: '60px',
+          }}
+        >
+          {/* Hero Search Bar with gradient border animation */}
+          <div className="animate-gradient-border p-[2px] rounded-2xl max-w-2xl w-full mx-6">
             <button
               onClick={() => setCurrentView('ask-aether')}
-              className="flex-1 max-w-xl mx-auto flex items-center gap-3 rounded-xl px-4 py-2 text-sm text-[rgba(240,240,248,0.45)] transition-all duration-200 group min-h-[44px] focus:outline-none"
+              className="cursor-pointer w-full flex items-center gap-3 rounded-[14px] px-5 py-2.5 text-sm transition-all duration-200 group min-h-[44px]"
               style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(157,139,167,0.15)',
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(192,132,252,0.4)'
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(192,132,252,0.1)'
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(157,139,167,0.15)'
-                e.currentTarget.style.boxShadow = 'none'
+                background: darkMode ? 'rgba(10, 10, 15, 0.85)' : 'rgba(255, 255, 255, 0.85)',
+                backdropFilter: 'blur(24px)',
+                WebkitBackdropFilter: 'blur(24px)',
               }}
               aria-label="Search memories"
             >
-              <Sparkles
-                size={16}
+              <Search
+                size={18}
                 className="flex-shrink-0 text-[#9D8BA7]/60 group-hover:text-[#9D8BA7] transition-colors duration-150"
               />
-              <span className="truncate">Search memories or ask Aether...</span>
+              <span className={`truncate flex-1 text-left ${darkMode ? 'text-[rgba(240,240,248,0.4)]' : 'text-[rgba(0,0,0,0.35)]'}`}>
+                What do you need to remember?
+              </span>
+              <span
+                className="text-xs px-2 py-0.5 rounded-md border flex-shrink-0"
+                style={{
+                  borderColor: sidebarBorder,
+                  color: darkMode ? 'rgba(240,240,248,0.25)' : 'rgba(0,0,0,0.25)',
+                }}
+              >
+                ⌘K
+              </span>
             </button>
-
-            {/* Avatar (Desktop) */}
-            <div className="flex-shrink-0">
-              <Avatar className="h-8 w-8 ring-2 ring-[#9D8BA7]/30 cursor-pointer hover:ring-[#9D8BA7]/50 transition-all duration-150">
-                <AvatarFallback className="bg-[#9D8BA7]/10 text-[#9D8BA7] text-xs font-semibold">
-                  {profile.initials}
-                </AvatarFallback>
-              </Avatar>
-            </div>
           </div>
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <main className="flex-1 min-h-0 flex flex-col overflow-hidden mobile-bottom-pad">
           {children}
         </main>
       </div>
 
-      {/* ── Desktop FAB Capture Button ── */}
+      {/* ─── Desktop FAB — Premium Glassmorphic ─── */}
       <button
         onClick={() => setCaptureModalOpen(true)}
-        className="hidden md:flex fixed z-40 bottom-8 right-8 h-14 w-14 rounded-full bg-gradient-to-br from-[#9D8BA7] to-[#c084fc] text-white items-center justify-center transition-all duration-200 hover:scale-[1.08] active:scale-95 animate-capture-pulse hover:shadow-[0_4px_32px_rgba(157,139,167,0.5)]"
+        className="cursor-pointer hidden md:flex fixed z-40 bottom-8 right-8 h-12 w-12 rounded-full items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 animate-capture-button-pulse"
+        style={{
+          background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          boxShadow: '0 4px 24px rgba(157, 139, 167, 0.4), 0 0 0 0 rgba(157, 139, 167, 0)',
+        }}
         aria-label="Quick capture"
       >
-        <Plus size={24} className="stroke-[1.5]" />
+        <Plus size={22} className="stroke-[2.5] text-white" />
       </button>
 
-      {/* ── Bottom Navigation Bar (Mobile) ── */}
+      {/* ─── Bottom Navigation Bar (Mobile) ─── */}
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 mobile-gpu safe-area-bottom"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-none md:backdrop-blur-lg border-t mobile-gpu safe-area-bottom"
         style={{
-          background: 'rgba(7, 7, 15, 0.95)',
-          backdropFilter: 'blur(16px)',
-          borderTop: '1px solid rgba(157,139,167,0.08)',
+          background: darkMode ? 'rgba(10, 10, 15, 0.9)' : 'rgba(255, 255, 255, 0.85)',
+          borderColor: sidebarBorder,
         }}
       >
-        <div className="relative flex items-end justify-around px-1 pt-1.5" style={{ height: 'calc(64px + env(safe-area-inset-bottom, 0px))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-          {mobileNavItems.map((item, index) => {
-            // Center Capture button — raised and prominent with gradient + pulse
-            if (item.isCapture) {
-              return (
-                <button
-                  key={item.view}
-                  onClick={() => setCaptureModalOpen(true)}
-                  className="tap-feedback relative flex flex-col items-center justify-center -mt-5 z-10"
-                  aria-label="Quick capture"
-                >
-                  {/* Raised circular gradient button with pulse */}
-                  <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#9D8BA7] to-[#c084fc] flex items-center justify-center shadow-lg shadow-[#9D8BA7]/40 ring-4 ring-[rgba(7,7,15,0.8)] transition-all duration-200 hover:shadow-xl hover:shadow-[#c084fc]/50 active:scale-95 animate-capture-pulse">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                  </div>
-                  <span className="text-[10px] font-medium text-[#c084fc] mt-1 leading-tight">Capture</span>
-                </button>
-              )
-            }
-
-            // Regular nav items
-            return (
-              <BottomNavItem
-                key={item.view}
-                item={item}
-                isActive={activeNavView === item.view}
-                onClick={() => setCurrentView(item.view)}
-              />
-            )
-          })}
+        <div
+          className="relative flex items-center justify-around px-1 pt-1.5"
+          style={{ height: 'calc(64px + env(safe-area-inset-bottom, 0px))', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          {mobileNavItems.map((item) => (
+            <BottomNavItem
+              key={item.view}
+              item={item}
+              isActive={activeNavView === item.view}
+              onClick={() => setCurrentView(item.view)}
+              darkMode={darkMode}
+            />
+          ))}
         </div>
       </nav>
     </div>

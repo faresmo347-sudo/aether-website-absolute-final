@@ -8,6 +8,7 @@ import {
   Sparkles,
   Crown,
   Download,
+  FileText,
   Trash2,
   Check,
   X,
@@ -72,24 +73,17 @@ export function Settings() {
   const [editName, setEditName] = useState(profile.name)
   const [editEmail, setEditEmail] = useState(profile.email)
 
-  // Export loading state
-  const [isExporting, setIsExporting] = useState(false)
+  // Export loading states
+  const [isExportingJson, setIsExportingJson] = useState(false)
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
 
   // Delete account dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 
-  // ──── Dark mode: sync class on mount AND read from localStorage ────
-  useEffect(() => {
-    const saved = localStorage.getItem('aether-dark-mode')
-    if (saved === 'true') {
-      document.documentElement.classList.add('dark')
-      document.documentElement.classList.remove('light')
-      if (!darkMode) setDarkMode(true)
-    } else {
-      document.documentElement.classList.remove('dark')
-      document.documentElement.classList.add('light')
-    }
-  }, []) // Only on mount
+  // ──── Dark mode: DOM sync is handled by the blocking script in layout.tsx
+  // (initial paint) and the useEffect in page.tsx (ongoing sync with store).
+  // No additional mount-time sync needed here — handleDarkModeToggle below
+  // is the single source of truth for toggling.
 
   // ──── Profile handlers ────
   const handleEditStart = () => {
@@ -135,8 +129,10 @@ export function Settings() {
     setDarkMode(enabled)
     if (enabled) {
       document.documentElement.classList.add('dark')
+      document.documentElement.classList.remove('light')
     } else {
       document.documentElement.classList.remove('dark')
+      document.documentElement.classList.add('light')
     }
   }, [setDarkMode])
 
@@ -160,9 +156,9 @@ export function Settings() {
     }
   }, [setCurrentView, toast])
 
-  // ──── Export handler ────
-  const handleExport = useCallback(async () => {
-    setIsExporting(true)
+  // ──── Export JSON handler ────
+  const handleExportJson = useCallback(async () => {
+    setIsExportingJson(true)
     try {
       const jsonString = await exportAllMemories()
       const blob = new Blob([jsonString], { type: 'application/json' })
@@ -187,9 +183,154 @@ export function Settings() {
         variant: 'destructive',
       })
     } finally {
-      setIsExporting(false)
+      setIsExportingJson(false)
     }
   }, [toast, isOnline])
+
+  // ──── Export PDF handler ────
+  const handleExportPdf = useCallback(async () => {
+    setIsExportingPdf(true)
+    try {
+      // Dynamically import jspdf to avoid SSR issues
+      const { jsPDF } = await import('jspdf')
+
+      // Get memories from the store (works offline)
+      const allMemories = memories.length > 0 ? memories : (() => {
+        try {
+          const stored = localStorage.getItem('aether-memories')
+          return stored ? JSON.parse(stored) : []
+        } catch { return [] }
+      })()
+
+      if (allMemories.length === 0) {
+        toast({ title: 'No memories to export', description: 'Capture some memories first.' })
+        setIsExportingPdf(false)
+        return
+      }
+
+      const doc = new jsPDF()
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+      const margin = 20
+      const contentWidth = pageWidth - margin * 2
+      let y = margin
+
+      const addPageNumber = (pageNum: number) => {
+        doc.setFontSize(9)
+        doc.setTextColor(150, 150, 150)
+        doc.text(`Page ${pageNum}`, pageWidth / 2, pageHeight - 10, { align: 'center' })
+      }
+
+      // Title page
+      doc.setFontSize(24)
+      doc.setTextColor(157, 139, 167) // #9D8BA7
+      doc.text('Aether Memories', pageWidth / 2, y + 20, { align: 'center' })
+      y += 30
+
+      doc.setFontSize(12)
+      doc.setTextColor(100, 100, 100)
+      const exportDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+      doc.text(`Exported on ${exportDate}`, pageWidth / 2, y + 10, { align: 'center' })
+      y += 20
+
+      doc.setFontSize(10)
+      doc.text(`${allMemories.length} memories`, pageWidth / 2, y + 10, { align: 'center' })
+
+      addPageNumber(1)
+
+      // Memory pages
+      let currentPage = 2
+      let memoryIndex = 0
+
+      for (const memory of allMemories) {
+        memoryIndex++
+
+        // Start new page for each memory
+        doc.addPage()
+        y = margin
+        addPageNumber(currentPage)
+        currentPage++
+
+        // Memory title
+        doc.setFontSize(14)
+        doc.setTextColor(40, 40, 40)
+        const titleLines = doc.splitTextToSize(memory.title || 'Untitled', contentWidth)
+        doc.text(titleLines, margin, y)
+        y += titleLines.length * 7 + 4
+
+        // Date and type
+        doc.setFontSize(9)
+        doc.setTextColor(157, 139, 167)
+        const dateStr = new Date(memory.createdAt).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+        })
+        const typeLabel = memory.type ? memory.type.charAt(0).toUpperCase() + memory.type.slice(1) : 'Text'
+        doc.text(`${dateStr}  •  ${typeLabel}`, margin, y)
+        y += 8
+
+        // Divider
+        doc.setDrawColor(220, 220, 220)
+        doc.line(margin, y, pageWidth - margin, y)
+        y += 8
+
+        // Content
+        doc.setFontSize(10)
+        doc.setTextColor(60, 60, 60)
+        const contentText = memory.content || 'No content'
+        const contentLines = doc.splitTextToSize(contentText, contentWidth)
+
+        for (let i = 0; i < contentLines.length; i++) {
+          if (y > pageHeight - 30) {
+            doc.addPage()
+            currentPage++
+            y = margin
+            addPageNumber(currentPage - 1)
+          }
+          doc.text(contentLines[i], margin, y)
+          y += 5
+        }
+        y += 6
+
+        // Tags
+        if (memory.tags && memory.tags.length > 0) {
+          if (y > pageHeight - 30) {
+            doc.addPage()
+            currentPage++
+            y = margin
+            addPageNumber(currentPage - 1)
+          }
+          doc.setFontSize(9)
+          doc.setTextColor(157, 139, 167)
+          doc.text(`Tags: ${memory.tags.join(', ')}`, margin, y)
+        }
+      }
+
+      doc.save(`aether-memories-${new Date().toISOString().split('T')[0]}.pdf`)
+
+      toast({
+        title: 'PDF exported!',
+        description: `${allMemories.length} memories exported as PDF.`,
+      })
+    } catch (err) {
+      console.error('PDF export failed:', err)
+      toast({
+        title: 'PDF export failed',
+        description: 'Could not generate PDF. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsExportingPdf(false)
+    }
+  }, [toast, memories])
 
   // ──── Logout handler ────
   const handleLogout = useCallback(async () => {
@@ -203,7 +344,7 @@ export function Settings() {
 
   return (
     <div className="bg-background text-foreground flex-1 min-h-0 overflow-y-auto ios-scroll">
-      <div className="max-w-2xl mx-auto px-0 sm:px-6 py-6 sm:py-8 pb-28 md:pb-8">
+      <div className="max-w-2xl mx-auto px-0 sm:px-6 py-6 sm:py-8 pb-8">
         {/* Header */}
         <div className="px-4 sm:px-0 mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -512,24 +653,43 @@ export function Settings() {
               Danger Zone
             </h3>
           </div>
-          <div className="px-4 sm:px-0 space-y-2 pb-8" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}>
-            <button
-              onClick={handleExport}
-              disabled={isExporting}
-              className="tap-feedback w-full flex items-center justify-center gap-2 py-3 min-h-[48px] rounded-xl border border-red-200 text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors text-sm font-medium disabled:opacity-50"
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  Preparing export...
-                </>
-              ) : (
-                <>
-                  <Download className="size-4" />
-                  Export all memories
-                </>
-              )}
-            </button>
+          <div className="px-4 sm:px-0 space-y-2 pb-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={handleExportJson}
+                disabled={isExportingJson}
+                className="tap-feedback flex-1 flex items-center justify-center gap-2 py-3 min-h-[48px] rounded-xl border border-red-200 text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                {isExportingJson ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Preparing...
+                  </>
+                ) : (
+                  <>
+                    <Download className="size-4" />
+                    Export as JSON
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleExportPdf}
+                disabled={isExportingPdf}
+                className="tap-feedback flex-1 flex items-center justify-center gap-2 py-3 min-h-[48px] rounded-xl border border-red-200 text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                {isExportingPdf ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Generating PDF...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="size-4" />
+                    Export as PDF
+                  </>
+                )}
+              </button>
+            </div>
             <button
               onClick={() => setDeleteDialogOpen(true)}
               className="tap-feedback w-full flex items-center justify-center gap-2 py-3 min-h-[48px] rounded-xl border border-red-200 text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors text-sm font-medium"

@@ -137,25 +137,21 @@ export const allTags = [
   { name: '#planning', count: 2 },
 ]
 
-export const mockAiResponses: Record<string, { answer: string; sources: number; referencedIds: string[] }> = {
+export const mockAiResponses: Record<string, { answer: string; referencedIds: string[] }> = {
   'ideas': {
     answer: 'You saved 3 ideas this week. The most prominent one was about a "Fintech for Artisans" platform with micro-lending integration — you recorded it as a voice note on Wednesday. You also had a late-night insight about building a graph-based memory view for the app, and you saved a link about AI in knowledge management.',
-    sources: 3,
     referencedIds: ['mem-1', 'mem-2', 'mem-10'],
   },
   'book': {
     answer: 'Sarah recommended "Thinking, Fast and Slow" by Daniel Kahneman. You saved this on January 14th. She specifically mentioned the chapters on cognitive biases as the most impactful. You also bookmarked an article about AI in personal knowledge management that references similar decision-making themes.',
-    sources: 2,
     referencedIds: ['mem-3', 'mem-2'],
   },
   'travel': {
     answer: 'You have 3 travel-related memories. Your NYC trip is planned for February 10-14 — you\'re staying at The Standard in East Village with a flight on UA 456 at 8:15 AM. You also saved a guide to the best coffee shops in San Francisco, and you captured a photo of an inspirational quote at SFMOMA.',
-    sources: 3,
     referencedIds: ['mem-7', 'mem-6', 'mem-8'],
   },
   'default': {
     answer: 'I searched through your memories and found some relevant connections. Based on what you\'ve saved recently, you seem to be focused on startup ideas and productivity tools. Your most recent captures include thoughts on fintech, design meeting notes, and some travel planning for NYC.',
-    sources: 4,
     referencedIds: ['mem-1', 'mem-9', 'mem-7', 'mem-10'],
   },
 }

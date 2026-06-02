@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
   ArrowLeft,
@@ -56,6 +56,29 @@ function formatDate(dateStr: string): string {
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+/**
+ * Parse the site name from enriched link content.
+ * Looks for the "[From SiteName]" pattern at the start of content,
+ * or falls back to the memory.siteName field.
+ */
+function parseSiteName(memory: Memory): string | null {
+  if (memory.siteName) return memory.siteName
+  if (memory.type !== 'link') return null
+
+  // Try to extract [From SiteName] from the beginning of content
+  const match = memory.content.match(/^\[From\s+(.+?)\]/)
+  if (match) return match[1]
+
+  return null
+}
+
+/**
+ * Strip the [From SiteName] prefix from content for display.
+ */
+function stripSiteNamePrefix(content: string): string {
+  return content.replace(/^\[From\s+.+?\]\s*\n*/, '').trim()
 }
 
 /* ─────────── Related Memory Card ─────────── */
@@ -136,8 +159,8 @@ export function MemoryDetail() {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [showTagInput, setShowTagInput] = useState(false)
   const [newTag, setNewTag] = useState('')
+  const tagInputRef = useRef<HTMLInputElement>(null)
   const [aiInsight, setAiInsight] = useState('')
   const [isLoadingInsight, setIsLoadingInsight] = useState(false)
   const [insightError, setInsightError] = useState(false)
@@ -246,18 +269,27 @@ export function MemoryDetail() {
 
   const handleAddTag = async () => {
     if (!newTag.trim() || !memory) return
-    const tagToAdd = newTag.trim()
+    // Enforce max 6 tags
+    if (memory.tags.length >= 6) {
+      toast({ title: 'Maximum tags reached', description: 'You can have up to 6 tags per memory.' })
+      return
+    }
+    // Normalize: strip leading #s then add exactly one #
+    let tagToAdd = newTag.trim()
+    tagToAdd = tagToAdd.replace(/^#+/, '')
+    tagToAdd = `#${tagToAdd}`
     // Avoid duplicate tags
     if (memory.tags.includes(tagToAdd)) {
       setNewTag('')
-      setShowTagInput(false)
+      setTimeout(() => tagInputRef.current?.focus(), 0)
       toast({ title: 'Tag already exists', description: `"${tagToAdd}" is already on this memory.` })
       return
     }
     const updatedTags = [...memory.tags, tagToAdd]
     updateMemory(memory.id, { tags: updatedTags })
     setNewTag('')
-    setShowTagInput(false)
+    setTimeout(() => tagInputRef.current?.focus(), 0)
+    // Keep input open so user can keep typing more tags
     toast({ title: 'Tag added!', description: !isOnline ? 'Tag saved locally — will sync when you reconnect.' : `"${tagToAdd}" has been added to this memory.` })
     try {
       await updateMemoryById(memory.id, { tags: updatedTags })
@@ -295,6 +327,8 @@ export function MemoryDetail() {
 
   const config = typeConfig[memory.type]
   const TypeIcon = config.icon
+  const siteName = parseSiteName(memory)
+  const displayContent = memory.type === 'link' ? stripSiteNamePrefix(memory.content) : memory.content
 
   return (
     <motion.div
@@ -329,6 +363,12 @@ export function MemoryDetail() {
               <h1 className="text-lg sm:text-3xl font-bold text-foreground leading-tight">
                 {memory.title}
               </h1>
+              {/* Site name badge for link memories */}
+              {memory.type === 'link' && siteName && (
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium">
+                  From {siteName}
+                </p>
+              )}
             </div>
           </div>
 
@@ -345,7 +385,19 @@ export function MemoryDetail() {
               <TypeIcon size={12} className="mr-1" />
               {config.label}
             </Badge>
-            {memory.source && (
+            {/* Open Link button for link memories */}
+            {memory.type === 'link' && (memory.source || memory.sourceUrl) && (
+              <a
+                href={memory.source || memory.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] hover:bg-[#9D8BA7] hover:text-white px-3 py-1.5 rounded-lg transition-all duration-300"
+              >
+                <ExternalLink size={12} />
+                Open Link
+              </a>
+            )}
+            {memory.type !== 'link' && memory.source && (
               <a
                 href={memory.source}
                 target="_blank"
@@ -358,6 +410,34 @@ export function MemoryDetail() {
               </a>
             )}
           </div>
+
+          {/* ── Link Preview Card ── */}
+          {memory.type === 'link' && (memory.linkImage || memory.imagePreview) && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.11, duration: 0.3 }}
+              className="mb-4 sm:mb-6"
+            >
+              <div
+                className="rounded-xl overflow-hidden border border-border cursor-pointer group"
+                onClick={() => {
+                  const url = memory.source || memory.sourceUrl
+                  if (url) window.open(url, '_blank', 'noopener,noreferrer')
+                }}
+              >
+                <img
+                  src={memory.linkImage || memory.imagePreview}
+                  alt={memory.title}
+                  className="w-full max-h-[200px] object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                  onError={(e) => {
+                    // Hide broken images
+                    ;(e.target as HTMLImageElement).style.display = 'none'
+                  }}
+                />
+              </div>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* ── AI Insights ── */}
@@ -501,24 +581,28 @@ export function MemoryDetail() {
                 </div>
               )}
 
-              {/* Link memories: show original URL */}
+              {/* Link memories: show original URL and extracted content */}
               {memory.type === 'link' && (
                 <div className="space-y-3 overflow-hidden">
-                  {memory.source && (
-                    <a
-                      href={memory.source}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-sm text-[#9D8BA7] hover:text-[#6D597A] underline underline-offset-2 transition-colors duration-300 break-all max-w-full overflow-hidden"
-                    >
-                      <Link2 size={14} className="shrink-0" />
-                      <span className="break-all">{memory.source}</span>
-                      <ExternalLink size={12} className="shrink-0" />
-                    </a>
+                  {(memory.source || memory.sourceUrl) && (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={memory.source || memory.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-sm text-[#9D8BA7] hover:text-[#6D597A] underline underline-offset-2 transition-colors duration-300 break-all max-w-full overflow-hidden"
+                      >
+                        <Link2 size={14} className="shrink-0" />
+                        <span className="break-all">{memory.source || memory.sourceUrl}</span>
+                        <ExternalLink size={12} className="shrink-0" />
+                      </a>
+                    </div>
                   )}
-                  <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-all overflow-hidden">
-                    {memory.content}
-                  </p>
+                  {displayContent && displayContent !== (memory.source || memory.sourceUrl) && (
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-all overflow-hidden">
+                      {displayContent}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -567,9 +651,9 @@ export function MemoryDetail() {
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl bg-card border border-border p-3 sm:p-6 shadow-sm">
-              <p className="text-foreground text-base leading-relaxed whitespace-pre-wrap">
-                {memory.content}
+            <div className="rounded-2xl bg-gradient-to-b from-card to-[#9D8BA7]/[0.03] border border-border p-3 sm:p-6 shadow-sm">
+              <p className="text-foreground text-base leading-[1.65] whitespace-pre-wrap">
+                {displayContent}
               </p>
             </div>
           )}
@@ -592,54 +676,61 @@ export function MemoryDetail() {
               {memory.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-[#9D8BA7]/8 text-[#9D8BA7] border border-[#9D8BA7]/15 hover:bg-[#9D8BA7]/15 transition-colors duration-300 whitespace-nowrap flex-shrink-0"
+                  className="inline-flex items-center gap-1 min-h-[32px] px-3 py-1 rounded-full text-xs font-medium bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/15 hover:bg-[#9D8BA7]/15 transition-colors duration-300 whitespace-nowrap flex-shrink-0"
                 >
                   {tag}
+                  <button
+                    onClick={async () => {
+                      if (!memory) return
+                      const updatedTags = memory.tags.filter((t) => t !== tag)
+                      updateMemory(memory.id, { tags: updatedTags })
+                      try {
+                        await updateMemoryById(memory.id, { tags: updatedTags })
+                      } catch {
+                        // Supabase update failed silently
+                      }
+                    }}
+                    className="ml-0.5 size-3.5 rounded-full flex items-center justify-center hover:bg-[#9D8BA7]/25 transition-colors"
+                    aria-label={`Remove tag ${tag}`}
+                  >
+                    <X size={10} />
+                  </button>
                 </span>
               ))}
-              {showTagInput ? (
+              {/* Tag input — always visible when under 6 tags */}
+              {memory.tags.length < 6 && (
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <input
+                    ref={tagInputRef}
                     type="text"
                     value={newTag}
                     onChange={(e) => setNewTag(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleAddTag()
+                      if ((e.key === 'Enter' || e.key === ',') && newTag.trim()) {
+                        e.preventDefault()
+                        handleAddTag()
+                      }
+                      // Space also confirms on mobile (but only if there's content)
+                      if (e.key === ' ' && newTag.trim() && newTag.trim().length >= 2) {
+                        e.preventDefault()
+                        handleAddTag()
+                      }
                       if (e.key === 'Escape') {
-                        setShowTagInput(false)
                         setNewTag('')
+                      }
+                      // Backspace on empty input removes last tag
+                      if (e.key === 'Backspace' && !newTag && memory.tags.length > 0) {
+                        const lastTag = memory.tags[memory.tags.length - 1]
+                        const updatedTags = memory.tags.slice(0, -1)
+                        updateMemory(memory.id, { tags: updatedTags })
+                        updateMemoryById(memory.id, { tags: updatedTags }).catch(() => {})
+                        toast({ title: 'Tag removed', description: `Removed ${lastTag}` })
                       }
                     }}
                     placeholder="#new-tag"
-                    autoFocus
-                    className="h-8 w-28 rounded-full border border-[#9D8BA7]/20 bg-card px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-2 focus:ring-[#9D8BA7]/10 transition-all duration-300"
+                    className="min-h-[32px] w-28 rounded-full border border-[#9D8BA7]/20 bg-card px-3 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-[#9D8BA7]/40 focus:ring-2 focus:ring-[#9D8BA7]/10 transition-all duration-300"
                   />
-                  <button
-                    onClick={handleAddTag}
-                    aria-label="Add tag"
-                    className="min-h-[44px] min-w-[44px] rounded-full bg-[#9D8BA7] text-white flex items-center justify-center hover:bg-[#6D597A] transition-colors duration-300"
-                  >
-                    <Check size={14} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowTagInput(false)
-                      setNewTag('')
-                    }}
-                    aria-label="Cancel tag"
-                    className="min-h-[44px] min-w-[44px] rounded-full bg-muted text-muted-foreground flex items-center justify-center hover:bg-muted/80 transition-colors duration-300"
-                  >
-                    <X size={14} />
-                  </button>
                 </div>
-              ) : (
-                <button
-                  onClick={() => setShowTagInput(true)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-muted-foreground border border-dashed border-border hover:border-[#9D8BA7]/30 hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 transition-all duration-300 whitespace-nowrap flex-shrink-0"
-                >
-                  <Plus size={12} />
-                  Add tag
-                </button>
               )}
             </div>
           </div>
@@ -686,7 +777,6 @@ export function MemoryDetail() {
                     onClick={() => {
                       setSelectedMemoryId(relMemory.id)
                       setIsEditing(false)
-                      setShowTagInput(false)
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
                   />

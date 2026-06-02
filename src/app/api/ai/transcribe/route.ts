@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
+import { getGroqClient } from '@/lib/groq'
+import { callAI } from '@/lib/ai-provider'
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Audio base64 is required' }, { status: 400 })
     }
 
-    // Step 1: Transcribe the audio using Groq Whisper API
+    // Step 1: Transcribe the audio using Groq Whisper API (Groq-specific — can't switch to Gemini)
     const groq = getGroqClient()
     const audioBuffer = Buffer.from(audio, 'base64')
     const file = new File([audioBuffer], 'audio.webm', { type: 'audio/webm' })
@@ -23,34 +24,43 @@ export async function POST(req: NextRequest) {
     const transcribedText = transcription.text || ''
 
     if (!transcribedText.trim()) {
-      return NextResponse.json({ transcription: '', summary: '' })
+      return NextResponse.json({ transcription: '', summary: '', title: '', error: 'Transcription failed — please try again' })
     }
 
-    // Step 2: Generate a summary using Groq LLM
-    const summaryCompletion = await groq.chat.completions.create({
-      model: GROQ_MODEL,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a helpful assistant that summarizes voice notes. Given a transcription of a voice memo, provide a concise 1-2 sentence summary. Return ONLY the summary text, nothing else.',
-        },
-        {
-          role: 'user',
-          content: `Summarize this voice note in 1-2 sentences:\n\n${transcribedText}`,
-        },
-      ],
-      temperature: 0.3,
-      max_tokens: 128,
-    })
+    // Step 2: Generate a title and summary using callAI (Gemini primary, Groq fallback)
+    let title = ''
+    let summary = ''
+    try {
+      const aiResponse = await callAI(
+        'You are a helpful assistant that processes voice notes. This is a VOICE memory. Process it accordingly. Given a transcription of a voice memo, return a JSON object with a title and summary. The title should be a 5-7 word summary of the TOPIC discussed (not "Voice Note" or a timestamp). The summary should be a concise 1-2 sentence warm summary. Return ONLY the JSON object: { "title": "...", "summary": "..." }',
+        `Generate a title and summary for this voice note:\n\n${transcribedText}`,
+        0.3,
+        256
+      )
 
-    const summary = summaryCompletion.choices[0]?.message?.content || ''
+      try {
+        const firstBrace = aiResponse.indexOf('{')
+        const lastBrace = aiResponse.lastIndexOf('}')
+        if (firstBrace !== -1 && lastBrace > firstBrace) {
+          const jsonStr = aiResponse.slice(firstBrace, lastBrace + 1)
+          const parsed = JSON.parse(jsonStr)
+          if (parsed.title) title = parsed.title
+          if (parsed.summary) summary = parsed.summary
+        }
+      } catch {
+        // JSON parse failed — try to use the response as summary directly
+        summary = aiResponse.trim()
+      }
+    } catch {
+      // If AI providers fail, use a basic truncation as fallback
+      summary = transcribedText.slice(0, 100)
+    }
 
-    return NextResponse.json({ transcription: transcribedText, summary })
+    return NextResponse.json({ transcription: transcribedText, summary, title })
   } catch (error) {
     console.error('Transcription error:', error)
     return NextResponse.json(
-      { error: 'Transcription failed', transcription: '', summary: '' },
+      { error: 'Transcription failed', transcription: '', summary: '', title: '' },
       { status: 500 }
     )
   }

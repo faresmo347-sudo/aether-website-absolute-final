@@ -66,11 +66,27 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Blocking script: Force dark mode BEFORE first paint to prevent flash */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function() {
-            // Force dark mode always — deep space is the default
-            document.documentElement.classList.add('dark');
-            document.documentElement.classList.remove('light');
+            // Read theme preference from localStorage
+            var theme = localStorage.getItem('aether-theme');
+            // Also check the aether-dark-mode key used by the store
+            var darkMode = localStorage.getItem('aether-dark-mode');
+            
+            var isDark = true; // Default to dark
+            if (theme === 'light') isDark = false;
+            if (darkMode === 'false') isDark = false;
+            
+            if (isDark) {
+              document.documentElement.classList.add('dark');
+              document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+              document.documentElement.setAttribute('data-theme', 'light');
+            }
           })();
         `}} />
       </head>

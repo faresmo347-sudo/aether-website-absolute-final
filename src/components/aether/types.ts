@@ -22,6 +22,9 @@ export interface Memory {
   sourceUrl?: string
   fileUrl?: string
   updatedAt?: string
+  // Link enrichment fields
+  siteName?: string
+  linkImage?: string
 }
 
 export interface Collection {
@@ -40,7 +43,8 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   referencedMemories?: string[]
-  sourcesCount?: number
+  detectedMode?: 'memory-search' | 'conversation' | 'both'
+  confidence?: 'high' | 'medium' | 'low'
   timestamp: string
 }
 
@@ -52,7 +56,7 @@ export type AppView =
   | 'dashboard' 
   | 'memory-detail' 
   | 'ask-aether' 
-  | 'collections' 
+  | 'constellations'
   | 'recaps' 
   | 'settings'
 

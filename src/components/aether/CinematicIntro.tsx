@@ -1,347 +1,257 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
 import { AetherLogo } from '@/components/aether/AetherLogo'
 
-// ---------------------------------------------------------------------------
-// Deterministic PRNG (mulberry32) — same seed ⇒ same values on server & client
-// ---------------------------------------------------------------------------
-function mulberry32(seed: number): () => number {
-  let s = seed
-  return () => {
-    let t = (s += 0x6d2b79f5)
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-const STAR_COLORS = ['#ffffff', '#c084fc', '#67e8f9'] as const
-const NUM_SHOOTING_STARS = 12
-const NUM_BG_STARS = 200
-
-// Phase timestamps (ms) — relative to the moment the intro starts playing
-const T_STARS_START = 400
-const T_SKIP_VISIBLE = 800
-const T_LOGO = 1800
-const T_TAGLINE = 2000
-const T_FADE_OUT = 2800
-const T_COMPLETE = 3500
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-interface ShootingStar {
-  id: number
-  startX: number       // % of viewport
-  startY: number       // % of viewport
-  dx: number           // px translation
-  dy: number           // px translation
-  width: number        // px
-  color: string
-  delay: number        // ms (0 – 800)
-  duration: number     // ms
-  burstX: number       // % of viewport (approximate exit point)
-  burstY: number       // % of viewport
-}
-
-interface BgStar {
-  id: number
-  x: number
-  y: number
-  opacity: number
-  size: number
-}
-
-// ---------------------------------------------------------------------------
-// Check whether the intro should be skipped entirely.
-// Runs only on the client; returns false on the server (SSR safe).
-// ---------------------------------------------------------------------------
-function shouldSkipIntro(): boolean {
-  if (typeof window === 'undefined') return false
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const played = sessionStorage.getItem('intro_played')
-  if (reduced || played) {
-    sessionStorage.setItem('intro_played', 'true')
-    return true
-  }
-  return false
-}
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 interface CinematicIntroProps {
   onComplete: () => void
 }
 
+/* ─── Shooting Star Configuration ─── */
+interface StarConfig {
+  id: number
+  /** Starting X position (vw%) */
+  x: number
+  /** Starting Y position (vh%) */
+  y: number
+  /** Horizontal travel distance in px (CSS --star-dx) */
+  dx: number
+  /** Vertical travel distance in px (CSS --star-dy) */
+  dy: number
+  /** Animation duration in seconds */
+  duration: number
+  /** Delay before the star starts (seconds) */
+  delay: number
+  /** Star head size in px */
+  size: number
+}
+
+const SHOOTING_STARS: StarConfig[] = [
+  { id: 1, x: 15, y: 10, dx: 320, dy: 180, duration: 1.0, delay: 0.0, size: 3 },
+  { id: 2, x: 60, y: 5, dx: 280, dy: 220, duration: 0.9, delay: 0.25, size: 2.5 },
+  { id: 3, x: 35, y: 25, dx: 350, dy: 150, duration: 1.1, delay: 0.5, size: 2 },
+  { id: 4, x: 75, y: 15, dx: 240, dy: 200, duration: 0.85, delay: 0.7, size: 2.5 },
+  { id: 5, x: 10, y: 30, dx: 300, dy: 170, duration: 0.95, delay: 0.9, size: 2 },
+]
+
+/* ─── Particle trails per star ─── */
+const PARTICLES_PER_STAR = 3
+
+type IntroPhase = 'playing' | 'exiting' | 'done'
+
 export function CinematicIntro({ onComplete }: CinematicIntroProps) {
-  // ---- Resolve skip check once during initial render (lazy initializer) ----
-  // Using a lazy initializer avoids calling setState synchronously inside an
-  // effect, which the strict lint rule forbids.
-  const [skipped] = useState(shouldSkipIntro)
+  const [phase, setPhase] = useState<IntroPhase>('playing')
+  const completedRef = useRef(false)
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([])
 
-  // ---- animation state -----------------------------------------------------
-  const [starsActive, setStarsActive] = useState(false)
-  const [logoVisible, setLogoVisible] = useState(false)
-  const [taglineVisible, setTaglineVisible] = useState(false)
-  const [skipVisible, setSkipVisible] = useState(false)
-  const [fadeOut, setFadeOut] = useState(false)
-  const [fadeOutSec, setFadeOutSec] = useState(0.7)
-
-  // Stable ref to the latest onComplete so effects don't need it in deps
-  const onCompleteRef = useRef(onComplete)
-  useEffect(() => {
-    onCompleteRef.current = onComplete
+  const finish = useCallback(() => {
+    if (completedRef.current) return
+    completedRef.current = true
+    try {
+      sessionStorage.setItem('intro_played', '1')
+    } catch {
+      // sessionStorage may be unavailable in some environments
+    }
+    onComplete()
   }, [onComplete])
 
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
-
-  // ---- deterministic data --------------------------------------------------
-  const shootingStars: ShootingStar[] = useMemo(() => {
-    const rng = mulberry32(42)
-    return Array.from({ length: NUM_SHOOTING_STARS }, (_, i) => {
-      const edge = Math.floor(rng() * 4) // 0 top, 1 right, 2 bottom, 3 left
-      const color = STAR_COLORS[Math.floor(rng() * STAR_COLORS.length)]
-      const width = 120 + rng() * 80
-      const delay = rng() * 800
-      const duration = 800 + rng() * 400
-      const travel = 800 + rng() * 600
-
-      let startX: number, startY: number, rotation: number
-
-      switch (edge) {
-        case 0: // top → downward
-          startX = rng() * 100
-          startY = -2
-          rotation = 30 + rng() * 120
-          break
-        case 1: // right → leftward
-          startX = 102
-          startY = rng() * 100
-          rotation = 150 + rng() * 120
-          break
-        case 2: // bottom → upward
-          startX = rng() * 100
-          startY = 102
-          rotation = 210 + rng() * 120
-          break
-        default: // left → rightward
-          startX = -2
-          startY = rng() * 100
-          rotation = -30 + rng() * 120
-          break
-      }
-
-      const rad = (rotation * Math.PI) / 180
-      const dx = Math.cos(rad) * travel
-      const dy = Math.sin(rad) * travel
-
-      // Approximate burst position — convert endpoint to % (assume 1920×1080)
-      const burstX = Math.max(2, Math.min(98, startX + dx / 19.2))
-      const burstY = Math.max(2, Math.min(98, startY + dy / 10.8))
-
-      return { id: i, startX, startY, dx, dy, width, color, delay, duration, burstX, burstY }
-    })
-  }, [])
-
-  const bgStars: BgStar[] = useMemo(() => {
-    const rng = mulberry32(789)
-    return Array.from({ length: NUM_BG_STARS }, (_, i) => ({
-      id: i,
-      x: rng() * 100,
-      y: rng() * 100,
-      opacity: 0.05 + rng() * 0.05,
-      size: 1 + rng() * 1.5,
-    }))
-  }, [])
-
-  // ---- if skipping, notify parent immediately (via effect, not render) ----
+  /* ─── Mount: check sessionStorage + prefers-reduced-motion ─── */
   useEffect(() => {
-    if (skipped) onCompleteRef.current()
-  }, [skipped])
-
-  // ---- animation phase timers (only when intro plays) ----------------------
-  useEffect(() => {
-    if (skipped) return
-
-    const add = (fn: () => void, ms: number) => {
-      const id = setTimeout(fn, ms)
-      timers.current.push(id)
+    let shouldSkip = false
+    try {
+      if (sessionStorage.getItem('intro_played')) shouldSkip = true
+    } catch {
+      // ignore
+    }
+    if (!shouldSkip && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      shouldSkip = true
     }
 
-    add(() => setStarsActive(true), T_STARS_START)
-    add(() => setSkipVisible(true), T_SKIP_VISIBLE)
-    add(() => setLogoVisible(true), T_LOGO)
-    add(() => setTaglineVisible(true), T_TAGLINE)
-    add(() => {
-      setFadeOutSec(0.7)
-      setFadeOut(true)
-    }, T_FADE_OUT)
-    add(() => {
-      sessionStorage.setItem('intro_played', 'true')
-      onCompleteRef.current()
-    }, T_COMPLETE)
+    if (shouldSkip) {
+      // Defer state update to avoid synchronous setState in effect
+      const t = setTimeout(() => {
+        setPhase('done')
+        finish()
+      }, 0)
+      timeoutsRef.current.push(t)
+      return () => {
+        timeoutsRef.current.forEach(clearTimeout)
+        timeoutsRef.current = []
+      }
+    }
+
+    // Phase 4: start fade-out at 2.8s
+    const t1 = setTimeout(() => {
+      setPhase('exiting')
+    }, 2800)
+
+    timeoutsRef.current.push(t1)
 
     return () => {
-      timers.current.forEach(clearTimeout)
-      timers.current = []
+      timeoutsRef.current.forEach(clearTimeout)
+      timeoutsRef.current = []
     }
-  }, [skipped])
+  }, [finish])
 
-  // ---- skip handler --------------------------------------------------------
+  /* ─── Skip handler ─── */
   const handleSkip = useCallback(() => {
-    setFadeOutSec(0.3)
-    setFadeOut(true)
-    const id = setTimeout(() => {
-      sessionStorage.setItem('intro_played', 'true')
-      onCompleteRef.current()
-    }, 300)
-    timers.current.push(id)
-  }, [])
+    setPhase('done')
+    finish()
+  }, [finish])
 
-  // ---- early exit if skipping / already done -------------------------------
-  if (skipped) return null
+  /* ─── If done, render nothing ─── */
+  if (phase === 'done') return null
 
-  // ---- render --------------------------------------------------------------
   return (
     <motion.div
-      className="fixed inset-0 z-[100] overflow-hidden select-none"
-      animate={{
-        opacity: fadeOut ? 0 : 1,
-        backgroundColor: fadeOut ? '#07070f' : '#000000',
+      className="fixed inset-0 z-[100] overflow-hidden"
+      style={{ backgroundColor: '#000000' }}
+      /* Phase 4: Fade out with subtle scale-up */
+      animate={
+        phase === 'exiting'
+          ? { opacity: 0, scale: 1.05 }
+          : { opacity: 1, scale: 1 }
+      }
+      transition={
+        phase === 'exiting'
+          ? { duration: 0.7, ease: 'easeInOut' }
+          : { duration: 0 }
+      }
+      onAnimationComplete={() => {
+        if (phase === 'exiting') {
+          finish()
+        }
       }}
-      transition={{ duration: fadeOutSec, ease: 'easeInOut' }}
     >
-      {/* ── CSS keyframes ────────────────────────────────────────────── */}
-      <style>{`
-        @keyframes aether-shoot {
-          0%   { transform: translate(0, 0); opacity: 0; }
-          5%   { opacity: 1; }
-          80%  { opacity: 1; }
-          100% { transform: translate(var(--star-dx), var(--star-dy)); opacity: 0; }
-        }
-        @keyframes aether-burst {
-          0%   { transform: translate(-50%, -50%) scale(0); opacity: 0.8; }
-          40%  { opacity: 0.5; }
-          100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
-        }
-        .aether-star {
-          animation: aether-shoot var(--star-dur) cubic-bezier(0.25, 0, 1, 0.5) var(--star-del) forwards;
-          opacity: 0;
-          pointer-events: none;
-        }
-        .aether-burst {
-          animation: aether-burst 500ms ease-out var(--burst-del) forwards;
-          opacity: 0;
-          pointer-events: none;
-        }
-      `}</style>
+      {/* ─── Phase 1: Pure black (0-0.5s) ─── */}
+      {/* The black background is already present via style — silence and darkness */}
 
-      {/* ── Background stars (static, very low opacity) ──────────────── */}
-      <div className="absolute inset-0" aria-hidden="true">
-        {bgStars.map((s) => (
+      {/* ─── Phase 2: Shooting Stars (0.5-2.0s) ─── */}
+      <div className="absolute inset-0">
+        {SHOOTING_STARS.map((star) => (
           <div
-            key={s.id}
-            className="absolute rounded-full bg-white"
+            key={star.id}
+            className="absolute"
             style={{
-              left: `${s.x}%`,
-              top: `${s.y}%`,
-              width: `${s.size}px`,
-              height: `${s.size}px`,
-              opacity: s.opacity,
-            }}
-          />
+              left: `${star.x}vw`,
+              top: `${star.y}vh`,
+              '--star-dx': `${star.dx}px`,
+              '--star-dy': `${star.dy}px`,
+              willChange: 'transform, opacity',
+            } as React.CSSProperties}
+          >
+            {/* Star head — animated via CSS keyframe */}
+            <div
+              style={{
+                width: star.size,
+                height: star.size,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, #ffffff 0%, #B8A8C4 60%, transparent 100%)',
+                boxShadow: `0 0 ${star.size * 3}px rgba(184, 168, 196, 0.6)`,
+                animation: `shooting-star ${star.duration}s ease-out ${star.delay + 0.5}s both`,
+                willChange: 'transform, opacity',
+              }}
+            />
+            {/* Trailing particles */}
+            {Array.from({ length: PARTICLES_PER_STAR }).map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  width: star.size * 0.6,
+                  height: star.size * 0.6,
+                  borderRadius: '50%',
+                  background: 'rgba(184, 168, 196, 0.5)',
+                  animation: [
+                    `shooting-star ${star.duration}s ease-out ${star.delay + 0.5 + i * 0.08}s both`,
+                    `shooting-star-particle ${star.duration * 0.6}s ease-out ${star.delay + 0.5 + i * 0.08}s both`,
+                  ].join(', '),
+                  willChange: 'transform, opacity',
+                }}
+              />
+            ))}
+          </div>
         ))}
       </div>
 
-      {/* ── Shooting stars ───────────────────────────────────────────── */}
-      {starsActive && (
-        <div className="absolute inset-0" aria-hidden="true">
-          {shootingStars.map((s) => (
-            <div key={s.id}>
-              {/* Star line */}
-              <div
-                className="aether-star absolute"
-                style={
-                  {
-                    left: `${s.startX}%`,
-                    top: `${s.startY}%`,
-                    width: `${s.width}px`,
-                    height: '1.5px',
-                    background: `linear-gradient(90deg, transparent, ${s.color}, white)`,
-                    boxShadow: `0 0 6px ${s.color}, 0 0 12px white`,
-                    '--star-dx': `${s.dx}px`,
-                    '--star-dy': `${s.dy}px`,
-                    '--star-del': `${s.delay}ms`,
-                    '--star-dur': `${s.duration}ms`,
-                    transformOrigin: 'left center',
-                  } as React.CSSProperties
-                }
-              />
-
-              {/* Particle burst near exit point */}
-              <div
-                className="aether-burst absolute rounded-full"
-                style={
-                  {
-                    left: `${s.burstX}%`,
-                    top: `${s.burstY}%`,
-                    width: '20px',
-                    height: '20px',
-                    background: `radial-gradient(circle, ${s.color}88, ${s.color}33, transparent)`,
-                    '--burst-del': `${s.delay + s.duration * 0.75}ms`,
-                  } as React.CSSProperties
-                }
-              />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Logo reveal (Phase 3) ────────────────────────────────────── */}
-      {logoVisible && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-          >
-            <AetherLogo
-              size={72}
-              variant="full"
-              className="[&>span]:!text-white [&>span]:!text-3xl"
-            />
-          </motion.div>
-
-          {/* Tagline — always in DOM so layout doesn't shift */}
-          <motion.p
-            className="mt-8 text-sm font-light tracking-[0.15em]"
-            style={{ color: '#9D8BA7' }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: taglineVisible ? 1 : 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            Your memory. Your companion.
-          </motion.p>
-        </div>
-      )}
-
-      {/* ── Skip button ──────────────────────────────────────────────── */}
-      <motion.button
-        className="absolute bottom-8 right-8 text-sm cursor-pointer text-white/30 hover:text-white/60 transition-colors duration-200"
+      {/* ─── Phase 3: Logo Reveal (2.0-2.8s) ─── */}
+      <motion.div
+        className="absolute inset-0 flex flex-col items-center justify-center"
         initial={{ opacity: 0 }}
-        animate={{ opacity: skipVisible ? 1 : 0 }}
-        transition={{ duration: 0.3 }}
-        onClick={handleSkip}
-        aria-label="Skip intro"
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2.0, duration: 0.8, ease: 'easeOut' }}
       >
-        skip
-      </motion.button>
+        {/* Logo with lavender glow */}
+        <div
+          style={{
+            animation: 'logo-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) 2.0s both',
+            filter: 'drop-shadow(0 0 30px rgba(157, 139, 167, 0.4)) drop-shadow(0 0 60px rgba(157, 139, 167, 0.2))',
+            willChange: 'transform, opacity',
+          }}
+        >
+          <AetherLogo size={80} />
+        </div>
+
+        {/* AETHER text — letter-spacing animates via tagline-reveal keyframe */}
+        <div
+          style={{
+            marginTop: '20px',
+            animation: 'tagline-reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) 2.2s both',
+            willChange: 'opacity, letter-spacing',
+          }}
+        >
+          <span
+            style={{
+              color: '#ffffff',
+              fontFamily: 'var(--font-playfair), serif',
+              fontWeight: 700,
+              fontSize: '2rem',
+              letterSpacing: '0.3em',
+              textTransform: 'uppercase',
+            }}
+          >
+            AETHER
+          </span>
+        </div>
+
+        {/* Tagline */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.5 }}
+          transition={{ delay: 2.4, duration: 0.4 }}
+        >
+          <span
+            style={{
+              color: '#ffffff',
+              fontSize: '0.65rem',
+              letterSpacing: '0.3em',
+              textTransform: 'uppercase',
+              marginTop: '12px',
+              display: 'block',
+            }}
+          >
+            YOUR AI SECOND BRAIN
+          </span>
+        </motion.div>
+      </motion.div>
+
+      {/* ─── Skip Button ─── */}
+      <button
+        onClick={handleSkip}
+        className="absolute bottom-8 right-8 text-white/30 hover:text-white/60 transition-colors duration-200 cursor-pointer"
+        style={{
+          fontSize: '0.8rem',
+          letterSpacing: '0.05em',
+          background: 'none',
+          border: 'none',
+          outline: 'none',
+          padding: '8px 12px',
+        }}
+        aria-label="Skip intro animation"
+      >
+        Skip →
+      </button>
     </motion.div>
   )
 }

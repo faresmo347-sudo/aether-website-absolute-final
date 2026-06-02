@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGroqClient, GROQ_MODEL } from '@/lib/groq'
+import { callAI } from '@/lib/ai-provider'
+import { AETHER_MASTER_PROMPT } from '@/lib/aether-prompt'
 
-function buildSystemPrompt(): string {
-  return `You are Aether, an AI insight companion for a personal memory app. Your job is to generate warm, conversational insights about a user's saved memory.
-
-CRITICAL RULES:
-1. Write exactly 3-5 sentences — no more, no less.
-2. Be warm and personal, as if speaking directly to the user ("You visited...", "You captured...", "You noted...").
-3. NEVER start with "This is a memory about..." or "This memory contains..." — always use direct, personal language.
-4. Analyze the full content and explain what the memory contains and why it might be important to the user.
-5. Identify key topics and any action items or follow-ups the user might want to take.
-6. Suggest meaningful connections — for example, if it's about a cafe visit, suggest "Consider adding it to your Travel or Food collection."
-7. Be intelligent and specific — reference actual details from the content. NEVER give generic or boilerplate responses.
-8. Do NOT use phrases like "This memory" or "This note" — speak as if you understand the user's experience directly.
-9. End with a helpful suggestion when appropriate (collections to add, people to follow up with, actions to take).
-
-EXAMPLE OUTPUTS:
-- Cafe visit: "You visited this charming cafe and found it worth remembering — possibly a spot you'd love to return to or recommend to friends. The details suggest this was a genuinely positive experience with great ambiance. Consider adding it to your Travel or Food collection so you can easily find it next time you're craving a similar outing."
-- Meeting notes: "You captured key decisions from this meeting, including action items that may need follow-up. The discussion touched on project timelines and resource allocation, both of which could impact your upcoming deliverables. Consider setting reminders for the action items and tagging the relevant team members to keep everyone aligned."
-- Book recommendation: "You saved a book recommendation that clearly resonated with you — perhaps it aligns with a topic you've been exploring lately. The themes suggest it could offer fresh perspectives on your current interests. Consider adding it to a Reading collection so you can track it alongside other books you've been meaning to dive into."
-
-Return ONLY a plain text insight string — no JSON, no markdown, no extra formatting.`
-}
+const DEFAULT_INSIGHT = 'You captured something worth remembering. Consider reviewing the details and adding it to a relevant collection for easy access later.'
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,10 +16,6 @@ export async function POST(req: NextRequest) {
     if (!content || typeof content !== 'string') {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
     }
-
-    const groq = getGroqClient()
-
-    const systemPrompt = buildSystemPrompt()
 
     // Build a rich user prompt with all available context
     const contextParts: string[] = []
@@ -56,33 +33,34 @@ export async function POST(req: NextRequest) {
 
     const contextBlock = contextParts.join('\n')
 
+    // Add memory type context for type-specific insights
+    const typeContext = type ? `This is a ${type.toUpperCase()} memory. Process it accordingly.\n` : ''
+    const typeInstructions: Record<string, string> = {
+      image: 'Reference what was actually IN the image — not just "you saved an image". Describe the content, text, or scene visible.\n',
+      voice: 'Reference specific things said in the voice note — not just "you recorded a voice note". Quote or paraphrase the transcript.\n',
+      link: 'Reference the actual content from the linked page — not just "you saved a link". Mention the topic or key information.\n',
+    }
+    const typeInstruction = typeInstructions[type || ''] || ''
+
     const userPrompt = `Generate a warm, insightful summary for this memory. Remember: 3-5 sentences, personal tone ("You visited/captured/noted..."), reference specific details, suggest connections or actions, and NEVER start with "This is a memory about..."
 
-${contextBlock}`
+${typeContext}${typeInstruction}${contextBlock}`
 
-    const completion = await groq.chat.completions.create({
-      model: GROQ_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.5,
-      max_tokens: 512,
-    })
+    const insight = await callAI(AETHER_MASTER_PROMPT, userPrompt, 0.6, 512)
 
-    const insight = completion.choices[0]?.message?.content?.trim() || ''
-
-    if (!insight) {
-      return NextResponse.json({
-        insight: 'You captured something worth remembering. Consider reviewing the details and adding it to a relevant collection for easy access later.',
-      })
+    if (!insight || !insight.trim()) {
+      return NextResponse.json({ insight: DEFAULT_INSIGHT })
     }
 
-    return NextResponse.json({ insight })
+    return NextResponse.json({ insight: insight.trim() })
   } catch (error) {
     console.error('AI insights error:', error)
-    return NextResponse.json({
-      insight: 'You captured something worth remembering. Consider reviewing the details and adding it to a relevant collection for easy access later.',
-    })
+
+    // If all providers exhausted, fail silently — memory still saves without AI insight
+    if (error instanceof Error && error.message === 'ALL_PROVIDERS_EXHAUSTED') {
+      return NextResponse.json({ insight: DEFAULT_INSIGHT })
+    }
+
+    return NextResponse.json({ insight: DEFAULT_INSIGHT })
   }
 }

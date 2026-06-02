@@ -11,17 +11,31 @@ import {
   Image as ImageIcon,
   Loader2,
   Plus,
-  Sparkles,
+  AlertCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAetherStore } from '@/store/aether-store'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 import type { ChatMessage, MemoryType } from '@/components/aether/types'
 
+function getSupportedMimeType(): string {
+  const types = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/mp4',
+  ]
+  for (const type of types) {
+    if (MediaRecorder.isTypeSupported(type)) return type
+  }
+  return '' // let browser decide
+}
+
 const starterQuestions = [
   'What ideas did I save this week?',
   'What was that book recommendation?',
   'Show me everything about my travel plans',
+  "Hey Aether, what's up?",
 ]
 
 const typeIconMap: Record<MemoryType, typeof FileText> = {
@@ -35,47 +49,31 @@ const typeIconMap: Record<MemoryType, typeof FileText> = {
 const TypingIndicator = memo(function TypingIndicator() {
   return (
     <div className="flex justify-start">
-      <div
-        className="px-4 sm:px-5 py-3.5 max-w-[80%] border"
-        style={{
-          background: 'rgba(15,15,26,0.9)',
-          borderColor: 'rgba(157,139,167,0.15)',
-          borderRadius: '4px 16px 16px 16px',
-        }}
-      >
+      <div className="bg-[#9D8BA7]/5 border border-[#9D8BA7]/10 rounded-2xl rounded-bl-sm px-4 sm:px-5 py-3.5 max-w-[85%]">
         <div className="flex items-center gap-2 mb-2">
-          <div
-            className="h-7 w-7 rounded-full bg-gradient-to-br from-[#9D8BA7] to-[#6D597A] flex items-center justify-center"
-            style={{ boxShadow: '0 0 12px rgba(157,139,167,0.4)' }}
-          >
-            <Brain size={11} className="text-white" />
+          <div className="h-5 w-5 rounded-full bg-gradient-to-br from-[#9D8BA7] to-[#6D597A] flex items-center justify-center">
+            <Brain size={10} className="text-white animate-pulse-glow" />
           </div>
           <span className="text-[10px] font-semibold text-[#9D8BA7] uppercase tracking-wider">
-            Aether
+            Aether is thinking...
           </span>
         </div>
         <div className="flex items-center gap-1.5 py-1">
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="h-2 w-2 rounded-full"
-              style={{ backgroundColor: 'rgba(157,139,167,0.6)' }}
-              animate={{ y: [0, -6, 0] }}
+              className="h-1.5 w-1.5 rounded-full bg-[#9D8BA7]/50"
+              initial={{ opacity: 0.3, scale: 0.8 }}
+              animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1.1, 0.8] }}
               transition={{
-                duration: 0.6,
-                delay: i * 0.15,
+                duration: 1.2,
+                delay: i * 0.2,
                 repeat: Infinity,
                 ease: 'easeInOut',
               }}
             />
           ))}
         </div>
-        <p
-          className="text-[10px] mt-1.5"
-          style={{ color: 'rgba(240,240,248,0.3)' }}
-        >
-          Aether is thinking...
-        </p>
       </div>
     </div>
   )
@@ -85,28 +83,14 @@ const TypingIndicator = memo(function TypingIndicator() {
 const InlineMemoryCard = memo(function InlineMemoryCard({ memory }: { memory: { id: string; title: string; content: string; type: MemoryType } }) {
   const Icon = typeIconMap[memory.type]
   return (
-    <div
-      className="rounded-xl border p-3 mt-2 transition-all duration-300 hover:border-[#9D8BA7]/25"
-      style={{
-        background: 'rgba(15,15,26,0.6)',
-        borderColor: 'rgba(157,139,167,0.1)',
-      }}
-    >
+    <div className="rounded-xl border border-border bg-background p-3 mt-2 hover:border-[#9D8BA7]/20 transition-all duration-300">
       <div className="flex items-start gap-2.5">
-        <div
-          className="h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-          style={{ background: 'rgba(157,139,167,0.08)' }}
-        >
+        <div className="h-7 w-7 rounded-lg bg-[#9D8BA7]/8 flex items-center justify-center flex-shrink-0 mt-0.5">
           <Icon size={13} className="text-[#9D8BA7]" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-[#f0f0f8] truncate">{memory.title}</p>
-          <p
-            className="text-[11px] line-clamp-2 mt-0.5 leading-relaxed"
-            style={{ color: 'rgba(240,240,248,0.45)' }}
-          >
-            {memory.content}
-          </p>
+          <p className="text-xs font-semibold text-foreground truncate">{memory.title}</p>
+          <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5 leading-relaxed">{memory.content}</p>
         </div>
       </div>
     </div>
@@ -117,59 +101,18 @@ const InlineMemoryCard = memo(function InlineMemoryCard({ memory }: { memory: { 
 const ChatBubble = memo(function ChatBubble({
   message,
   memories,
+  isStreaming,
 }: {
   message: ChatMessage
   memories: { id: string; title: string; content: string; type: MemoryType }[]
+  isStreaming?: boolean
 }) {
   const isUser = message.role === 'user'
-
-  // Character-by-character typing animation for short assistant messages
-  const shouldAnimateTyping =
-    !isUser &&
-    message.content.length < 200 &&
-    message.content.length > 0
-
-  const [displayedChars, setDisplayedChars] = useState(() => {
-    if (!shouldAnimateTyping) return message.content.length
-    // If the message is older than 3 seconds, show it instantly
-    const msgAge = Date.now() - new Date(message.timestamp).getTime()
-    if (msgAge > 3000) return message.content.length
-    return 0
-  })
-
-  useEffect(() => {
-    if (!shouldAnimateTyping || displayedChars >= message.content.length) return
-
-    const interval = setInterval(() => {
-      setDisplayedChars((prev) => {
-        if (prev >= message.content.length) {
-          clearInterval(interval)
-          return prev
-        }
-        return prev + 1
-      })
-    }, 18)
-
-    return () => clearInterval(interval)
-  }, [message.id])
-
-  const isTyping = shouldAnimateTyping && displayedChars < message.content.length
-  const displayContent = isUser
-    ? message.content
-    : message.content.slice(0, displayedChars)
 
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div
-          className="px-4 sm:px-5 py-3 max-w-[80%] border"
-          style={{
-            background: 'linear-gradient(135deg, rgba(157,139,167,0.15), rgba(192,132,252,0.1))',
-            borderColor: 'rgba(157,139,167,0.2)',
-            borderRadius: '16px 4px 16px 16px',
-            color: '#f0f0f8',
-          }}
-        >
+        <div className="bg-[#9D8BA7] text-white rounded-2xl rounded-br-sm px-4 sm:px-5 py-3 max-w-[75%] sm:max-w-[70%] ml-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
           <p className="text-sm leading-relaxed">{message.content}</p>
         </div>
       </div>
@@ -182,19 +125,12 @@ const ChatBubble = memo(function ChatBubble({
 
   return (
     <div className="flex justify-start">
-      <div
-        className="px-4 sm:px-5 py-3.5 sm:py-4 max-w-[80%] border"
-        style={{
-          background: 'rgba(15,15,26,0.9)',
-          borderColor: 'rgba(157,139,167,0.15)',
-          borderRadius: '4px 16px 16px 16px',
-        }}
-      >
+      <div className="bg-[#9D8BA7]/8 border border-[#9D8BA7]/12 rounded-2xl rounded-bl-sm px-4 sm:px-5 py-3.5 sm:py-4 max-w-[85%] sm:max-w-[70%] relative overflow-hidden">
+        {/* Left accent bar */}
+        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#9D8BA7]/30 rounded-l-2xl" />
+
         <div className="flex items-center gap-2 mb-2.5">
-          <div
-            className="h-7 w-7 rounded-full bg-gradient-to-br from-[#9D8BA7] to-[#6D597A] flex items-center justify-center"
-            style={{ boxShadow: '0 0 12px rgba(157,139,167,0.4)' }}
-          >
+          <div className="h-6 w-6 rounded-full bg-gradient-to-br from-[#9D8BA7] to-[#6D597A] flex items-center justify-center">
             <Brain size={12} className="text-white" />
           </div>
           <span className="text-[10px] font-semibold text-[#9D8BA7] uppercase tracking-wider">
@@ -202,10 +138,10 @@ const ChatBubble = memo(function ChatBubble({
           </span>
         </div>
 
-        <p className="text-sm text-[#f0f0f8] leading-relaxed">
-          {displayContent}
-          {isTyping && (
-            <span className="animate-blink-cursor inline-block ml-0.5 w-[2px] h-[14px] align-middle bg-[#c084fc]" />
+        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+          {message.content}
+          {isStreaming && (
+            <span className="animate-blink-cursor text-[#9D8BA7] ml-0.5">▊</span>
           )}
         </p>
 
@@ -217,14 +153,11 @@ const ChatBubble = memo(function ChatBubble({
           </div>
         )}
 
-        {message.sourcesCount && message.sourcesCount > 0 && (
-          <div
-            className="mt-3 pt-2 border-t"
-            style={{ borderColor: 'rgba(157,139,167,0.1)' }}
-          >
-            <span className="inline-flex items-center gap-1.5 text-[10px] font-medium text-[#9D8BA7]/70">
-              <FileText size={10} />
-              Sources: {message.sourcesCount} memories
+        {message.confidence === 'low' && (
+          <div className="mt-2 flex items-start gap-1.5">
+            <AlertCircle size={11} className="text-muted-foreground/50 mt-0.5 flex-shrink-0" />
+            <span className="text-[11px] text-muted-foreground/50 leading-relaxed">
+              I couldn&apos;t find anything about that in your memories — it might not be saved yet
             </span>
           </div>
         )}
@@ -235,12 +168,21 @@ const ChatBubble = memo(function ChatBubble({
 
 /* ─────────── Ask Aether ─────────── */
 export function AskAether() {
-  const { chatMessages, addChatMessage, isChatThinking, setChatThinking, memories, setCurrentView, setCaptureModalOpen } = useAetherStore()
+  const { memories, setCurrentView, setCaptureModalOpen, user, darkMode } = useAetherStore()
   const isOnline = useOnlineStatus()
+
+  // FIX 2: Local state only — no Zustand persistence, fresh on every mount
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
-  const [inputFocused, setInputFocused] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const [isThinking, setIsThinking] = useState(false)
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
+
   const chatEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
 
   // Memoize the memory list for lookup
   const memoryLookup = useMemo(
@@ -270,12 +212,37 @@ export function AskAether() {
     [memories]
   )
 
+  // Build conversation history for the API (last N messages for context)
+  const chatHistoryForApi = useMemo(
+    () =>
+      messages.slice(-10).map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+    [messages]
+  )
+
+  // Track streaming message for typing cursor effect
+  const prevMessageCountRef = useRef(messages.length)
+  useEffect(() => {
+    if (messages.length > prevMessageCountRef.current) {
+      const lastMsg = messages[messages.length - 1]
+      if (lastMsg && lastMsg.role === 'assistant') {
+        setStreamingMessageId(lastMsg.id)
+        const timer = setTimeout(() => setStreamingMessageId(null), 1500)
+        prevMessageCountRef.current = messages.length
+        return () => clearTimeout(timer)
+      }
+    }
+    prevMessageCountRef.current = messages.length
+  }, [messages])
+
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [chatMessages, isChatThinking])
+  }, [messages, isThinking])
 
   const processMessage = useCallback(async (text: string) => {
     if (!text.trim()) return
@@ -287,9 +254,9 @@ export function AskAether() {
       content: text.trim(),
       timestamp: new Date().toISOString(),
     }
-    addChatMessage(userMsg)
+    setMessages((prev) => [...prev, userMsg])
     setInput('')
-    setChatThinking(true)
+    setIsThinking(true)
 
     // If offline, do a local keyword search through cached memories
     if (!isOnline) {
@@ -308,50 +275,212 @@ export function AskAether() {
         role: 'assistant',
         content: offlineAnswer,
         referencedMemories: results.slice(0, 3).map((m) => m.id),
-        sourcesCount: results.length,
         timestamp: new Date().toISOString(),
       }
-      addChatMessage(assistantMsg)
-      setChatThinking(false)
+      setMessages((prev) => [...prev, assistantMsg])
+      setIsThinking(false)
       return
     }
 
+    // Check if memories are loaded before sending API request
+    if (memories.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+    }
+
     try {
-      // Call the AI ask API (Groq-powered)
+      // Get fresh memories from store
+      const freshMemories = useAetherStore.getState().memories
+      const apiMemories = freshMemories.length > 0
+        ? freshMemories.map((m) => ({
+            id: m.id,
+            type: m.type,
+            title: m.title,
+            content: m.content,
+            tags: m.tags,
+            createdAt: m.createdAt,
+            aiSummary: m.aiSummary,
+            collectionId: m.collectionId,
+          }))
+        : memoriesForApi
+
+      // 15 second timeout for slow mobile connections
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
+
       const res = await fetch('/api/ai/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: text.trim(),
-          memories: memoriesForApi,
+          memories: apiMemories,
+          chatHistory: chatHistoryForApi,
+          userId: user?.id,
         }),
+        signal: controller.signal,
       })
 
-      const data = await res.json()
+      clearTimeout(timeoutId)
+
+      const rawResponse = await res.json()
+
+      // Safe response parsing — ONLY ever display the "answer" field
+      let displayAnswer = ''
+      let referencedIds: string[] = []
+
+      try {
+        if (rawResponse && typeof rawResponse === 'object' && typeof rawResponse.answer === 'string') {
+          displayAnswer = rawResponse.answer.trim()
+          referencedIds = Array.isArray(rawResponse.referencedIds) ? rawResponse.referencedIds : []
+        } else if (typeof rawResponse === 'string') {
+          try {
+            const parsed = JSON.parse(rawResponse)
+            displayAnswer = (parsed.answer || '').trim()
+            referencedIds = Array.isArray(parsed.referencedIds) ? parsed.referencedIds : []
+          } catch {
+            displayAnswer = rawResponse.trim()
+          }
+        }
+      } catch {
+        displayAnswer = ''
+      }
+
+      // Clean any JSON artifacts that might have leaked into the answer
+      displayAnswer = displayAnswer
+        .replace(/\{[^}]*"referencedIds"[^}]*\}/g, '')
+        .replace(/\{[^}]*"sourcesCount"[^}]*\}/g, '')
+        .replace(/\{[^}]*"detectedMode"[^}]*\}/g, '')
+        .replace(/\{[^}]*"confidence"[^}]*\}/g, '')
+        .replace(/^\s*\{[\s\S]*\}\s*$/g, (match) => {
+          try {
+            const parsed = JSON.parse(match)
+            return parsed.answer || ''
+          } catch {
+            return match
+          }
+        })
+        .trim()
+
+      // Fallback if answer is empty
+      if (!displayAnswer) {
+        displayAnswer = "Hmm something went wrong — try asking me again? 😊"
+      }
 
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: data.answer || "I couldn't find any relevant memories for your question.",
-        referencedMemories: data.referencedIds || [],
-        sourcesCount: data.sourcesCount || 0,
+        content: displayAnswer,
+        referencedMemories: referencedIds,
+        detectedMode: rawResponse?.detectedMode || 'conversation',
+        confidence: rawResponse?.confidence || 'high',
         timestamp: new Date().toISOString(),
       }
-      addChatMessage(assistantMsg)
-    } catch {
+      setMessages((prev) => [...prev, assistantMsg])
+
+      // Fire-and-forget: Learn about the user from this conversation
+      if (user?.id) {
+        try {
+          fetch('/api/ai/learn', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: user.id,
+              userMessage: text.trim(),
+              conversationHistory: [...messages.slice(-6), assistantMsg].map((m) => ({
+                role: m.role,
+                content: m.content,
+              })),
+            }),
+          }).catch(() => {
+            // Fire-and-forget — never block or crash
+          })
+        } catch {
+          // Silently ignore
+        }
+      }
+    } catch (err: any) {
+      const isTimeout = err?.name === 'AbortError'
       const assistantMsg: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
-        content: "Sorry, I had trouble searching your memories. Please try again.",
+        content: isTimeout
+          ? "That took too long — try again when you have a stronger connection. I'm here whenever you're ready!"
+          : "I had trouble reaching my thinking space. Please try again — I'm here for you.",
         referencedMemories: [],
-        sourcesCount: 0,
         timestamp: new Date().toISOString(),
       }
-      addChatMessage(assistantMsg)
+      setMessages((prev) => [...prev, assistantMsg])
     } finally {
-      setChatThinking(false)
+      setIsThinking(false)
     }
-  }, [addChatMessage, setChatThinking, memoriesForApi, isOnline, memories])
+  }, [memoriesForApi, chatHistoryForApi, isOnline, memories, messages, user])
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mimeType = getSupportedMimeType()
+      const mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream)
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop())
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' })
+
+        const reader = new FileReader()
+        reader.onloadend = async () => {
+          const base64Audio = (reader.result as string).split(',')[1]
+          setIsTranscribing(true)
+
+          try {
+            const res = await fetch('/api/ai/transcribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ audio: base64Audio }),
+            })
+
+            const data = await res.json()
+            if (data.transcription?.trim()) {
+              setInput((prev) => (prev ? prev + ' ' + data.transcription.trim() : data.transcription.trim()))
+            }
+          } catch {
+            // Silently fail — transcription not critical
+          } finally {
+            setIsTranscribing(false)
+          }
+        }
+        reader.readAsDataURL(audioBlob)
+      }
+
+      mediaRecorderRef.current = mediaRecorder
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch {
+      setIsRecording(false)
+    }
+  }, [])
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+    }
+  }, [])
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) {
+      stopRecording()
+    } else {
+      startRecording()
+    }
+  }, [isRecording, startRecording, stopRecording])
 
   const handleSend = useCallback(() => {
     processMessage(input)
@@ -361,74 +490,44 @@ export function AskAether() {
     processMessage(question)
   }, [processMessage])
 
+  // Mix of starter questions
+  const displayStarters = memories.length > 0
+    ? starterQuestions
+    : starterQuestions.slice(3)
+
   return (
-    <div
-      className="flex flex-col flex-1 min-h-0 overflow-hidden"
-      style={{ background: '#07070f' }}
-    >
-      {/* Header — compact, transparent */}
-      <div
-        className="flex-shrink-0 px-4 sm:px-6 pt-3 sm:pt-5 pb-2 sm:pb-3"
-        style={{
-          background: 'rgba(7,7,15,0.85)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(157,139,167,0.08)',
-        }}
-      >
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden max-w-screen bg-background">
+      {/* Header — compact on mobile */}
+      <div className="flex-shrink-0 px-4 md:px-6 pt-3 md:pt-5 pb-2 md:pb-3 border-b border-border bg-background/80 backdrop-blur-sm">
         <div className="md:max-w-3xl md:mx-auto">
           <div className="flex items-center gap-3">
-            <div
-              className="h-9 w-9 sm:h-10 sm:w-10 rounded-2xl bg-gradient-to-br from-[#9D8BA7] to-[#6D597A] flex items-center justify-center"
-              style={{ boxShadow: '0 0 20px rgba(157,139,167,0.35)' }}
-            >
-              <Brain size={18} className="text-white sm:size-5" />
+            <div className="h-8 w-8 md:h-10 md:w-10 rounded-2xl bg-gradient-to-br from-[#9D8BA7] to-[#6D597A] flex items-center justify-center shadow-lg shadow-[#9D8BA7]/20">
+              <Brain size={16} className="text-white md:size-5" />
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold text-[#f0f0f8]">Ask Aether</h1>
-              <p
-                className="hidden sm:block text-xs"
-                style={{ color: 'rgba(240,240,248,0.45)' }}
-              >
-                Ask anything about your memories in natural language
+              <h1 className="text-base md:text-xl font-bold text-foreground">Ask Aether</h1>
+              <p className="hidden sm:block text-xs text-muted-foreground">
+                Search your memories or just ask me anything
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Suggested Questions — deep-space pill styling */}
-      {memories.length > 0 && chatMessages.length === 0 && (
-        <div
-          className="flex-shrink-0 py-2.5 px-4"
-          style={{
-            background: 'rgba(7,7,15,0.6)',
-            borderBottom: '1px solid rgba(157,139,167,0.06)',
-          }}
-        >
+      {/* Suggested Questions — horizontally scrollable on all viewports */}
+      {messages.length === 0 && (
+        <div className="flex-shrink-0 py-2 px-3 md:px-4 border-b border-border/50 bg-background/60">
           <div className="md:max-w-3xl md:mx-auto">
-            <div className="flex flex-wrap gap-2">
-              {starterQuestions.map((question) => (
+            <div className="overflow-x-auto flex-nowrap scrollbar-none gap-2 flex">
+              {displayStarters.map((question) => (
                 <button
                   key={question}
                   onClick={() => handleStarterClick(question)}
-                  className="px-3.5 py-2 rounded-xl border text-sm min-h-[40px] transition-all duration-300 hover:border-[rgba(157,139,167,0.3)]"
-                  style={{
-                    background: 'rgba(15,15,26,0.8)',
-                    borderColor: 'rgba(157,139,167,0.15)',
-                    color: '#f0f0f8',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(157,139,167,0.08)'
-                    e.currentTarget.style.borderColor = 'rgba(157,139,167,0.3)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(15,15,26,0.8)'
-                    e.currentTarget.style.borderColor = 'rgba(157,139,167,0.15)'
-                  }}
+                  className="px-3.5 py-2 rounded-2xl border border-[#9D8BA7]/15 bg-card text-sm text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/30 transition-all duration-300 shadow-sm min-h-[40px] flex items-center gap-1.5 whitespace-nowrap active:scale-[0.97] cursor-pointer"
                 >
-                  <span className="text-[#9D8BA7] mr-0.5">&ldquo;</span>
+                  <span className="text-[#9D8BA7]">&ldquo;</span>
                   {question.replace(/^"|"$/g, '')}
-                  <span className="text-[#9D8BA7] ml-0.5">&rdquo;</span>
+                  <span className="text-[#9D8BA7]">&rdquo;</span>
                 </button>
               ))}
             </div>
@@ -436,37 +535,34 @@ export function AskAether() {
         </div>
       )}
 
-      {/* Chat Area — deep space with holographic grid */}
+      {/* Chat Area — fills remaining space with holographic grid */}
       <div
         ref={chatContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto ios-scroll px-4 sm:px-6 py-4 sm:py-6"
+        className="flex-1 min-h-0 overflow-y-auto ios-scroll px-3 md:px-6 py-3 md:py-5 pb-4 md:pb-6"
         style={{
-          backgroundImage:
-            'linear-gradient(rgba(157,139,167,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(157,139,167,0.03) 1px, transparent 1px)',
+          backgroundImage: `
+            linear-gradient(rgba(157,139,167,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(157,139,167,0.04) 1px, transparent 1px)
+          `,
           backgroundSize: '50px 50px',
           animation: 'grid-scan 20s linear infinite',
         }}
       >
-        <div className="md:max-w-3xl md:mx-auto flex flex-col min-h-full gap-3 sm:gap-4">
+        <div className="md:max-w-3xl md:mx-auto flex flex-col min-h-full gap-2 md:gap-4">
           {/* Empty state — no memories yet */}
-          {memories.length === 0 && chatMessages.length === 0 && (
+          {memories.length === 0 && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center flex-1 px-4 text-center">
-              <div
-                className="h-20 w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-6 animate-star-pulse"
-                style={{ boxShadow: '0 0 30px rgba(157,139,167,0.15)' }}
-              >
-                <Sparkles size={36} className="text-[#9D8BA7]" />
+              <div className="h-14 w-14 md:h-20 md:w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-4 md:mb-6 shadow-sm">
+                <Brain size={28} className="text-[#9D8BA7]" />
               </div>
-              <h2 className="text-xl font-bold text-[#f0f0f8] mb-3">Ask Aether</h2>
-              <p
-                className="text-sm max-w-xs mb-6 leading-relaxed"
-                style={{ color: 'rgba(240,240,248,0.45)' }}
-              >
-                Your AI-powered memory assistant. Save some memories and then ask me anything about them.
+              <h2 className="text-lg md:text-xl font-bold text-foreground mb-2 md:mb-3">Ask Aether</h2>
+              <p className="text-xs md:text-sm text-muted-foreground max-w-xs mb-4 md:mb-6 leading-relaxed">
+                Your AI companion — search your memories, ask questions, or just chat. I&apos;ll understand what you need.
               </p>
               <Button
                 onClick={() => { setCurrentView('dashboard'); setCaptureModalOpen(true); }}
-                className="w-full sm:w-auto rounded-full px-6 min-h-[48px] bg-gradient-to-r from-[#9D8BA7] to-[#c084fc] hover:from-[#9D8BA7]/90 hover:to-[#c084fc]/90 text-white border-none shadow-lg shadow-[#9D8BA7]/20"
+                className="w-full sm:w-auto rounded-full px-6 shadow-lg shadow-[#9D8BA7]/20 min-h-[48px] active:scale-[0.97]"
+                style={{ backgroundColor: '#9D8BA7', color: '#fff', border: 'none' }}
               >
                 <Plus className="size-4 mr-1.5" />
                 Capture a Memory
@@ -475,54 +571,57 @@ export function AskAether() {
           )}
 
           {/* Empty state — has memories but no chat messages */}
-          {memories.length > 0 && chatMessages.length === 0 && (
+          {memories.length > 0 && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center flex-1 px-4 text-center">
-              <div
-                className="h-20 w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-5 animate-star-pulse"
-                style={{ boxShadow: '0 0 25px rgba(157,139,167,0.12)' }}
-              >
-                <Brain size={32} className="text-[#9D8BA7]/70" />
+              <div className="h-14 w-14 md:h-20 md:w-20 rounded-3xl bg-gradient-to-br from-[#9D8BA7]/15 to-[#9D8BA7]/5 flex items-center justify-center mb-4 md:mb-5 shadow-sm">
+                <Brain size={24} className="text-[#9D8BA7]/70" />
               </div>
-              <h3 className="text-lg font-semibold text-[#f0f0f8] mb-2">What would you like to know?</h3>
-              <p
-                className="text-sm max-w-xs leading-relaxed"
-                style={{ color: 'rgba(240,240,248,0.45)' }}
-              >
-                Ask a question about your memories and I&apos;ll search through everything you&apos;ve saved.
+              <h3 className="text-base md:text-lg font-semibold text-foreground mb-1.5 md:mb-2">What would you like to know?</h3>
+              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+                Ask about your memories or just say hi — I&apos;ll understand what you need.
               </p>
             </div>
           )}
 
-          {/* Chat messages */}
-          {chatMessages.map((msg) => (
-            <ChatBubble key={msg.id} message={msg} memories={memoryLookup} />
-          ))}
+          {/* Chat messages with entrance animation */}
+          <AnimatePresence mode="popLayout">
+            {messages.map((msg) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              >
+                <ChatBubble
+                  message={msg}
+                  memories={memoryLookup}
+                  isStreaming={streamingMessageId === msg.id}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {/* Typing indicator */}
-          {isChatThinking && <TypingIndicator />}
+          {isThinking && <TypingIndicator />}
 
           <div ref={chatEndRef} />
         </div>
       </div>
 
-      {/* Input Bar — futuristic deep-space style */}
+      {/* Input Bar — futuristic design */}
       <div
-        className="shrink-0 z-30 pb-16 md:pb-2"
+        className={`shrink-0 z-30 backdrop-blur-none md:backdrop-blur-sm border-t ${darkMode ? 'bg-[#07070f]/95 border-white/6' : 'bg-white/95 border-gray-200'}`}
         style={{
-          background: 'rgba(15,15,26,0.95)',
-          backdropFilter: 'blur(12px)',
-          borderTop: '1px solid rgba(157,139,167,0.1)',
+          paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))',
         }}
       >
-        <div className="md:max-w-3xl md:mx-auto px-4 sm:px-6 py-2.5 sm:py-4">
+        <div className="md:max-w-3xl md:mx-auto px-3 md:px-6 py-2 md:py-3">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex-1 relative">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => setInputFocused(false)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey && input.trim()) {
                     e.preventDefault()
@@ -530,68 +629,54 @@ export function AskAether() {
                   }
                 }}
                 placeholder="Ask Aether anything..."
-                disabled={isChatThinking}
+                disabled={isThinking}
                 aria-label="Ask Aether a question"
-                className="w-full px-4 sm:px-5 py-2.5 text-sm min-h-[44px] resize-none transition-all duration-300 disabled:opacity-50 outline-none"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: inputFocused
-                    ? '1px solid rgba(192,132,252,0.4)'
-                    : '1px solid rgba(157,139,167,0.15)',
-                  borderRadius: '12px',
-                  color: '#f0f0f8',
-                  boxShadow: inputFocused
-                    ? '0 0 0 3px rgba(192,132,252,0.1)'
-                    : 'none',
-                  caretColor: '#c084fc',
-                }}
+                className={`w-full rounded-xl md:rounded-2xl p-3 md:p-4 text-sm md:text-base focus:outline-none focus:border-[#9D8BA7]/40 focus:shadow-[0_0_20px_rgba(157,139,167,0.1)] transition-all duration-300 disabled:opacity-50 min-h-[44px] resize-none ${
+                  darkMode
+                    ? 'bg-white/5 border-white/10 text-white placeholder:text-gray-400'
+                    : 'bg-white border-gray-200 text-gray-900 placeholder:text-gray-500 shadow-sm'
+                }`}
               />
               {/* Microphone button inside input */}
               <button
-                className="absolute right-3 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center transition-colors duration-150 active:bg-[#9D8BA7]/10"
-                style={{ color: 'rgba(240,240,248,0.35)' }}
-                aria-label="Voice input"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = '#9D8BA7'
-                  e.currentTarget.style.background = 'rgba(157,139,167,0.05)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'rgba(240,240,248,0.35)'
-                  e.currentTarget.style.background = 'transparent'
-                }}
+                onClick={toggleRecording}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 min-h-[44px] min-w-[44px] rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                  isRecording
+                    ? 'text-red-500 bg-red-500/10'
+                    : 'text-muted-foreground hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 active:bg-[#9D8BA7]/10'
+                }`}
+                aria-label={isRecording ? 'Stop recording' : 'Voice input'}
               >
-                <Mic size={18} />
+                {isRecording ? (
+                  <span className="relative flex h-5 w-5 items-center justify-center">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-50" />
+                    <Mic size={18} className="relative" />
+                  </span>
+                ) : (
+                  <Mic size={18} />
+                )}
               </button>
+              {/* Transcribing indicator */}
+              {isTranscribing && (
+                <span className="absolute right-14 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 size={14} className="animate-spin" />
+                  <span className="hidden sm:inline">Transcribing…</span>
+                </span>
+              )}
             </div>
-            {/* Send button — purple gradient circle with glow */}
-            <button
+            <Button
               onClick={handleSend}
-              disabled={!input.trim() || isChatThinking}
+              disabled={!input.trim() || isThinking}
+              size="icon"
               aria-label="Send message"
-              className="h-11 w-11 sm:h-11 sm:w-11 rounded-full bg-gradient-to-br from-[#9D8BA7] to-[#c084fc] flex items-center justify-center flex-shrink-0 text-white transition-all duration-300 disabled:opacity-30 disabled:shadow-none"
-              style={{
-                boxShadow:
-                  input.trim() && !isChatThinking
-                    ? '0 4px 20px rgba(157,139,167,0.3)'
-                    : '0 2px 10px rgba(157,139,167,0.15)',
-              }}
-              onMouseEnter={(e) => {
-                if (input.trim() && !isChatThinking) {
-                  e.currentTarget.style.boxShadow = '0 6px 28px rgba(157,139,167,0.45)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (input.trim() && !isChatThinking) {
-                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(157,139,167,0.3)'
-                }
-              }}
+              className="h-12 w-12 rounded-xl md:rounded-2xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-white/90 shadow-lg shadow-slate-900/20 dark:shadow-white/10 transition-all duration-300 hover:shadow-xl disabled:opacity-40 disabled:shadow-none flex-shrink-0 active:scale-95 cursor-pointer"
             >
-              {isChatThinking ? (
+              {isThinking ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : (
                 <Send size={18} />
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
