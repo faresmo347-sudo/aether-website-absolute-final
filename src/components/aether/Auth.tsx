@@ -60,7 +60,7 @@ function useProgressiveLoading(loading: boolean) {
 function AuthBackground() {
   // Generate static stars once
   const stars = useState(() =>
-    Array.from({ length: 200 }, (_, i) => ({
+    Array.from({ length: typeof window !== 'undefined' && window.innerWidth < 768 ? 80 : 200 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
@@ -90,8 +90,8 @@ function AuthBackground() {
       <div
         className="absolute animate-float"
         style={{
-          width: '500px',
-          height: '500px',
+          width: '300px',
+          height: '300px',
           borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(157,139,167,0.18) 0%, rgba(157,139,167,0.04) 50%, transparent 70%)',
           top: '-10%',
@@ -103,8 +103,8 @@ function AuthBackground() {
       <div
         className="absolute animate-float-delayed"
         style={{
-          width: '400px',
-          height: '400px',
+          width: '250px',
+          height: '250px',
           borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(128,203,196,0.12) 0%, rgba(128,203,196,0.02) 50%, transparent 70%)',
           bottom: '-5%',
@@ -116,8 +116,8 @@ function AuthBackground() {
       <div
         className="absolute animate-float-slow hidden sm:block"
         style={{
-          width: '300px',
-          height: '300px',
+          width: '200px',
+          height: '200px',
           borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(157,139,167,0.10) 0%, transparent 60%)',
           top: '50%',
@@ -129,8 +129,8 @@ function AuthBackground() {
       <div
         className="absolute animate-pulse-glow hidden sm:block"
         style={{
-          width: '200px',
-          height: '200px',
+          width: '150px',
+          height: '150px',
           borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(184,168,196,0.15) 0%, transparent 60%)',
           top: '20%',
@@ -277,7 +277,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setName(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -299,7 +299,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -322,7 +322,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   required
                   minLength={6}
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
 
@@ -385,7 +385,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
             <button
               type="button"
               onClick={() => onSwitch('signin')}
-              className="text-[#9D8BA7] font-semibold hover:text-[#c084fc] transition-colors duration-150 px-2 py-1"
+              className="text-[#c084fc] font-semibold hover:text-[#d4a5ff] transition-colors duration-150 px-2 py-1"
             >
               Sign in
             </button>
@@ -477,7 +477,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -491,7 +491,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                 <button
                   type="button"
                   onClick={() => onSwitch('forgot')}
-                  className="text-xs text-[#9D8BA7] font-medium hover:text-[#c084fc] transition-colors duration-150 min-h-[44px] flex items-center"
+                  className="text-xs text-[#d4a5ff] font-semibold hover:text-white transition-colors duration-150 min-h-[44px] flex items-center"
                 >
                   Forgot password?
                 </button>
@@ -508,7 +508,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -545,7 +545,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
             <button
               type="button"
               onClick={() => onSwitch('signup')}
-              className="text-[#9D8BA7] font-semibold hover:text-[#c084fc] transition-colors duration-150 px-2 py-1"
+              className="text-[#c084fc] font-semibold hover:text-[#d4a5ff] transition-colors duration-150 px-2 py-1"
             >
               Sign up
             </button>
@@ -664,7 +664,7 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/40 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>

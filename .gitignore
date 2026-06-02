@@ -79,3 +79,4 @@ download/
 start-dev.sh
 Caddyfile
 worklog.md
+*.png

@@ -604,14 +604,14 @@ function AiChatDemo() {
   }, [messages.length, isTyping])
 
   return (
-    <section className="relative py-12 sm:py-24">
+    <section className="relative py-8 sm:py-24">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px', amount: 0.2 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-10 sm:mb-12"
+          className="text-center mb-6 sm:mb-12"
         >
           <span className="inline-block text-xs font-semibold text-[#9D8BA7] uppercase tracking-widest mb-3">Ask Aether</span>
           <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
@@ -914,7 +914,7 @@ function CtaSection({ onEnterApp }: { onEnterApp: () => void }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px', amount: 0.2 }}
           transition={{ duration: 0.6 }}
-          className="text-center bg-gradient-to-br from-[#9D8BA7]/10 via-[#9D8BA7]/5 to-[#E0F2F1]/20 rounded-2xl sm:rounded-3xl p-6 sm:p-12 md:p-16 border border-[#9D8BA7]/10"
+          className="text-center bg-gradient-to-br from-[#9D8BA7]/10 via-[#9D8BA7]/5 to-[#E0F2F1]/20 rounded-2xl sm:rounded-3xl p-5 sm:p-12 md:p-16 border border-[#9D8BA7]/10"
         >
           <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
             Ready to never forget again?
@@ -942,20 +942,20 @@ function CtaSection({ onEnterApp }: { onEnterApp: () => void }) {
 function Footer() {
   return (
     <footer className="border-t border-[#1a1a2e]/5 bg-white/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between sm:gap-4">
           <div className="flex items-center gap-2.5">
-            <AetherLogo size={32} showText />
+            <AetherLogo size={28} showText />
           </div>
 
-          <div className="flex items-center gap-6 text-sm text-[#1a1a2e]/40">
+          <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-[#1a1a2e]/40">
             <a href="#features" className="hover:text-[#9D8BA7] transition-colors">Features</a>
             <a href="#pricing" className="hover:text-[#9D8BA7] transition-colors">Pricing</a>
             <a href="#" className="hover:text-[#9D8BA7] transition-colors">Privacy</a>
             <a href="#" className="hover:text-[#9D8BA7] transition-colors">Terms</a>
           </div>
 
-          <p className="text-xs text-[#1a1a2e]/30">
+          <p className="text-[10px] sm:text-xs text-[#1a1a2e]/30">
             Made with care in San Francisco, CA
           </p>
         </div>

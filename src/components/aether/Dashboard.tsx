@@ -1796,44 +1796,46 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
       {/* Aurora Background — behind capture area */}
       {!prefersReducedMotion && <AuroraBackground />}
 
-      {/* ─── Mobile Header — glassmorphic ─── */}
+      {/* ─── Mobile Header — compact: logo + search pill + theme toggle ─── */}
       <div
-        className="md:hidden sticky top-0 z-20 px-4 pt-3 pb-2 backdrop-blur-xl border-b"
+        className="md:hidden sticky top-0 z-20 px-3 py-2 backdrop-blur-xl border-b"
         style={{
           background: darkMode ? 'rgba(7,7,15,0.8)' : 'rgba(255,255,255,0.85)',
           borderColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
         }}
       >
-        <h1 className={`text-lg md:text-xl font-bold ${darkMode ? 'text-white/90' : 'text-gray-900'}`}>Aether</h1>
+        <div className="flex items-center gap-2">
+          <h1 className={`text-base font-bold ${darkMode ? 'text-white/90' : 'text-gray-900'}`}>Aether</h1>
+          <div className="flex-1" />
+          {/* Search icon pill — taps into Ask Aether */}
+          <button
+            onClick={() => setCurrentView('ask-aether')}
+            className="cursor-pointer flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs min-h-[32px] transition-colors"
+            style={{
+              background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+              color: darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+            }}
+            aria-label="Search memories"
+          >
+            <Search size={14} className="text-[#9D8BA7]/70" />
+            <span>Ask</span>
+          </button>
+        </div>
       </div>
 
-      {/* ─── Mobile Glassmorphic Search Bar with Aurora Glow ─── */}
-      <div className="md:hidden px-4 py-2 relative">
-        {/* Aurora glow behind search — smaller blur for mobile performance */}
-        <div
-          className="absolute inset-0 pointer-events-none overflow-hidden"
-          aria-hidden="true"
-        >
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] h-[100px] rounded-full blur-3xl"
-            style={{
-              background: darkMode
-                ? 'rgba(157, 139, 167, 0.20)'
-                : 'rgba(157, 139, 167, 0.08)',
-            }}
-          />
-        </div>
+      {/* ─── Mobile Search Pill (tappable to open Ask Aether) ─── */}
+      <div className="md:hidden px-4 pt-2 pb-1">
         <button
           onClick={() => setCurrentView('ask-aether')}
-          className="cursor-pointer w-full flex items-center gap-2.5 rounded-xl p-3 text-sm backdrop-blur-xl min-h-[44px] relative z-10"
+          className="cursor-pointer w-full flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm backdrop-blur-xl min-h-[44px] relative z-10 transition-colors"
           style={{
             background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
-            border: darkMode ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(0,0,0,0.08)',
-            boxShadow: darkMode ? '0 2px 12px rgba(0,0,0,0.2)' : '0 1px 4px rgba(0,0,0,0.06)',
+            border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
+            boxShadow: darkMode ? '0 2px 8px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.04)',
           }}
           aria-label="Search memories"
         >
-          <Search size={16} className={`flex-shrink-0 ${darkMode ? 'text-[#9D8BA7]/60' : 'text-[#9D8BA7]/50'}`} />
+          <Search size={15} className={`flex-shrink-0 ${darkMode ? 'text-[#9D8BA7]/60' : 'text-[#9D8BA7]/50'}`} />
           <span className={`flex-1 text-left text-sm ${darkMode ? 'text-white/30' : 'text-gray-400'}`}>
             What do you remember?
           </span>
@@ -1843,6 +1845,8 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto min-h-0 ios-scroll relative z-10">
         <div className="px-4 md:px-6 md:pt-8 md:pb-6 pb-24 max-w-2xl mx-auto">
+          {/* Aurora glow — compact version for mobile */}
+          <div className="md:hidden absolute top-0 left-1/2 -translate-x-1/2 w-[250px] h-[80px] rounded-full blur-3xl pointer-events-none" aria-hidden="true" style={{ background: darkMode ? 'rgba(157, 139, 167, 0.12)' : 'rgba(157, 139, 167, 0.06)' }} />
 
           {/* ─── Desktop Search Bar (hidden on mobile) ─── */}
           <motion.section
@@ -1924,7 +1928,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
-              <h2 className={`text-xs md:text-sm font-semibold tracking-wide uppercase ${darkMode ? 'text-white/40' : 'text-gray-400'}`}>
+              <h2 className={`text-sm md:text-base font-semibold tracking-wide uppercase ${darkMode ? 'text-white/40' : 'text-gray-400'}`}>
                 Recent Memories
               </h2>
               <div className="flex items-center gap-2">
@@ -1973,7 +1977,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
               </div>
             ) : sortedMemories.length > 0 ? (
               /* Memory feed — single column on mobile, grid on larger screens */
-              <div className="flex flex-col gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
+              <div className="flex flex-col gap-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
                 {sortedMemories.map((memory, index) => (
                   <MemoryCard
                     key={memory.id}

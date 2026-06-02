@@ -357,7 +357,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
-        <div className="relative flex items-center justify-around h-16 px-4">
+        <div className="relative flex items-center justify-around h-16 px-2">
+          {/* Theme toggle — small pill on the left edge */}
+          <div className="absolute -top-12 left-3 z-10">
+            <ThemeToggle />
+          </div>
           {mobileNavItems.map((item) => {
             const isCapture = item.view === 'capture'
 
@@ -372,7 +376,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   aria-label="Capture new memory"
                 >
                   <div
-                    className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/50 bg-indigo-600"
+                    className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
+                    style={{ background: 'linear-gradient(135deg, #9D8BA7, #c084fc)', boxShadow: '0 4px 20px rgba(157, 139, 167, 0.5)' }}
                   >
                     <Plus size={24} className="text-white" strokeWidth={2.5} />
                   </div>
@@ -382,7 +387,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
             // ─── Regular nav items ───
             const isActive = activeNavView === item.view
-            const activeColor = '#818cf8'
+            const activeColor = '#9D8BA7'
             const inactiveColor = darkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
             const iconColor = isActive ? activeColor : inactiveColor
             const svgIcon = navIconSvgs[item.view as string]
