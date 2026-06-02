@@ -1460,14 +1460,10 @@ export default function Home() {
   }, [loadUserData, setUser, setProfile, setMemories, setCollections, setCurrentView, setIsSyncing, setIsLoadingMemories, setPendingSyncCount, setLastSyncedAt, updateMemory, navigateFromUrl])
 
   // "Enter Aether" on the landing page should go to signup for new users
+  // TEMP: Always go to dashboard for UI testing
   const handleEnterApp = useCallback(() => {
-    if (isAuthenticated) {
-      setCurrentView('dashboard')
-    } else {
-      setAuthScreen('signup')
-      setCurrentView('signup')
-    }
-  }, [isAuthenticated, setCurrentView, setAuthScreen])
+    setCurrentView('dashboard')
+  }, [setCurrentView])
 
   const handleAuthSwitch = useCallback((screen: 'signup' | 'signin' | 'forgot') => {
     setAuthScreen(screen)
@@ -1505,14 +1501,16 @@ export default function Home() {
   }
 
   // Landing page
-  if (currentView === 'landing') {
-    return <LandingPage onEnterApp={handleEnterApp} />
-  }
+  // TEMP: Skip landing page for UI testing - go directly to dashboard
+  // if (currentView === 'landing') {
+  //   return <LandingPage onEnterApp={handleEnterApp} />
+  // }
 
   // If trying to access app but not authenticated, redirect to signup
-  if (!isAuthenticated) {
-    return <SignUp onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
-  }
+  // TEMP: Skip auth for UI testing
+  // if (!isAuthenticated) {
+  //   return <SignUp onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
+  // }
 
   // App views
   // Skip intro if not on landing page or if already played

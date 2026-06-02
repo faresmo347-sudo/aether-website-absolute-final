@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, memo, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, Loader2, Eye, Sparkles, ClipboardPaste, Camera, ArrowUp, Mail, Search } from 'lucide-react'
+import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, Loader2, Eye, Sparkles, ClipboardPaste, Camera, ArrowUp, Mail, Search, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAetherStore } from '@/store/aether-store'
 import { createMemory, getMemoryCount, updateMemoryById } from '@/lib/supabase/data'
@@ -1796,50 +1796,47 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
       {/* Aurora Background — behind capture area */}
       {!prefersReducedMotion && <AuroraBackground />}
 
-      {/* ─── Mobile Header — compact: logo + search pill + theme toggle ─── */}
+      {/* ─── Mobile Header — logo left, settings icon right ─── */}
       <div
-        className="md:hidden sticky top-0 z-20 px-3 py-2 backdrop-blur-xl border-b"
+        className="md:hidden sticky top-0 z-20 backdrop-blur-xl border-b"
         style={{
           background: darkMode ? 'rgba(7,7,15,0.8)' : 'rgba(255,255,255,0.85)',
           borderColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
         }}
       >
-        <div className="flex items-center gap-2">
-          <h1 className={`text-base font-bold ${darkMode ? 'text-white/90' : 'text-gray-900'}`}>Aether</h1>
-          <div className="flex-1" />
-          {/* Search icon pill — taps into Ask Aether */}
+        {/* Top row: Aether logo + Settings icon */}
+        <div className="flex justify-between items-center px-4 pt-4 pb-2">
+          <h1 className={`text-lg font-bold tracking-tight ${darkMode ? 'text-white/90' : 'text-gray-900'}`}>Aether</h1>
           <button
-            onClick={() => setCurrentView('ask-aether')}
-            className="cursor-pointer flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs min-h-[32px] transition-colors"
+            onClick={() => setCurrentView('settings')}
+            className="cursor-pointer flex items-center justify-center size-8 rounded-full transition-colors active:scale-95"
             style={{
               background: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-              color: darkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
+            }}
+            aria-label="Settings"
+          >
+            <Settings size={16} className={darkMode ? 'text-white/50' : 'text-gray-500'} />
+          </button>
+        </div>
+
+        {/* Search/Quick Capture bar — full width */}
+        <div className="px-4 pb-3">
+          <button
+            onClick={() => setCurrentView('ask-aether')}
+            className="cursor-pointer w-full flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm backdrop-blur-xl min-h-[44px] relative z-10 transition-colors"
+            style={{
+              background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
+              border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
+              boxShadow: darkMode ? '0 2px 8px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.04)',
             }}
             aria-label="Search memories"
           >
-            <Search size={14} className="text-[#9D8BA7]/70" />
-            <span>Ask</span>
+            <Search size={15} className={`flex-shrink-0 ${darkMode ? 'text-[#9D8BA7]/60' : 'text-[#9D8BA7]/50'}`} />
+            <span className={`flex-1 text-left text-sm ${darkMode ? 'text-white/30' : 'text-gray-400'}`}>
+              What do you remember?
+            </span>
           </button>
         </div>
-      </div>
-
-      {/* ─── Mobile Search Pill (tappable to open Ask Aether) ─── */}
-      <div className="md:hidden px-4 pt-2 pb-1">
-        <button
-          onClick={() => setCurrentView('ask-aether')}
-          className="cursor-pointer w-full flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm backdrop-blur-xl min-h-[44px] relative z-10 transition-colors"
-          style={{
-            background: darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
-            border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
-            boxShadow: darkMode ? '0 2px 8px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.04)',
-          }}
-          aria-label="Search memories"
-        >
-          <Search size={15} className={`flex-shrink-0 ${darkMode ? 'text-[#9D8BA7]/60' : 'text-[#9D8BA7]/50'}`} />
-          <span className={`flex-1 text-left text-sm ${darkMode ? 'text-white/30' : 'text-gray-400'}`}>
-            What do you remember?
-          </span>
-        </button>
       </div>
 
       {/* Scrollable Content */}

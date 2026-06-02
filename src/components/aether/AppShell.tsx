@@ -339,10 +339,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
         }}
       >
         <div className="relative flex items-center justify-around h-16 px-2">
-          {/* Theme toggle — small pill on the left edge */}
-          <div className="absolute -top-12 left-3 z-10">
-            <ThemeToggle />
-          </div>
           {mobileNavItems.map((item) => {
             const isCapture = item.view === 'capture'
 
