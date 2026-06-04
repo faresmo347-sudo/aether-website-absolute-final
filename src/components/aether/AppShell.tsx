@@ -257,7 +257,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="w-8 h-px mb-3" style={{ background: sidebarBorder }} />
 
         <div className="pb-5 flex flex-col items-center gap-3">
-          <ThemeToggle />
+          <div className="hidden md:flex">
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
 
@@ -348,7 +350,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <button
                   key="capture-fab"
                   onClick={() => setCaptureModalOpen(true)}
-                  className="relative -mt-6 cursor-pointer flex items-center justify-center transition-transform duration-150 active:scale-90 z-10"
+                  className="relative -mt-6 cursor-pointer flex items-center justify-center transition-transform duration-150 active:scale-90 z-50"
                   style={{ width: '20%' }}
                   aria-label="Capture new memory"
                 >

@@ -197,6 +197,7 @@ export function AskAether() {
   const [isThinking, setIsThinking] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
 
+  const [inputFocused, setInputFocused] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -513,10 +514,13 @@ export function AskAether() {
     ? starterQuestions
     : starterQuestions.slice(3)
 
+  // Show suggestions inline when: no messages (always), or input focused with messages
+  const showSuggestions = messages.length === 0 || (inputFocused && messages.length > 0)
+
   return (
-    <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden max-w-screen bg-background">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden overflow-x-hidden max-w-screen bg-background relative z-10">
       {/* Header — compact on mobile, flat bg */}
-      <div className={`flex-shrink-0 px-4 md:px-6 pt-3 md:pt-5 pb-2 md:pb-3 border-b ${
+      <div className={`flex-shrink-0 px-4 md:px-6 pt-3 md:pt-5 pb-2 md:pb-3 border-b z-10 ${
         darkMode
           ? 'bg-[#0a0a0f] border-gray-800'
           : 'bg-white border-gray-200'
@@ -536,15 +540,26 @@ export function AskAether() {
         </div>
       </div>
 
-      {/* Suggested Questions — vertically stacked on mobile */}
-      {messages.length === 0 && (
-        <div className={`flex-shrink-0 py-2 px-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+      {/* Suggested Questions — INLINE, pushing content down */}
+      {showSuggestions && (
+        <div className={`flex-shrink-0 py-2 px-4 border-b z-10 ${
+          messages.length > 0
+            ? darkMode
+              ? 'bg-gray-950/90 backdrop-blur-xl border-gray-800'
+              : 'bg-white/90 backdrop-blur-xl border-gray-200'
+            : darkMode
+              ? 'border-gray-800'
+              : 'border-gray-200'
+        }`}>
           <div className="md:max-w-3xl md:mx-auto">
             <div className="flex flex-col gap-2">
               {displayStarters.map((question) => (
                 <button
                   key={question}
-                  onClick={() => handleStarterClick(question)}
+                  onClick={() => {
+                    handleStarterClick(question)
+                    setInputFocused(false)
+                  }}
                   className={`w-full px-3 py-3 rounded-xl border text-[13px] transition-all duration-200 min-h-[44px] flex items-center gap-1.5 text-left active:scale-[0.97] cursor-pointer ${
                     darkMode
                       ? 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-800'
@@ -629,7 +644,7 @@ export function AskAether() {
 
       {/* Input Bar — padding-bottom handled by AppShell mobile-bottom-pad on <main> */}
       <div
-        className={`shrink-0 z-30 border-t ${
+        className={`shrink-0 z-10 border-t ${
           darkMode
             ? 'bg-[#0a0a0f] border-gray-800'
             : 'bg-white border-gray-200'
@@ -643,14 +658,18 @@ export function AskAether() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
+                onFocus={() => setInputFocused(true)}
+                onBlur={() => setTimeout(() => setInputFocused(false), 200)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey && input.trim()) {
                     e.preventDefault()
                     handleSend()
+                    setInputFocused(false)
                   }
                 }}
                 placeholder="Ask Aether anything..."
                 disabled={isThinking}
+                autoComplete="off"
                 aria-label="Ask Aether a question"
                 className={`w-full rounded-xl p-3 text-sm focus:outline-none focus:border-[#9D8BA7]/40 transition-all duration-200 disabled:opacity-50 h-12 resize-none ${
                   darkMode

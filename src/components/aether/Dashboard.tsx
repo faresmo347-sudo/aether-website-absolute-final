@@ -113,7 +113,7 @@ function AuroraBackground() {
   if (isMobile) return null
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
       {/* Primary purple orb — top center */}
       <div
         className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full opacity-30"
@@ -1063,7 +1063,7 @@ function QuickCaptureModal() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-none md:backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md"
           onClick={() => setShowUpgradeDialog(false)}
         >
           <motion.div
@@ -1114,7 +1114,7 @@ function QuickCaptureModal() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-black/50"
+          className="fixed inset-0 z-[60] bg-black/50"
           onClick={handleClose}
         />
         <motion.div
@@ -1123,7 +1123,7 @@ function QuickCaptureModal() {
           animate={{ y: isDragging ? dragY : 0, opacity: 1 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-          className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl h-[92dvh] flex flex-col overflow-hidden border-t border-[var(--glass-border)]"
+          className="fixed bottom-0 left-0 right-0 z-[60] rounded-t-3xl h-[92dvh] flex flex-col overflow-hidden border-t border-[var(--glass-border)]"
           style={{ background: 'var(--modal-bg)', transform: isDragging ? `translateY(${dragY}px)` : undefined }}
           onTouchStart={(e) => {
             const sheet = sheetRef.current
@@ -1431,7 +1431,7 @@ function QuickCaptureModal() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-none md:backdrop-blur-xl"
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-md"
         onClick={handleClose}
       >
         <motion.div
@@ -1798,7 +1798,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
 
       {/* ─── Mobile Header — logo left, settings icon right ─── */}
       <div
-        className="md:hidden sticky top-0 z-20 backdrop-blur-xl border-b"
+        className="md:hidden sticky top-0 z-10 backdrop-blur-xl border-b"
         style={{
           background: darkMode ? 'rgba(7,7,15,0.8)' : 'rgba(255,255,255,0.85)',
           borderColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',

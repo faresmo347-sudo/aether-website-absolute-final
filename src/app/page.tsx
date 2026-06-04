@@ -116,8 +116,7 @@ function AnimatedBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="absolute inset-0 pointer-events-none"
-      style={{ zIndex: 0 }}
+      className="absolute inset-0 pointer-events-none z-0"
     />
   )
 }
@@ -160,7 +159,7 @@ function FloatingParticles() {
   }, [count])
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
       {particles.map((p) => (
         <motion.div
           key={p.id}
@@ -1460,10 +1459,15 @@ export default function Home() {
   }, [loadUserData, setUser, setProfile, setMemories, setCollections, setCurrentView, setIsSyncing, setIsLoadingMemories, setPendingSyncCount, setLastSyncedAt, updateMemory, navigateFromUrl])
 
   // "Enter Aether" on the landing page should go to signup for new users
-  // TEMP: Always go to dashboard for UI testing
+  // "Enter Aether" on the landing page goes to dashboard
+  // In demo mode (no Supabase), skip auth and go straight to dashboard
   const handleEnterApp = useCallback(() => {
+    if (!isSupabaseConfigured()) {
+      // Demo mode: set a placeholder user so isAuthenticated passes
+      setUser({ name: 'Demo User', email: 'demo@aether.ai', initials: 'DU' })
+    }
     setCurrentView('dashboard')
-  }, [setCurrentView])
+  }, [setCurrentView, setUser])
 
   const handleAuthSwitch = useCallback((screen: 'signup' | 'signin' | 'forgot') => {
     setAuthScreen(screen)
@@ -1489,28 +1493,31 @@ export default function Home() {
   // background and redirect to dashboard only if a session is found.
   // ═══════════════════════════════════════════════════════════════
 
-  // Render auth screens
-  if (currentView === 'signup') {
-    return <SignUp onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
-  }
-  if (currentView === 'signin') {
-    return <SignIn onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
-  }
-  if (currentView === 'forgot-password') {
-    return <ForgotPassword onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
+  // Landing page — always show when view is 'landing'
+  if (currentView === 'landing') {
+    return <LandingPage onEnterApp={handleEnterApp} />
   }
 
-  // Landing page
-  // TEMP: Skip landing page for UI testing - go directly to dashboard
-  // if (currentView === 'landing') {
-  //   return <LandingPage onEnterApp={handleEnterApp} />
-  // }
+  // In demo mode (Supabase not configured), skip all auth screens and go straight to app
+  const isDemoMode = !isSupabaseConfigured()
 
-  // If trying to access app but not authenticated, redirect to signup
-  // TEMP: Skip auth for UI testing
-  // if (!isAuthenticated) {
-  //   return <SignUp onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
-  // }
+  // Auth screens — only accessible when Supabase is configured
+  if (!isDemoMode) {
+    if (currentView === 'signup') {
+      return <SignUp onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
+    }
+    if (currentView === 'signin') {
+      return <SignIn onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
+    }
+    if (currentView === 'forgot-password') {
+      return <ForgotPassword onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
+    }
+
+    // If trying to access app but not authenticated, redirect to signup
+    if (!isAuthenticated) {
+      return <SignUp onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
+    }
+  }
 
   // App views
   // Skip intro if not on landing page or if already played

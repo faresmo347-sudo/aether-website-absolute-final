@@ -494,7 +494,7 @@ function StarfieldCanvas({ darkMode }: { darkMode: boolean }) {
     <canvas
       ref={canvasRef}
       className="absolute inset-0 w-full h-full pointer-events-none"
-      style={{ zIndex: 1 }}
+      style={{ zIndex: 0 }}
       aria-hidden="true"
     />
   )
@@ -534,7 +534,7 @@ const NebulaBlurs = memo(function NebulaBlurs({ darkMode }: { darkMode: boolean 
   if (isMobile) return null
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }} aria-hidden="true">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
       {nebulae.map((neb, i) => (
         <motion.div
           key={i}
@@ -880,7 +880,7 @@ function ConstellationPanel({ group, darkMode, onClose }: ConstellationPanelProp
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.3 }}
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-[60]"
         style={{
           background: darkMode ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.2)',
           backdropFilter: 'blur(4px)',
@@ -896,7 +896,7 @@ function ConstellationPanel({ group, darkMode, onClose }: ConstellationPanelProp
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed top-0 right-0 bottom-0 z-50 w-full md:w-[440px] overflow-y-auto ios-scroll backdrop-blur-none md:backdrop-blur-xl shadow-none md:shadow-2xl"
+        className="fixed top-0 right-0 bottom-0 z-[60] w-full md:w-[440px] overflow-y-auto ios-scroll backdrop-blur-none md:backdrop-blur-xl shadow-none md:shadow-2xl"
         style={darkMode
           ? {
               background: 'rgba(255,255,255,0.05)',

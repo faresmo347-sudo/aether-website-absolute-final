@@ -836,7 +836,7 @@ export function MemoryDetail() {
       </div>
 
       {/* ── Fixed Action Bar (Mobile only) ── */}
-      <div className="md:hidden fixed bottom-[calc(64px+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 bg-card/95 backdrop-blur-sm border-t border-border">
+      <div className="md:hidden fixed bottom-[calc(64px+env(safe-area-inset-bottom,0px))] left-0 right-0 z-10 bg-card/95 backdrop-blur-sm border-t border-border">
         <div className="flex items-center justify-around px-4 h-16">
           <button
             onClick={handleShare}
