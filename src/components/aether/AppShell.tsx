@@ -256,10 +256,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
         <div className="w-8 h-px mb-3" style={{ background: sidebarBorder }} />
 
-        <div className="pb-5 flex flex-col items-center gap-3">
-          <div className="hidden md:flex">
-            <ThemeToggle />
-          </div>
+        {/* Theme Toggle — Desktop ONLY. Hidden on mobile (mobile users use Settings page). */}
+        <div className="pb-5 flex flex-col items-center gap-3 hidden md:flex">
+          <ThemeToggle />
         </div>
       </aside>
 

@@ -540,41 +540,47 @@ export function AskAether() {
         </div>
       </div>
 
-      {/* Suggested Questions — INLINE, pushing content down */}
-      {showSuggestions && (
-        <div className={`flex-shrink-0 py-2 px-4 border-b z-10 ${
-          messages.length > 0
-            ? darkMode
-              ? 'bg-gray-950/90 backdrop-blur-xl border-gray-800'
-              : 'bg-white/90 backdrop-blur-xl border-gray-200'
-            : darkMode
-              ? 'border-gray-800'
-              : 'border-gray-200'
-        }`}>
-          <div className="md:max-w-3xl md:mx-auto">
-            <div className="flex flex-col gap-2">
-              {displayStarters.map((question) => (
-                <button
-                  key={question}
-                  onClick={() => {
-                    handleStarterClick(question)
-                    setInputFocused(false)
-                  }}
-                  className={`w-full px-3 py-3 rounded-xl border text-[13px] transition-all duration-200 min-h-[44px] flex items-center gap-1.5 text-left active:scale-[0.97] cursor-pointer ${
-                    darkMode
-                      ? 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-800'
-                      : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="text-[#9D8BA7]">&ldquo;</span>
-                  {question.replace(/^"|"$/g, '')}
-                  <span className="text-[#9D8BA7]">&rdquo;</span>
-                </button>
-              ))}
+      {/* Suggested Questions — INLINE, solid background, pushes content down */}
+      <AnimatePresence>
+        {showSuggestions && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="flex-shrink-0 overflow-hidden z-20"
+          >
+            <div className={`py-2 px-4 border-b ${
+              darkMode
+                ? 'bg-[#0a0a0f] border-gray-800'
+                : 'bg-white border-gray-200'
+            }`}>
+              <div className="md:max-w-3xl md:mx-auto">
+                <div className="flex flex-col gap-2">
+                  {displayStarters.map((question) => (
+                    <button
+                      key={question}
+                      onClick={() => {
+                        handleStarterClick(question)
+                        setInputFocused(false)
+                      }}
+                      className={`w-full px-3 py-3 rounded-xl border text-[13px] transition-all duration-200 min-h-[44px] flex items-center gap-1.5 text-left active:scale-[0.97] cursor-pointer ${
+                        darkMode
+                          ? 'border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-800'
+                          : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className="text-[#9D8BA7]">&ldquo;</span>
+                      {question.replace(/^"|"$/g, '')}
+                      <span className="text-[#9D8BA7]">&rdquo;</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Chat Area — clean flat bg on mobile */}
       <div

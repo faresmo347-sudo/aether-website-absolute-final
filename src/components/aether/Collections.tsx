@@ -260,7 +260,7 @@ export function Collections() {
       {/* Mobile FAB - Create Collection */}
       <button
         onClick={() => setCreateOpen(true)}
-        className="md:hidden fixed right-4 h-14 w-14 rounded-full bg-[#9D8BA7] text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform z-40 tap-feedback"
+        className="md:hidden fixed right-4 h-14 w-14 rounded-full bg-[#9D8BA7] text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform z-50 tap-feedback"
         style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))' }}
         aria-label="Create collection"
       >
