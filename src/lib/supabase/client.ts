@@ -77,10 +77,8 @@ export function createClient() {
 
 // Check if Supabase is properly configured
 export function isSupabaseConfigured(): boolean {
-  // TEMP: Return false to skip auth for UI testing
-  return false
-  // return !!(SUPABASE_URL && SUPABASE_ANON_KEY &&
-  //   SUPABASE_URL !== 'https://placeholder.supabase.co')
+  return !!(SUPABASE_URL && SUPABASE_ANON_KEY &&
+    SUPABASE_URL !== 'https://placeholder.supabase.co')
 }
 
 // Fast synchronous check for whether auth cookies exist.

@@ -5,10 +5,10 @@ import { Menu, X } from 'lucide-react'
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { useAetherStore } from '@/store/aether-store'
-import { createClient, isSupabaseConfigured, hasValidSession } from '@/lib/supabase/client'
+import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import { getProfile, fetchMemories, fetchCollections } from '@/lib/supabase/data'
 import { initOfflineDB, getCachedMemories, getCachedCollections, getSyncQueueCount } from '@/lib/offline-db'
-import { syncAll, onSyncStatus, onSyncComplete } from '@/lib/sync-engine'
+import { onSyncStatus, onSyncComplete } from '@/lib/sync-engine'
 import AppShell from '@/components/aether/AppShell'
 import Dashboard from '@/components/aether/Dashboard'
 import { MemoryDetail } from '@/components/aether/MemoryDetail'
@@ -17,7 +17,6 @@ import { Recaps } from '@/components/aether/Recaps'
 import { Settings } from '@/components/aether/Settings'
 import { SignUp, SignIn, ForgotPassword } from '@/components/aether/Auth'
 import { AetherLogo } from '@/components/aether/AetherLogo'
-import { CinematicIntro } from '@/components/aether/CinematicIntro'
 import type { AppView } from '@/components/aether/types'
 
 // Dynamic import for Constellations — Canvas requires browser DOM
@@ -1040,19 +1039,14 @@ function AppContent() {
    ═══════════════════════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════════════════════════
-   LOADING SPLASH — Only shown during session transitions, NEVER on initial load
+   SIMPLE LOADING SPINNER — Small spinner shown during auth check only
    ═══════════════════════════════════════════════════════════════ */
-function LoadingSplash() {
+function SimpleSpinner() {
   return (
-    <div
-      className="fixed inset-0 flex flex-col items-center justify-center"
-      style={{ background: '#FFFAF5' }}
-    >
-      <div className="flex flex-col items-center gap-4">
-        <div className="animate-pulse">
-          <AetherLogo size={64} />
-        </div>
-        <p className="text-sm text-[#1a1a2e]/40 font-medium">Loading...</p>
+    <div className="fixed inset-0 flex items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-6 w-6 rounded-full border-2 border-muted-foreground/20 border-t-[#9D8BA7] animate-spin" />
+        <p className="text-xs text-muted-foreground">Checking session...</p>
       </div>
     </div>
   )
@@ -1078,16 +1072,13 @@ export default function Home() {
     setSelectedMemoryId,
   } = useAetherStore()
 
-  // Cinematic intro — plays once per session on the landing page
-  const [introComplete, setIntroComplete] = useState(false)
+  // Auth state: 'checking' | 'authenticated' | 'unauthenticated'
+  const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>('checking')
 
   // URL-based navigation: read the current URL path to determine which view to show.
-  // This ensures that direct links like /dashboard, /ask, /constellations work correctly.
-  // The middleware rewrites all paths to / but the browser URL stays the same,
-  // so we can read window.location.pathname to determine the desired view.
   const navigateFromUrl = useCallback(() => {
     if (typeof window === 'undefined') return
-    const path = window.location.pathname.replace(/\/$/, '') // remove trailing slash
+    const path = window.location.pathname.replace(/\/$/, '')
 
     const urlToViewMap: Record<string, AppView> = {
       '/dashboard': 'dashboard',
@@ -1103,14 +1094,12 @@ export default function Home() {
 
     const view = urlToViewMap[path]
     if (view) {
-      // For auth views, also update the auth screen
       if (view === 'signup' || view === 'signin' || view === 'forgot-password') {
         setAuthScreen(view === 'forgot-password' ? 'forgot' : view)
       }
       return view
     }
 
-    // Check for memory detail URL pattern: /memory/{id}
     if (path.startsWith('/memory/')) {
       const memoryId = path.replace('/memory/', '')
       if (memoryId) {
@@ -1125,9 +1114,7 @@ export default function Home() {
   // Track whether initial data has been loaded for this session
   const dataLoadedRef = useRef(false)
 
-  // Sync dark mode class with store state on mount and whenever darkMode changes.
-  // The blocking script in layout.tsx handles the initial paint to prevent flash,
-  // but this effect ensures the DOM stays in sync with the Zustand store.
+  // Sync dark mode class with store state
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark')
@@ -1136,7 +1123,6 @@ export default function Home() {
       document.documentElement.classList.remove('dark')
       document.documentElement.setAttribute('data-theme', 'light')
     }
-    // Also persist to localStorage so refresh respects the preference
     try {
       localStorage.setItem('aether-theme', darkMode ? 'dark' : 'light')
       localStorage.setItem('aether-dark-mode', String(darkMode))
@@ -1174,7 +1160,7 @@ export default function Home() {
     } catch {
       // localStorage read failed — will fetch from Supabase
     }
-    setIsLoadingMemories(false) // Cache loaded — remove skeleton
+    setIsLoadingMemories(false)
 
     setIsLoadingMemories(true)
     try {
@@ -1191,7 +1177,6 @@ export default function Home() {
         setMemories(memResult.memories)
         setCollections(collections)
       } catch (err) {
-        // Network error — fall back to cached data from IndexedDB
         console.warn('Failed to fetch from Supabase, loading from cache:', err)
         try {
           const [cachedMems, cachedCols] = await Promise.all([
@@ -1201,12 +1186,11 @@ export default function Home() {
           if (cachedMems.length > 0) setMemories(cachedMems)
           if (cachedCols.length > 0) setCollections(cachedCols)
         } catch {
-          // IndexedDB also failed — nothing we can do
+          // IndexedDB also failed
         }
       }
     } catch (err) {
       console.error('Failed to load user data:', err)
-      // Don't block the user from using the app if data load fails
     } finally {
       setIsLoadingMemories(false)
     }
@@ -1215,24 +1199,25 @@ export default function Home() {
   // ═══════════════════════════════════════════════════════════════════
   // AUTH INITIALIZATION
   // ═══════════════════════════════════════════════════════════════════
-  // CRITICAL DESIGN: The landing page MUST render immediately on first load.
-  // Auth checks run in the background and only redirect if a session is found.
-  // There is NO loading screen gate on initial load — ever.
-  //
-  // SPEED OPTIMIZATION: If auth cookies exist (hasValidSession()), we show
-  // the dashboard INSTANTLY before any async calls. getSession(), getUser(),
-  // and loadUserData() all run in the background. If the session turns out
-  // to be expired, we redirect gracefully to signin.
+  // The user MUST see either the Landing Page (if logged out) or
+  // the Dashboard (if logged in). No splash screens, no forced waiting.
+  // A small spinner is shown ONLY while the auth check is in progress.
   // ═══════════════════════════════════════════════════════════════════
+
+  // Use a ref to ensure the auth effect only runs ONCE
+  const authInitializedRef = useRef(false)
+
   useEffect(() => {
+    // Prevent double-initialization (React strict mode / HMR)
+    if (authInitializedRef.current) return
+    authInitializedRef.current = true
+
     // Initialize offline IndexedDB (non-blocking)
     initOfflineDB().catch((err) => console.warn('Failed to init offline DB:', err))
 
     // Register service worker for caching
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {
-        // Service worker registration failed — non-critical
-      });
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
     }
 
     // Listen for sync events
@@ -1246,21 +1231,18 @@ export default function Home() {
       }
     })
 
-    // Listen for memory synced events (temp ID -> real ID replacement)
+    // Listen for memory synced events
     const handleMemorySynced = ((e: CustomEvent) => {
       const { tempId, realId, memory } = e.detail
       updateMemory(tempId, { id: realId, syncStatus: 'synced', ...memory })
     }) as EventListener
     window.addEventListener('aether:memory-synced', handleMemorySynced)
 
-    // ─── If Supabase isn't configured, skip auth entirely ───
+    // ─── If Supabase isn't configured, show landing page ───
     if (!isSupabaseConfigured()) {
       console.info('[Aether] Supabase not configured — showing landing page. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to enable auth.')
-      // Check if URL points to a specific view, otherwise landing is already showing
-      const urlView = navigateFromUrl()
-      if (urlView) {
-        setCurrentView(urlView)
-      }
+      setAuthState('unauthenticated')
+      // Don't force currentView — the render logic handles it based on authState
       return () => {
         unsubStatus()
         unsubComplete()
@@ -1268,83 +1250,27 @@ export default function Home() {
       }
     }
 
-    // ─── Supabase is configured — check auth in background ───
+    // ─── Supabase is configured — check auth ───
     const supabase = createClient()
     let mounted = true
-    let authResolved = false
-    let fastPathUsed = false
 
-    // Helper: resolve auth to a view (prevents double-redirects)
-    const resolveAuth = (view: AppView) => {
-      if (!mounted || authResolved) return
-      authResolved = true
-      clearTimeout(timeoutId)
-      setCurrentView(view)
-    }
-
-    // ─── 0.8-SECOND HARD TIMEOUT: force landing page if auth hangs ───
-    // Reduced from 3s — if auth hasn't resolved in 0.8s the user is likely
-    // not signed in, and showing the landing page quickly is better than waiting.
-    const timeoutId = setTimeout(() => {
-      if (!authResolved && mounted) {
-        console.warn('[Aether] Auth check timed out after 0.8s — showing landing page')
-        authResolved = true
-        // If fast-path showed dashboard but auth never confirmed, revert
-        if (fastPathUsed) {
-          setUser(null)
-          setProfile({ name: '', email: '', initials: '' })
-        }
-        const urlView = navigateFromUrl()
-        if (urlView === 'signup' || urlView === 'signin' || urlView === 'forgot-password') {
-          setCurrentView(urlView)
-        } else {
-          setCurrentView('landing')
-        }
-      }
-    }, 800)
-
-    // ─── FAST PATH: Synchronous cookie check ───
-    // If Supabase auth cookies exist, show the dashboard IMMEDIATELY
-    // without waiting for any async getSession()/getUser() calls.
-    // The async checkAuth validates the session afterwards — if it's
-    // expired we redirect gracefully to signin.
-    if (hasValidSession()) {
-      fastPathUsed = true
-      const urlView = navigateFromUrl()
-      const targetView = urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard'
-      // Set a placeholder user so the isAuthenticated render guard passes
-      // and the dashboard renders with skeleton loading states.
-      // The real profile will be loaded by loadUserData() shortly.
-      setUser({ name: '', email: '', initials: '' })
-      setIsLoadingMemories(true)
-      setCurrentView(targetView)
-    }
-
-    // ─── Background auth check ───
     const checkAuth = async () => {
       try {
-        // Step 1: getSession() reads from local cookie storage (no network request)
-        // This resolves almost instantly (~5ms)
+        // Step 1: getSession() reads from local cookie storage (fast, no network)
         const { data: { session } } = await supabase.auth.getSession()
 
         if (!mounted) return
 
         if (session?.user) {
-          // Session found in cookies — update user with real info from session
+          // Session found — user is authenticated
           const email = session.user.email || ''
           const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0]
           const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || email[0].toUpperCase()
           setUser({ name, email, initials })
+          setAuthState('authenticated')
+          setCurrentView('dashboard')
 
-          if (!authResolved) {
-            const urlView = navigateFromUrl()
-            resolveAuth(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
-          }
-
-          // Validate session AND load data IN PARALLEL:
-          // - getUser() verifies the session with the Supabase server (catches expired tokens)
-          // - loadUserData() fetches profile, memories, collections
-          // Running them concurrently saves 500-2000ms vs sequential.
+          // Validate session AND load data in PARALLEL
           const [userResult] = await Promise.allSettled([
             supabase.auth.getUser(),
             loadUserData(session.user.id),
@@ -1354,71 +1280,52 @@ export default function Home() {
           if (userResult.status === 'fulfilled' && mounted) {
             const { data: { user: validatedUser } } = userResult.value
             if (!validatedUser) {
-              // Session is expired or invalid — redirect to signin
               console.warn('[Aether] Session validation failed — redirecting to signin')
               dataLoadedRef.current = false
               setUser(null)
               setProfile({ name: '', email: '', initials: '' })
               setMemories([])
               setCollections([])
+              setAuthState('unauthenticated')
               setCurrentView('signin')
             }
           }
           return
         }
 
-        // Step 2: No cookie session — try getUser() which validates with server.
-        // This can be slow or hang if Supabase is unreachable.
+        // Step 2: No cookie session — try getUser() which validates with server
         const { data: { user } } = await supabase.auth.getUser()
 
-        if (!mounted || authResolved) return
+        if (!mounted) return
 
         if (user) {
           const email = user.email || ''
           const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0]
           const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || email[0].toUpperCase()
           setUser({ name, email, initials })
+          setAuthState('authenticated')
+          setCurrentView('dashboard')
 
-          const urlView = navigateFromUrl()
-          resolveAuth(urlView && urlView !== 'signup' && urlView !== 'signin' && urlView !== 'forgot-password' ? urlView : 'dashboard')
           loadUserData(user.id).catch((err) =>
             console.warn('[Aether] Background data load failed:', err)
           )
         } else {
-          // Not authenticated
-          // If fast-path incorrectly showed dashboard, revert to landing
-          if (fastPathUsed && mounted) {
-            setUser(null)
-            setProfile({ name: '', email: '', initials: '' })
-            setCurrentView('landing')
-          }
-
-          const urlView = navigateFromUrl()
-          if (urlView === 'signup' || urlView === 'signin' || urlView === 'forgot-password') {
-            resolveAuth(urlView)
-          }
-          // If no URL view override, landing page stays (already the default)
-          authResolved = true
-          clearTimeout(timeoutId)
-        }
-      } catch {
-        // Any error — ensure landing page is showing
-        if (!mounted || authResolved) return
-        // If fast-path showed dashboard but auth failed, revert
-        if (fastPathUsed) {
-          setUser(null)
-          setProfile({ name: '', email: '', initials: '' })
+          // Not authenticated — show landing page
+          setAuthState('unauthenticated')
           setCurrentView('landing')
         }
-        authResolved = true
-        clearTimeout(timeoutId)
-        // Don't change view — landing page is already the default
+      } catch {
+        // Any error — show landing page
+        if (mounted) {
+          setAuthState('unauthenticated')
+          setCurrentView('landing')
+        }
       }
     }
 
     checkAuth()
 
-    // ─── Subscribe to auth state changes for ongoing events ───
+    // ─── Subscribe to auth state changes ───
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return
@@ -1428,12 +1335,12 @@ export default function Home() {
 
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
           dataLoadedRef.current = false
-          // Load data in the background — don't block navigation.
-          // The dashboard is already showing via handleAuthSuccess.
-          // If handleAuthSuccess hasn't fired yet (e.g. token refresh),
-          // navigate to dashboard first.
+          const email = session.user.email || ''
+          const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0]
+          const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || email[0].toUpperCase()
+          setUser({ name, email, initials })
+          setAuthState('authenticated')
           setCurrentView('dashboard')
-          // Fire-and-forget data loading
           loadUserData(session.user.id).catch((err) =>
             console.warn('[Aether] Background data load failed:', err)
           )
@@ -1443,6 +1350,7 @@ export default function Home() {
           setProfile({ name: '', email: '', initials: '' })
           setMemories([])
           setCollections([])
+          setAuthState('unauthenticated')
           setCurrentView('landing')
         }
       }
@@ -1450,59 +1358,48 @@ export default function Home() {
 
     return () => {
       mounted = false
-      clearTimeout(timeoutId)
       subscription.unsubscribe()
       unsubStatus()
       unsubComplete()
       window.removeEventListener('aether:memory-synced', handleMemorySynced)
     }
-  }, [loadUserData, setUser, setProfile, setMemories, setCollections, setCurrentView, setIsSyncing, setIsLoadingMemories, setPendingSyncCount, setLastSyncedAt, updateMemory, navigateFromUrl])
+  }, []) // Run once on mount — auth check should only happen once
 
-  // "Enter Aether" on the landing page should go to signup for new users
-  // "Enter Aether" on the landing page goes to dashboard
-  // In demo mode (no Supabase), skip auth and go straight to dashboard
+  // "Enter Aether" on the landing page → go to Sign In
+  // If Supabase isn't configured, go to signin page anyway (it will handle errors)
   const handleEnterApp = useCallback(() => {
-    if (!isSupabaseConfigured()) {
-      // Demo mode: set a placeholder user so isAuthenticated passes
-      setUser({ name: 'Demo User', email: 'demo@aether.ai', initials: 'DU' })
-    }
-    setCurrentView('dashboard')
-  }, [setCurrentView, setUser])
+    setAuthScreen('signin')
+    setCurrentView('signin')
+  }, [setAuthScreen, setCurrentView])
 
   const handleAuthSwitch = useCallback((screen: 'signup' | 'signin' | 'forgot') => {
     setAuthScreen(screen)
     setCurrentView(screen === 'forgot' ? 'forgot-password' : screen)
   }, [setAuthScreen, setCurrentView])
 
-  // After auth success — IMMEDIATELY navigate to dashboard.
-  // This is the critical speed optimization: we navigate FIRST, then load data in background.
-  // The onAuthStateChange listener handles data loading when it fires.
+  // After auth success — navigate to dashboard immediately
   const handleAuthSuccess = useCallback(() => {
-    // Navigate to dashboard IMMEDIATELY — don't wait for any data loading.
-    // Data (profile, memories, collections) loads in the background via
-    // the onAuthStateChange SIGNED_IN handler, which runs after this.
-    // The dashboard shows skeleton loading states while data loads.
+    setAuthState('authenticated')
     setCurrentView('dashboard')
   }, [setCurrentView])
 
   // ═══════════════════════════════════════════════════════════════
   // RENDER LOGIC
   // ═══════════════════════════════════════════════════════════════
-  // IMPORTANT: There is NO loading screen gate on initial load.
-  // The landing page renders immediately. Auth checks happen in the
-  // background and redirect to dashboard only if a session is found.
+  // CRITICAL: No splash screen. No forced waiting.
+  // - While checking session → small spinner
+  // - If logged out → Landing Page
+  // - If logged in → Dashboard (inside AppShell)
   // ═══════════════════════════════════════════════════════════════
 
-  // Landing page — always show when view is 'landing'
-  if (currentView === 'landing') {
-    return <LandingPage onEnterApp={handleEnterApp} />
+  // While checking auth, show a simple small spinner
+  if (authState === 'checking') {
+    return <SimpleSpinner />
   }
 
-  // In demo mode (Supabase not configured), skip all auth screens and go straight to app
-  const isDemoMode = !isSupabaseConfigured()
-
-  // Auth screens — only accessible when Supabase is configured
-  if (!isDemoMode) {
+  // Landing page — always show when unauthenticated
+  if (authState === 'unauthenticated') {
+    // Auth screens take priority over landing page if user navigated to them
     if (currentView === 'signup') {
       return <SignUp onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
     }
@@ -1512,25 +1409,19 @@ export default function Home() {
     if (currentView === 'forgot-password') {
       return <ForgotPassword onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
     }
-
-    // If trying to access app but not authenticated, redirect to signup
-    if (!isAuthenticated) {
-      return <SignUp onSwitch={handleAuthSwitch} onSuccess={handleAuthSuccess} />
-    }
+    // Default: show landing page
+    return <LandingPage onEnterApp={handleEnterApp} />
   }
 
-  // App views
-  // Skip intro if not on landing page or if already played
-  const showIntro = currentView === 'landing' && !introComplete
+  // Authenticated — render the app
+  // If user somehow ends up on an auth view, redirect to dashboard
+  if (currentView === 'signup' || currentView === 'signin' || currentView === 'forgot-password' || currentView === 'landing') {
+    setCurrentView('dashboard')
+  }
 
   return (
-    <>
-      {showIntro && (
-        <CinematicIntro onComplete={() => setIntroComplete(true)} />
-      )}
-      <AppShell>
-        <AppContent />
-      </AppShell>
-    </>
+    <AppShell>
+      <AppContent />
+    </AppShell>
   )
 }
