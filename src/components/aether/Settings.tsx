@@ -50,8 +50,6 @@ export function Settings() {
   const {
     dailySummary,
     setDailySummary,
-    weeklyRecap,
-    setWeeklyRecap,
     autoTagging,
     setAutoTagging,
     defaultCapture,
@@ -477,21 +475,7 @@ export function Settings() {
               </div>
               <Switch checked={dailySummary} onCheckedChange={setDailySummary} />
             </div>
-            <div className="h-px bg-border" />
-            <div className="flex items-center justify-between py-3 min-h-[48px] active:bg-muted/50 rounded-lg px-0 transition-colors">
-              <div className="flex items-center gap-3">
-                <Bell className="size-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    Weekly recap email
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Weekly digest every Sunday
-                  </p>
-                </div>
-              </div>
-              <Switch checked={weeklyRecap} onCheckedChange={setWeeklyRecap} />
-            </div>
+
           </div>
 
           {/* Divider */}

@@ -6,7 +6,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { useAetherStore } from '@/store/aether-store'
 import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
-import { getProfile, fetchMemories, fetchCollections } from '@/lib/supabase/data'
+import { getProfile, ensureProfile, fetchMemories, fetchCollections, getInitials } from '@/lib/supabase/data'
 import { initOfflineDB, getCachedMemories, getCachedCollections, getSyncQueueCount } from '@/lib/offline-db'
 import { onSyncStatus, onSyncComplete } from '@/lib/sync-engine'
 import AppShell from '@/components/aether/AppShell'
@@ -224,7 +224,7 @@ function Navbar({ onEnterApp }: { onEnterApp: () => void }) {
       transition={{ duration: 0.6, ease: 'easeOut' }}
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-[#FFFAF5]/90 backdrop-blur-xl shadow-sm border-b border-[#1a1a2e]/5'
+          ? 'bg-[#07070f]/90 backdrop-blur-xl border-b border-white/5'
           : 'bg-transparent'
       }`}
     >
@@ -237,7 +237,7 @@ function Navbar({ onEnterApp }: { onEnterApp: () => void }) {
         {/* Nav Links (Desktop) */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <a key={link.href} href={link.href} className="text-sm text-[#1a1a2e]/60 hover:text-[#9D8BA7] transition-colors">{link.label}</a>
+            <a key={link.href} href={link.href} className="text-sm text-white/60 hover:text-[#9D8BA7] transition-colors">{link.label}</a>
           ))}
         </div>
 
@@ -254,7 +254,7 @@ function Navbar({ onEnterApp }: { onEnterApp: () => void }) {
           {/* Hamburger — mobile only */}
           <button
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="md:hidden h-10 w-10 rounded-xl flex items-center justify-center text-[#1a1a2e]/70 hover:bg-[#1a1a2e]/5 transition-colors"
+            className="md:hidden h-10 w-10 rounded-xl flex items-center justify-center text-white/70 hover:bg-white/5 transition-colors"
             aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
             {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -270,7 +270,7 @@ function Navbar({ onEnterApp }: { onEnterApp: () => void }) {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="md:hidden overflow-hidden border-t border-[#1a1a2e]/5 bg-[#FFFAF5]/95 backdrop-blur-xl"
+            className="md:hidden overflow-hidden border-t border-white/5 bg-[#07070f]/95 backdrop-blur-xl"
           >
             <div className="px-4 py-4 space-y-1">
               {navLinks.map((link) => (
@@ -278,7 +278,7 @@ function Navbar({ onEnterApp }: { onEnterApp: () => void }) {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block px-4 py-3 rounded-xl text-base text-[#1a1a2e]/70 hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 transition-colors min-h-[44px] flex items-center"
+                  className="block px-4 py-3 rounded-xl text-base text-white/70 hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 transition-colors min-h-[44px] flex items-center"
                 >
                   {link.label}
                 </a>
@@ -308,10 +308,10 @@ function HeroSection({ onEnterApp }: { onEnterApp: () => void }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-sm border border-[#9D8BA7]/15 rounded-full px-4 py-1.5 mb-4 sm:mb-8 shadow-sm"
+          className="inline-flex items-center gap-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-full px-4 py-1.5 mb-4 sm:mb-8 shadow-sm"
         >
           <span className="h-2 w-2 rounded-full bg-[#9D8BA7] animate-pulse" />
-          <span className="text-xs font-medium text-[#1a1a2e]/70">Your AI-powered second brain</span>
+          <span className="text-xs font-medium text-white/70">Your AI-powered second brain</span>
         </motion.div>
 
         {/* Headline */}
@@ -319,7 +319,7 @@ function HeroSection({ onEnterApp }: { onEnterApp: () => void }) {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.8 }}
-          className="font-serif text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[#1a1a2e] leading-[1.05] tracking-tight mb-3 sm:mb-6"
+          className="font-serif text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.05] tracking-tight mb-3 sm:mb-6"
         >
           Forget{' '}
           <span className="bg-gradient-to-r from-[#9D8BA7] via-[#B8A8C4] to-[#9D8BA7] bg-clip-text text-transparent animate-gradient">
@@ -333,7 +333,7 @@ function HeroSection({ onEnterApp }: { onEnterApp: () => void }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.6 }}
-          className="text-base sm:text-lg md:text-xl text-[#1a1a2e]/50 max-w-2xl mx-auto mb-4 sm:mb-8 leading-relaxed"
+          className="text-base sm:text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-4 sm:mb-8 leading-relaxed"
         >
           Aether remembers everything — so you don&apos;t have to. Capture ideas, voice notes, links, and more. 
           Retrieve any memory instantly with natural language AI search.
@@ -355,7 +355,7 @@ function HeroSection({ onEnterApp }: { onEnterApp: () => void }) {
           </button>
           <a
             href="#how-it-works"
-            className="inline-flex items-center gap-2 text-[#1a1a2e]/60 hover:text-[#9D8BA7] text-base font-medium transition-colors duration-300 group"
+            className="inline-flex items-center gap-2 text-white/60 hover:text-[#9D8BA7] text-base font-medium transition-colors duration-300 group"
           >
             See how it works
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-1 transition-transform"><path d="m9 18 6-6-6-6"/></svg>
@@ -367,13 +367,13 @@ function HeroSection({ onEnterApp }: { onEnterApp: () => void }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2, duration: 0.8 }}
-          className="mt-6 sm:mt-12 flex items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-[#1a1a2e]/30"
+          className="mt-6 sm:mt-12 flex items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-white/30"
         >
           <div className="hidden xs:flex -space-x-2">
             {['A', 'S', 'M', 'J'].map((initial, i) => (
               <div
                 key={i}
-                className="h-7 w-7 sm:h-8 sm:w-8 rounded-full border-2 border-[#FFFAF5] flex items-center justify-center text-[10px] sm:text-xs font-semibold text-white"
+                className="h-7 w-7 sm:h-8 sm:w-8 rounded-full border-2 border-[#07070f] flex items-center justify-center text-[10px] sm:text-xs font-semibold text-white"
                 style={{ backgroundColor: ['#9D8BA7', '#B8A8C4', '#7A6B85', '#6D597A'][i] }}
               >
                 {initial}
@@ -449,10 +449,10 @@ function FeaturesSection() {
           className="text-center mb-6 sm:mb-12"
         >
           <span className="inline-block text-xs font-semibold text-[#9D8BA7] uppercase tracking-widest mb-3">Features</span>
-          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
+          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
             Everything your brain needs
           </h2>
-          <p className="text-[#1a1a2e]/50 text-base sm:text-lg max-w-2xl mx-auto">
+          <p className="text-white/50 text-base sm:text-lg max-w-2xl mx-auto">
             Capture, connect, and retrieve — Aether handles the rest.
           </p>
         </motion.div>
@@ -466,13 +466,13 @@ function FeaturesSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px', amount: 0.2 }}
               transition={{ delay: i * 0.1, duration: 0.5 }}
-              className="group bg-white/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-[#1a1a2e]/5 shadow-sm hover:shadow-lg md:hover:-translate-y-1 transition-all duration-300"
+              className="group bg-white/5 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/5 shadow-sm hover:shadow-lg md:hover:-translate-y-1 transition-all duration-300"
             >
               <div className="h-12 w-12 rounded-xl bg-[#9D8BA7]/10 flex items-center justify-center text-[#9D8BA7] mb-4 group-hover:bg-[#9D8BA7]/15 group-hover:scale-110 transition-all duration-300">
                 {feature.icon}
               </div>
-              <h3 className="text-lg font-bold text-[#1a1a2e] mb-2">{feature.title}</h3>
-              <p className="text-sm text-[#1a1a2e]/50 leading-relaxed">{feature.description}</p>
+              <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
+              <p className="text-sm text-white/50 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </div>
@@ -520,7 +520,7 @@ const stepIconMap: Record<string, React.ReactNode> = {
 
 function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="relative py-12 sm:py-24 bg-white/40">
+    <section id="how-it-works" className="relative py-12 sm:py-24 bg-white/[0.02]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Section Header */}
         <motion.div
@@ -531,7 +531,7 @@ function HowItWorksSection() {
           className="text-center mb-6 sm:mb-12"
         >
           <span className="inline-block text-xs font-semibold text-[#9D8BA7] uppercase tracking-widest mb-3">How It Works</span>
-          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-[#1a1a2e] mb-4">
+          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
             Three steps to a perfect memory
           </h2>
         </motion.div>
@@ -562,8 +562,8 @@ function HowItWorksSection() {
                 </span>
               </div>
 
-              <h3 className="text-xl font-bold text-[#1a1a2e] mb-3">{step.title}</h3>
-              <p className="text-sm text-[#1a1a2e]/50 leading-relaxed max-w-xs mx-auto">{step.description}</p>
+              <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
+              <p className="text-sm text-white/50 leading-relaxed max-w-xs mx-auto">{step.description}</p>
             </motion.div>
           ))}
         </div>
@@ -612,10 +612,10 @@ function AiChatDemo() {
           className="text-center mb-6 sm:mb-12"
         >
           <span className="inline-block text-xs font-semibold text-[#9D8BA7] uppercase tracking-widest mb-3">Ask Aether</span>
-          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
+          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
             Your memories, one question away
           </h2>
-          <p className="text-[#1a1a2e]/50 text-base sm:text-lg max-w-2xl mx-auto">
+          <p className="text-white/50 text-base sm:text-lg max-w-2xl mx-auto">
             Ask in natural language and Aether retrieves the right memory instantly.
           </p>
         </motion.div>
@@ -626,14 +626,14 @@ function AiChatDemo() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-50px', amount: 0.2 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-[#9D8BA7]/10 border border-[#1a1a2e]/5 overflow-hidden max-w-2xl mx-2 sm:mx-auto"
+          className="bg-[#0f0f1a] rounded-2xl sm:rounded-3xl shadow-2xl shadow-[#9D8BA7]/10 border border-white/10 overflow-hidden max-w-2xl mx-2 sm:mx-auto"
         >
           {/* Window header */}
-          <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-[#1a1a2e]/5 bg-[#FFFAF5]">
+          <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-b border-white/10 bg-[#0a0a15]">
             <AetherLogo size={32} />
             <div>
-              <p className="text-sm font-semibold text-[#1a1a2e]">Aether</p>
-              <p className="text-xs text-[#1a1a2e]/40">AI Search</p>
+              <p className="text-sm font-semibold text-white">Aether</p>
+              <p className="text-xs text-white/40">AI Search</p>
             </div>
             <div className="ml-auto flex items-center gap-1.5">
               <div className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -645,7 +645,7 @@ function AiChatDemo() {
           <div className="p-4 sm:p-6 min-h-[180px] sm:min-h-[280px] max-h-[400px] overflow-y-auto space-y-4">
             {messages.length === 0 && !isTyping && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-[#1a1a2e]/30 text-sm mb-4">Click to see Aether in action</p>
+                <p className="text-white/30 text-sm mb-4">Click to see Aether in action</p>
                 <button
                   onClick={handleDemoClick}
                   className="bg-[#9D8BA7]/10 hover:bg-[#9D8BA7]/20 text-[#9D8BA7] rounded-full px-6 py-2.5 text-sm font-medium transition-all duration-300"
@@ -667,7 +667,7 @@ function AiChatDemo() {
                   className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                     msg.role === 'user'
                       ? 'bg-[#9D8BA7] text-white rounded-br-md'
-                      : 'bg-[#FFFAF5] text-[#1a1a2e] border border-[#1a1a2e]/5 rounded-bl-md'
+                      : 'bg-white/5 text-white/80 border border-white/10 rounded-bl-md'
                   }`}
                 >
                   {msg.text}
@@ -677,7 +677,7 @@ function AiChatDemo() {
 
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-[#FFFAF5] border border-[#1a1a2e]/5 rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-md px-4 py-3">
                   <div className="flex items-center gap-1.5">
                     {[0, 1, 2].map((i) => (
                       <motion.div
@@ -694,14 +694,14 @@ function AiChatDemo() {
           </div>
 
           {/* Input bar */}
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-[#1a1a2e]/5 bg-white/50">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-white/10 bg-[#0f0f1a]/50">
             <div className="flex items-center gap-3">
               <input
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ask Aether anything..."
-                className="flex-1 bg-[#FFFAF5] border border-[#1a1a2e]/5 rounded-full px-4 py-2.5 sm:py-3 text-sm text-[#1a1a2e] placeholder:text-[#1a1a2e]/30 focus:outline-none focus:border-[#9D8BA7]/30 transition-colors min-h-[44px]"
+                className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-2.5 sm:py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#9D8BA7]/30 transition-colors min-h-[44px]"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleDemoClick()
                 }}
@@ -747,7 +747,7 @@ const testimonials = [
 
 function TestimonialsSection() {
   return (
-    <section className="relative py-12 sm:py-24 bg-white/40">
+    <section className="relative py-12 sm:py-24 bg-white/[0.02]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -757,7 +757,7 @@ function TestimonialsSection() {
           className="text-center mb-6 sm:mb-12"
         >
           <span className="inline-block text-xs font-semibold text-[#9D8BA7] uppercase tracking-widest mb-3">Testimonials</span>
-          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
+          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
             People love their second brain
           </h2>
         </motion.div>
@@ -770,7 +770,7 @@ function TestimonialsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px', amount: 0.2 }}
               transition={{ delay: i * 0.15, duration: 0.5 }}
-              className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-[#1a1a2e]/5 shadow-sm hover:shadow-md transition-shadow duration-300"
+              className="bg-white/5 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/5 shadow-sm hover:shadow-md transition-shadow duration-300"
             >
               {/* Stars */}
               <div className="flex gap-1 mb-4">
@@ -779,7 +779,7 @@ function TestimonialsSection() {
                 ))}
               </div>
 
-              <p className="text-sm text-[#1a1a2e]/70 leading-relaxed mb-3 sm:mb-6 italic">
+              <p className="text-sm text-white/70 leading-relaxed mb-3 sm:mb-6 italic">
                 &ldquo;{t.quote}&rdquo;
               </p>
 
@@ -788,8 +788,8 @@ function TestimonialsSection() {
                   {t.initials}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#1a1a2e]">{t.author}</p>
-                  <p className="text-xs text-[#1a1a2e]/40">{t.role}</p>
+                  <p className="text-sm font-semibold text-white">{t.author}</p>
+                  <p className="text-xs text-white/40">{t.role}</p>
                 </div>
               </div>
             </motion.div>
@@ -816,10 +816,10 @@ function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
           className="text-center mb-6 sm:mb-12"
         >
           <span className="inline-block text-xs font-semibold text-[#9D8BA7] uppercase tracking-widest mb-3">Pricing</span>
-          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
+          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
             Start free, grow forever
           </h2>
-          <p className="text-[#1a1a2e]/50 text-base sm:text-lg max-w-2xl mx-auto">
+          <p className="text-white/50 text-base sm:text-lg max-w-2xl mx-auto">
             No credit card required. Upgrade when you&apos;re ready.
           </p>
         </motion.div>
@@ -831,19 +831,19 @@ function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-50px', amount: 0.2 }}
             transition={{ duration: 0.5 }}
-            className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#1a1a2e]/5 shadow-sm"
+            className="bg-white/5 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-white/5 shadow-sm"
           >
             <div className="mb-6">
-              <h3 className="font-serif text-2xl font-bold text-[#1a1a2e] mb-1">Seed</h3>
-              <p className="text-sm text-[#1a1a2e]/40">Get started for free</p>
+              <h3 className="font-serif text-2xl font-bold text-white mb-1">Seed</h3>
+              <p className="text-sm text-white/40">Get started for free</p>
             </div>
             <div className="mb-6">
-              <span className="text-4xl font-bold text-[#1a1a2e]">$0</span>
-              <span className="text-[#1a1a2e]/40 text-sm">/month</span>
+              <span className="text-4xl font-bold text-white">$0</span>
+              <span className="text-white/40 text-sm">/month</span>
             </div>
             <ul className="space-y-3 mb-8">
               {['50 memories/month', 'Basic AI search', 'Text & voice capture', 'Daily recaps'].map((f) => (
-                <li key={f} className="flex items-center gap-2.5 text-sm text-[#1a1a2e]/60">
+                <li key={f} className="flex items-center gap-2.5 text-sm text-white/60">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9D8BA7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                   {f}
                 </li>
@@ -851,7 +851,7 @@ function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
             </ul>
             <button
               onClick={onEnterApp}
-              className="w-full py-3 rounded-xl border border-[#1a1a2e]/10 text-[#1a1a2e]/70 font-medium text-sm hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/20 transition-all duration-300"
+              className="w-full py-3 rounded-xl border border-white/10 text-white/70 font-medium text-sm hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/20 transition-all duration-300"
             >
               Get Started Free
             </button>
@@ -871,16 +871,16 @@ function PricingSection({ onEnterApp }: { onEnterApp: () => void }) {
             </div>
 
             <div className="mb-6">
-              <h3 className="font-serif text-2xl font-bold text-[#1a1a2e] mb-1">Bloom</h3>
-              <p className="text-sm text-[#1a1a2e]/40">Unlimited memory power</p>
+              <h3 className="font-serif text-2xl font-bold text-white mb-1">Bloom</h3>
+              <p className="text-sm text-white/40">Unlimited memory power</p>
             </div>
             <div className="mb-6">
-              <span className="text-4xl font-bold text-[#1a1a2e]">$6</span>
-              <span className="text-[#1a1a2e]/40 text-sm">/month</span>
+              <span className="text-4xl font-bold text-white">$6</span>
+              <span className="text-white/40 text-sm">/month</span>
             </div>
             <ul className="space-y-3 mb-8">
               {['Unlimited memories', 'Advanced AI search & insights', 'All capture types', 'Daily & weekly recaps', 'Priority support', 'Smart connections'].map((f) => (
-                <li key={f} className="flex items-center gap-2.5 text-sm text-[#1a1a2e]/60">
+                <li key={f} className="flex items-center gap-2.5 text-sm text-white/60">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9D8BA7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                   {f}
                 </li>
@@ -912,12 +912,12 @@ function CtaSection({ onEnterApp }: { onEnterApp: () => void }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-100px', amount: 0.2 }}
           transition={{ duration: 0.6 }}
-          className="text-center bg-gradient-to-br from-[#9D8BA7]/10 via-[#9D8BA7]/5 to-[#E0F2F1]/20 rounded-2xl sm:rounded-3xl p-5 sm:p-12 md:p-16 border border-[#9D8BA7]/10"
+          className="text-center bg-gradient-to-br from-[#9D8BA7]/5 via-[#9D8BA7]/3 to-transparent rounded-2xl sm:rounded-3xl p-5 sm:p-12 md:p-16 border border-white/5"
         >
-          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-[#1a1a2e] mb-4">
+          <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
             Ready to never forget again?
           </h2>
-          <p className="text-[#1a1a2e]/50 text-base sm:text-lg max-w-xl mx-auto mb-6 sm:mb-8">
+          <p className="text-white/50 text-base sm:text-lg max-w-xl mx-auto mb-6 sm:mb-8">
             Join thousands of thinkers who trust Aether as their second brain.
           </p>
           <button
@@ -939,21 +939,21 @@ function CtaSection({ onEnterApp }: { onEnterApp: () => void }) {
 
 function Footer() {
   return (
-    <footer className="border-t border-[#1a1a2e]/5 bg-white/30">
+    <footer className="border-t border-white/5 bg-white/[0.02]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between sm:gap-4">
           <div className="flex items-center gap-2.5">
             <AetherLogo size={28} showText />
           </div>
 
-          <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-[#1a1a2e]/40">
+          <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm text-white/30">
             <a href="#features" className="hover:text-[#9D8BA7] transition-colors">Features</a>
             <a href="#pricing" className="hover:text-[#9D8BA7] transition-colors">Pricing</a>
             <a href="#" className="hover:text-[#9D8BA7] transition-colors">Privacy</a>
             <a href="#" className="hover:text-[#9D8BA7] transition-colors">Terms</a>
           </div>
 
-          <p className="text-[10px] sm:text-xs text-[#1a1a2e]/30">
+          <p className="text-[10px] sm:text-xs text-white/40">
             Made with care in San Francisco, CA
           </p>
         </div>
@@ -968,7 +968,7 @@ function Footer() {
 
 function LandingPage({ onEnterApp }: { onEnterApp: () => void }) {
   return (
-    <div className="min-h-screen flex flex-col bg-[#FFFAF5] text-[#1a1a2e]">
+    <div className="min-h-screen flex flex-col bg-[#07070f] text-white/90">
       {/* Animated Canvas Background */}
       <div className="fixed inset-0 pointer-events-none">
         <AnimatedBackground />
@@ -1164,10 +1164,36 @@ export default function Home() {
 
     setIsLoadingMemories(true)
     try {
-      const profile = await getProfile(userId)
+      // Use ensureProfile instead of getProfile — this creates the profile
+      // row if it doesn't exist yet (e.g. after email confirmation)
+      const profile = await ensureProfile(userId)
       if (profile) {
         setUser(profile)
         setProfile(profile)
+      } else {
+        // Profile doesn't exist yet — create from session data
+        const supabase = createClient()
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        const fallbackName = authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || ''
+        const fallbackEmail = authUser?.email || ''
+        const fallbackProfile = {
+          id: userId,
+          name: fallbackName,
+          email: fallbackEmail,
+          initials: getInitials(fallbackName || fallbackEmail),
+          plan: 'free' as const,
+        }
+        // Try to create the profile in Supabase so it exists next time
+        try {
+          await supabase.from('profiles').upsert({
+            id: userId,
+            email: fallbackEmail,
+            name: fallbackName,
+            plan: 'free',
+          }, { onConflict: 'id' })
+        } catch {}
+        setUser(fallbackProfile)
+        setProfile(fallbackProfile)
       }
       try {
         const [memResult, collections] = await Promise.all([
@@ -1338,9 +1364,11 @@ export default function Home() {
           const email = session.user.email || ''
           const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0]
           const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || email[0].toUpperCase()
-          setUser({ name, email, initials })
+          // Set basic user info immediately for instant UI update
+          setUser({ name, email, initials, id: session.user.id, plan: 'free' })
           setAuthState('authenticated')
           setCurrentView('dashboard')
+          // loadUserData will call ensureProfile to create/load the full profile
           loadUserData(session.user.id).catch((err) =>
             console.warn('[Aether] Background data load failed:', err)
           )

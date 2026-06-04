@@ -36,6 +36,73 @@ export async function signOut() {
 
 // ─── PROFILES ───
 
+/**
+ * Ensure a profile row exists in the `profiles` table for the given user.
+ * If the profile doesn't exist yet (e.g. just signed up, or email confirmation
+ * just completed), it will be created with data from auth.user_metadata.
+ * If it already exists, this is a no-op.
+ * Uses upsert with onConflict so it's safe to call multiple times.
+ */
+export async function ensureProfile(userId: string): Promise<UserProfile | null> {
+  const supabase = createClient()
+
+  // First, check if profile already exists
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id, name, email, avatar_url, plan')
+    .eq('id', userId)
+    .single()
+
+  if (existingProfile) {
+    return {
+      id: existingProfile.id,
+      name: existingProfile.name || '',
+      email: existingProfile.email || '',
+      initials: getInitials(existingProfile.name || existingProfile.email || ''),
+      avatarUrl: existingProfile.avatar_url,
+      plan: existingProfile.plan || 'free',
+    }
+  }
+
+  // Profile doesn't exist — get user info from auth and create it
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || ''
+  const email = user.email || ''
+
+  const { error: upsertError } = await supabase
+    .from('profiles')
+    .upsert({
+      id: userId,
+      email,
+      name,
+      plan: 'free',
+    }, { onConflict: 'id' })
+
+  if (upsertError) {
+    console.warn('[Aether] Profile creation warning:', upsertError.message)
+  }
+
+  // Return the profile (fetch again to be sure)
+  const { data: newProfile } = await supabase
+    .from('profiles')
+    .select('id, name, email, avatar_url, plan')
+    .eq('id', userId)
+    .single()
+
+  if (!newProfile) return null
+
+  return {
+    id: newProfile.id,
+    name: newProfile.name || '',
+    email: newProfile.email || '',
+    initials: getInitials(newProfile.name || newProfile.email || ''),
+    avatarUrl: newProfile.avatar_url,
+    plan: newProfile.plan || 'free',
+  }
+}
+
 export async function getProfile(userId: string): Promise<UserProfile | null> {
   const supabase = createClient()
   const { data, error } = await supabase
@@ -615,7 +682,7 @@ function mapMemoryFromDb(row: any): Memory {
   }
 }
 
-function getInitials(name: string): string {
+export function getInitials(name: string): string {
   if (!name) return ''
   const parts = name.trim().split(/\s+/)
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()

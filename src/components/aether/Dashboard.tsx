@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, memo, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, Loader2, Eye, Sparkles, ClipboardPaste, Camera, ArrowUp, Mail, Search, Settings } from 'lucide-react'
+import { Mic, FileText, Link2, ImageIcon, X, Upload, Plus, Brain, Loader2, Eye, Sparkles, ClipboardPaste, Camera, ArrowUp, Search, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAetherStore } from '@/store/aether-store'
 import { createMemory, getMemoryCount, updateMemoryById } from '@/lib/supabase/data'
@@ -1490,8 +1490,7 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
   const { toast } = useToast()
   const [captureInput, setCaptureInput] = useState('')
   const [isCapturing, setIsCapturing] = useState(false)
-  const [isSendingRecap, setIsSendingRecap] = useState(false)
-  const [recapCooldown, setRecapCooldown] = useState(false)
+
   const inputRef = useRef<HTMLInputElement>(null)
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false)
 
@@ -1733,48 +1732,6 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
     setCaptureModalOpen(true)
   }, [setActiveCaptureTab, setCaptureModalOpen])
 
-  // ─── Weekly Recap Email Handler ───
-  const handleSendRecap = useCallback(async () => {
-    if (isSendingRecap || recapCooldown) return
-
-    // Need user info from the store
-    const currentUser = user ?? useAetherStore.getState().user
-    if (!currentUser?.id || !currentUser?.email) {
-      toast({ title: 'Please sign in first', description: 'You need to be logged in to send a recap.' })
-      return
-    }
-
-    setIsSendingRecap(true)
-
-    try {
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-      const res = await fetch('https://tbompcwyijpnzwlttkq.supabase.co/functions/v1/weekly-recap-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${anonKey}`,
-        },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          userEmail: currentUser.email,
-        }),
-      })
-
-      if (res.ok) {
-        toast({ title: 'Recap sent to your inbox! ✉️', description: 'Check your email for your weekly summary.' })
-      } else {
-        toast({ title: 'Could not send recap', description: 'Something went wrong. Please try again later.' })
-      }
-    } catch {
-      toast({ title: 'Could not send recap', description: 'Network error. Please check your connection and try again.' })
-    } finally {
-      setIsSendingRecap(false)
-      // 5-second cooldown to prevent spamming
-      setRecapCooldown(true)
-      setTimeout(() => setRecapCooldown(false), 5000)
-    }
-  }, [user, isSendingRecap, recapCooldown, toast])
-
   // Count memories this week for stats bar
   const memoriesThisWeek = useMemo(() => {
     const now = new Date()
@@ -1928,26 +1885,6 @@ export default function Dashboard({ onMemoryClick }: DashboardProps) {
               <h2 className={`text-sm md:text-base font-semibold tracking-wide uppercase ${darkMode ? 'text-white/40' : 'text-gray-400'}`}>
                 Recent Memories
               </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleSendRecap}
-                  disabled={isSendingRecap || recapCooldown}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                  style={{
-                    background: 'var(--glass-bg)',
-                    border: '1px solid var(--glass-border)',
-                    color: 'var(--text-muted)',
-                  }}
-                  aria-label="Send weekly recap email"
-                >
-                  {isSendingRecap ? (
-                    <Loader2 className="size-3 animate-spin" />
-                  ) : (
-                    <Mail className="size-3" />
-                  )}
-                  <span className="hidden sm:inline">{isSendingRecap ? 'Sending...' : recapCooldown ? 'Sent ✓' : 'Weekly Recap'}</span>
-                </button>
-              </div>
             </div>
 
             {isLoadingMemories ? (

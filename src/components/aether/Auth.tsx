@@ -184,7 +184,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
 
     try {
       const supabase = createClient()
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -195,6 +195,24 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
       if (signUpError) {
         setError(signUpError.message)
         return
+      }
+
+      // If Supabase auto-confirms (no email verification), the user is
+      // immediately authenticated. Try to create a profile row in that case.
+      // If email confirmation is required, the profile will be created in
+      // the auth callback route when they confirm.
+      if (signUpData.user && signUpData.session) {
+        // Auto-confirmed: user is already signed in
+        try {
+          await supabase.from('profiles').upsert({
+            id: signUpData.user.id,
+            email,
+            name,
+            plan: 'free',
+          }, { onConflict: 'id' })
+        } catch {
+          // Profile creation failure should not block signup
+        }
       }
 
       // Show confirmation screen INSTANTLY — no additional processing
@@ -424,6 +442,33 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
       if (signInError) {
         setError(signInError.message)
         return
+      }
+
+      // After sign-in, ensure profile exists in the `profiles` table.
+      // This handles users who signed up but may not have a profile row yet
+      // (e.g. email confirmation just completed, or auto-confirm was enabled).
+      // Fire-and-forget — don't block the UI.
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', authUser.id)
+            .single()
+
+          if (!existingProfile) {
+            const name = authUser.user_metadata?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || ''
+            await supabase.from('profiles').upsert({
+              id: authUser.id,
+              email: authUser.email,
+              name,
+              plan: 'free',
+            }, { onConflict: 'id' })
+          }
+        }
+      } catch {
+        // Profile check/creation failure should NOT block sign-in
       }
 
       // IMMEDIATELY call onSuccess — this navigates to dashboard INSTANTLY.

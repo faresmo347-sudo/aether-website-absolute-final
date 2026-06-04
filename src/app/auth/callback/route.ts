@@ -47,6 +47,34 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       // Successfully exchanged code for session.
+      // Now ensure the user has a profile row in the `profiles` table.
+      // This handles the email confirmation flow where the user signed up
+      // and just confirmed their email — the profile may not exist yet.
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const name = user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || ''
+          const email = user.email || ''
+
+          // Upsert profile — if it already exists, this is a no-op
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: user.id,
+              email,
+              name,
+              plan: 'free',
+            }, { onConflict: 'id' })
+
+          if (profileError) {
+            console.warn('[Aether] Profile creation in callback warning:', profileError.message)
+          }
+        }
+      } catch (profileErr) {
+        // Profile creation failure should NOT block the redirect
+        console.warn('[Aether] Profile creation in callback failed:', profileErr)
+      }
+
       // The client-side onAuthStateChange will detect the session
       // and load the dashboard automatically.
       return res
