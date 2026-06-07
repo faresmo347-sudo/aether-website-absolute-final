@@ -162,16 +162,20 @@ export function Settings() {
   // ──── Delete account handler ────
   const handleDeleteAccount = useCallback(async () => {
     try {
+      // Mark as signed out so demo mode doesn't re-create the user
+      const { setSignedOut } = useAetherStore.getState()
+      setSignedOut(true)
       // Clear all local state first for instant feedback
       clearLocalState()
       await signOut()
-      router.replace('/')
+      // Use hard navigation to ensure clean page load
+      window.location.href = '/'
       toast({ title: 'Signed out', description: 'Your account session has been ended.' })
     } catch (err) {
       console.error('Sign out failed:', err)
       toast({ title: 'Error', description: 'Could not sign out. Please try again.', variant: 'destructive' })
     }
-  }, [router, toast])
+  }, [toast])
 
   // ──── Export JSON handler ────
   const handleExportJson = useCallback(async () => {
@@ -352,16 +356,20 @@ export function Settings() {
   // ──── Logout handler ────
   const handleLogout = useCallback(async () => {
     try {
+      // Mark as signed out so demo mode doesn't re-create the user
+      const { setSignedOut } = useAetherStore.getState()
+      setSignedOut(true)
       // Clear all local state first for instant feedback
       clearLocalState()
       await signOut()
-      router.replace('/')
+      // Use hard navigation to ensure clean page load
+      window.location.href = '/'
     } catch (err) {
       console.error('Sign out failed:', err)
       // Even if signOut fails, redirect to be safe
-      router.replace('/')
+      window.location.href = '/'
     }
-  }, [router])
+  }, [])
 
   return (
     <div className="bg-background text-foreground flex-1 min-h-0 overflow-y-auto ios-scroll">

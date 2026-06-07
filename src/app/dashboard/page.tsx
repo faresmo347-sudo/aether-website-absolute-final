@@ -180,6 +180,8 @@ export default function DashboardPage() {
     setProfile({ name: '', email: '', initials: '' })
     setMemories([])
     setCollections([])
+    // Mark as signed out so demo mode doesn't re-create the user
+    useAetherStore.getState().setSignedOut(true)
     // Clear localStorage to prevent stale data on next login
     try {
       localStorage.removeItem('aether-memories')
@@ -197,6 +199,13 @@ export default function DashboardPage() {
 
     const supabase = createClientSafe()
     if (!supabase) {
+      // Supabase not configured — check if user explicitly signed out
+      const currentSignedOut = useAetherStore.getState().signedOut
+      if (currentSignedOut) {
+        // User explicitly signed out — redirect to landing page
+        clearAllStateAndRedirect()
+        return
+      }
       // Supabase not configured — allow demo mode with a mock user
       // This lets users preview the dashboard UI before configuring Supabase
       console.warn('[Aether] Supabase not configured — running in demo mode.')

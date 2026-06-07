@@ -90,6 +90,8 @@ interface AetherState {
   setAuthScreen: (screen: 'signup' | 'signin' | 'forgot') => void
   isSessionLoading: boolean
   setIsSessionLoading: (v: boolean) => void
+  signedOut: boolean
+  setSignedOut: (v: boolean) => void
 
   // Navigation
   currentView: AppView
@@ -194,6 +196,8 @@ export const useAetherStore = create<AetherState>((set, get) => ({
   setAuthScreen: (screen) => set({ authScreen: screen }),
   isSessionLoading: false, // Start false — landing page shows immediately, auth check runs in background
   setIsSessionLoading: (v) => set({ isSessionLoading: v }),
+  signedOut: false,
+  setSignedOut: (v) => set({ signedOut: v }),
 
   // Navigation — hydrated from localStorage so users return to their last view
   currentView: initialCurrentView,

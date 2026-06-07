@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Lock, User, ArrowLeft, Check, Loader2, Wifi, WifiOff } from 'lucide-react'
+import { Mail, Lock, User, ArrowLeft, Check, Loader2, Wifi, WifiOff, Sparkles } from 'lucide-react'
 import { AetherLogo } from '@/components/aether/AetherLogo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -90,6 +90,9 @@ export default function AuthPage() {
   const router = useRouter()
   const { setUser, setProfile } = useAetherStore()
   const [screen, setScreen] = useState<AuthScreen>('signin')
+
+  // Check if Supabase is configured — memoize the check so it only runs once
+  const isSupabaseConfigured = useMemo(() => !!createClientSafe(), [])
 
   // If already authenticated, redirect to dashboard
   useEffect(() => {
@@ -181,6 +184,30 @@ export default function AuthPage() {
           {screen === 'signin' && <SignInForm onSwitch={setScreen} onSuccess={handleAuthSuccess} />}
           {screen === 'signup' && <SignUpForm onSwitch={setScreen} onSuccess={handleAuthSuccess} />}
           {screen === 'forgot' && <ForgotForm onSwitch={setScreen} />}
+
+          {/* Demo Mode — shown when Supabase isn't configured */}
+          {!isSupabaseConfigured && (
+            <div className="mt-6 pt-6 border-t border-white/10">
+              <p className="text-center text-xs text-white/25 mb-3">
+                No account? Try the demo first.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  const store = useAetherStore.getState()
+                  store.setSignedOut(false) // Reset signed-out flag
+                  setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+                  setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+                  // Use hard navigation to ensure dashboard loads fresh
+                  window.location.href = '/dashboard'
+                }}
+                className="w-full flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-medium bg-white/[0.06] border border-white/10 text-white/60 hover:bg-white/[0.1] hover:text-white/80 hover:border-white/15 transition-all duration-200"
+              >
+                <Sparkles size={16} />
+                Try Demo Mode
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
