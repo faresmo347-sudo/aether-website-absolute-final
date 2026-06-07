@@ -5,7 +5,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 const IGNORED_PREFIXES = [
   '/api/',
   '/_next/',
-  '/auth/',
   '/favicon.ico',
   '/aether-icon.svg',
   '/aether-logo.png',
@@ -15,18 +14,34 @@ const IGNORED_PREFIXES = [
   '/robots.txt',
 ]
 
-// Routes that exist as actual Next.js pages or API routes
-const EXISTING_ROUTES = [
-  '/auth/callback',
-]
-
 // Routes that require authentication
 const PROTECTED_PATHS = [
   '/dashboard',
   '/ask',
   '/constellations',
-  '/settings',
+  '/collections',
   '/recaps',
+  '/settings',
+  '/memory',
+]
+
+// Routes that should redirect to dashboard if already authenticated
+const AUTH_ONLY_PATHS = [
+  '/auth',
+]
+
+// Actual Next.js page routes — these should NOT be rewritten to /
+const PAGE_ROUTES = [
+  '/dashboard',
+  '/auth',
+  '/privacy',
+  '/terms',
+  '/ask',
+  '/constellations',
+  '/collections',
+  '/recaps',
+  '/settings',
+  '/memory',
 ]
 
 export async function proxy(request: NextRequest) {
@@ -37,8 +52,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 2. For existing Next.js routes (like auth callback), refresh session
-  if (EXISTING_ROUTES.some((route) => pathname === route)) {
+  // 2. Skip for auth callback — just refresh session
+  if (pathname === '/auth/callback') {
     return updateSession(request)
   }
 
@@ -48,11 +63,12 @@ export async function proxy(request: NextRequest) {
   // 4. Auth-based route protection (lightweight cookie check — no server-side validation)
   const hasAuthCookies =
     request.cookies.get('sb-access-token')?.value ||
-    request.cookies.get('sb-refresh-token')?.value
-
-  const isProtectedPath = PROTECTED_PATHS.some((path) => pathname.startsWith(path))
+    request.cookies.get('sb-refresh-token')?.value ||
+    // Also check for Supabase project-specific cookie prefix
+    request.cookies.getAll().some((c) => c.name.startsWith('sb-') && c.value.length > 20)
 
   // If trying to access protected route without auth cookies → redirect to landing page
+  const isProtectedPath = PROTECTED_PATHS.some((path) => pathname.startsWith(path))
   if (isProtectedPath && !hasAuthCookies) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/'
@@ -64,9 +80,30 @@ export async function proxy(request: NextRequest) {
     return redirectResponse
   }
 
-  // 5. SPA routing: rewrite non-root paths to "/" so client-side router handles them.
-  //    This ensures /dashboard, /ask, /collections, /settings all load the app
-  //    instead of returning 404 on Vercel or direct URL access.
+  // 5. If accessing /auth with valid session → redirect to dashboard
+  const isAuthOnlyPath = AUTH_ONLY_PATHS.some((path) => pathname.startsWith(path))
+  if (isAuthOnlyPath && hasAuthCookies) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/dashboard'
+    const redirectResponse = NextResponse.redirect(redirectUrl)
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value)
+    })
+    return redirectResponse
+  }
+
+  // 6. For actual Next.js page routes, just pass through (Next.js will handle them)
+  const isPageRoute = PAGE_ROUTES.some((route) => pathname === route || pathname.startsWith(route + '/'))
+  if (isPageRoute) {
+    // Copy cookies from session refresh to the response
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      supabaseResponse.cookies.set(cookie.name, cookie.value)
+    })
+    return supabaseResponse
+  }
+
+  // 7. SPA fallback: for any other non-root, non-static path, rewrite to "/"
+  //    This ensures deep links that don't have a real page still load the app.
   if (pathname !== '/' && !pathname.includes('.')) {
     const rewriteUrl = request.nextUrl.clone()
     rewriteUrl.pathname = '/'

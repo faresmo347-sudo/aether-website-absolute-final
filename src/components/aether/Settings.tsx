@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   Bell,
@@ -47,6 +48,7 @@ import {
 import type { CaptureTab } from './types'
 
 export function Settings() {
+  const router = useRouter()
   const {
     dailySummary,
     setDailySummary,
@@ -60,7 +62,6 @@ export function Settings() {
     setProfile,
     memories,
     user,
-    setCurrentView,
   } = useAetherStore()
 
   const { toast } = useToast()
@@ -151,13 +152,13 @@ export function Settings() {
   const handleDeleteAccount = useCallback(async () => {
     try {
       await signOut()
-      setCurrentView('landing')
+      router.replace('/')
       toast({ title: 'Signed out', description: 'Your account session has been ended.' })
     } catch (err) {
       console.error('Sign out failed:', err)
       toast({ title: 'Error', description: 'Could not sign out. Please try again.', variant: 'destructive' })
     }
-  }, [setCurrentView, toast])
+  }, [router, toast])
 
   // ──── Export JSON handler ────
   const handleExportJson = useCallback(async () => {
@@ -339,11 +340,11 @@ export function Settings() {
   const handleLogout = useCallback(async () => {
     try {
       await signOut()
-      setCurrentView('landing')
+      router.replace('/')
     } catch (err) {
       console.error('Sign out failed:', err)
     }
-  }, [setCurrentView])
+  }, [router])
 
   return (
     <div className="bg-background text-foreground flex-1 min-h-0 overflow-y-auto ios-scroll">
