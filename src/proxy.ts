@@ -1,4 +1,4 @@
-import { updateSession } from '@/lib/supabase/middleware'
+import { updateSession, isSupabaseReachable, checkSupabaseReachability } from '@/lib/supabase/middleware'
 import { NextResponse, type NextRequest } from 'next/server'
 
 // Routes that should be handled by Next.js directly (API routes, static assets, etc.)
@@ -60,6 +60,9 @@ export async function proxy(request: NextRequest) {
   // 3. Refresh Supabase session — critical for auth across tabs & direct links
   const supabaseResponse = await updateSession(request)
 
+  // Check if the middleware detected Supabase as unreachable
+  const middlewareDetectedUnreachable = supabaseResponse.headers.get('x-supabase-unreachable') === '1'
+
   // 4. Auth-based route protection (lightweight cookie check — no server-side validation)
   const hasAuthCookies =
     request.cookies.get('sb-access-token')?.value ||
@@ -71,10 +74,25 @@ export async function proxy(request: NextRequest) {
   // This lets users preview the dashboard UI without Supabase credentials
   const supabaseConfigured = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 
-  // If trying to access protected route without auth cookies → redirect to landing page
-  // But only if Supabase is configured (otherwise we're in demo mode)
+  // Also skip redirects if Supabase is configured but recently detected as
+  // unreachable (paused project, DNS failure, etc.). This allows users to
+  // access the dashboard in demo mode even when Supabase is down.
   const isProtectedPath = PROTECTED_PATHS.some((path) => pathname.startsWith(path))
-  if (isProtectedPath && !hasAuthCookies && supabaseConfigured) {
+
+  // Determine if Supabase is unreachable: either the middleware told us,
+  // or we already cached it as unreachable.
+  let supabaseUnreachable = middlewareDetectedUnreachable || isSupabaseReachable() === false
+
+  // If we don't know yet (null) and this is a protected route without auth
+  // cookies, do a quick reachability check before deciding.
+  if (supabaseConfigured && isProtectedPath && !hasAuthCookies && !supabaseUnreachable && isSupabaseReachable() === null) {
+    const reachable = await checkSupabaseReachability()
+    supabaseUnreachable = !reachable
+  }
+
+  // If trying to access protected route without auth cookies → redirect to landing page
+  // But only if Supabase is configured AND reachable (otherwise we're in demo mode)
+  if (isProtectedPath && !hasAuthCookies && supabaseConfigured && !supabaseUnreachable) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/'
     const redirectResponse = NextResponse.redirect(redirectUrl)

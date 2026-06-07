@@ -15,7 +15,27 @@ import LandingPage from '@/components/aether/LandingPage'
    3. If authenticated: redirect to /dashboard.
    4. If NOT authenticated: render the <LandingPage />.
    5. Listen for SIGNED_OUT events to immediately show landing page.
+   6. If Supabase is unreachable/paused, timeout gracefully and
+      fall back to unauthenticated (landing page / demo mode).
    ═══════════════════════════════════════════════════════════════ */
+
+// Timeout for Supabase auth calls when the project may be paused/unreachable.
+const AUTH_TIMEOUT_MS = 5000
+
+/**
+ * Wraps a promise with a timeout. Returns a tuple of [result, timedOut].
+ * If the promise doesn't settle within the timeout, returns [null, true].
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<[result: T | null, timedOut: boolean]> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<[null, true]>((resolve) => {
+    timer = setTimeout(() => resolve([null, true]), ms)
+  })
+  return Promise.race([
+    promise.then((r) => [r, false] as [T, false]),
+    timeout,
+  ]).finally(() => clearTimeout(timer))
+}
 
 function SimpleSpinner() {
   return (
@@ -72,8 +92,21 @@ export default function Home() {
     const checkAuth = async () => {
       try {
         // Step 1: getSession() reads from local cookie storage (fast, no network)
-        const { data: { session } } = await supabase.auth.getSession()
+        // Add timeout in case the Supabase project is paused/unreachable
+        const [sessionResult, sessionTimedOut] = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_TIMEOUT_MS
+        )
         if (!mounted) return
+
+        if (sessionTimedOut) {
+          // Supabase is unreachable — treat as unauthenticated
+          console.warn('[Aether] Supabase getSession() timed out — Supabase may be paused/unreachable. Falling back to demo mode.')
+          setAuthState('unauthenticated')
+          return
+        }
+
+        const { data: { session } } = sessionResult
 
         if (!session?.user) {
           // No local session — definitely not authenticated
@@ -83,8 +116,21 @@ export default function Home() {
 
         // Step 2: Validate the session with the server.
         // A stale/expired session will return null user from getUser().
-        const { data: { user } } = await supabase.auth.getUser()
+        // Add timeout for the same unreachable-Supabase case.
+        const [userResult, userTimedOut] = await withTimeout(
+          supabase.auth.getUser(),
+          AUTH_TIMEOUT_MS
+        )
         if (!mounted) return
+
+        if (userTimedOut) {
+          // Supabase is unreachable — can't validate session, treat as unauthenticated
+          console.warn('[Aether] Supabase getUser() timed out — cannot validate session. Falling back to demo mode.')
+          setAuthState('unauthenticated')
+          return
+        }
+
+        const { data: { user } } = userResult
 
         if (user) {
           // Validated — redirect to dashboard
@@ -97,7 +143,11 @@ export default function Home() {
           setAuthState('unauthenticated')
         }
       } catch {
-        if (mounted) setAuthState('unauthenticated')
+        // Network error or other unexpected failure — treat as unauthenticated
+        if (mounted) {
+          console.warn('[Aether] Auth check failed — Supabase may be unreachable. Falling back to demo mode.')
+          setAuthState('unauthenticated')
+        }
       }
     }
 

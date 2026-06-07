@@ -12,6 +12,24 @@ import { createClientSafe } from '@/lib/supabase/client'
 import { useAetherStore } from '@/store/aether-store'
 import { getInitials } from '@/lib/supabase/data'
 
+// Timeout for Supabase auth calls when the project may be paused/unreachable.
+const AUTH_TIMEOUT_MS = 8000
+
+/**
+ * Wraps a promise with a timeout. Returns a tuple of [result, timedOut].
+ * If the promise doesn't settle within the timeout, returns [null, true].
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<[result: T | null, timedOut: boolean]> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<[null, true]>((resolve) => {
+    timer = setTimeout(() => resolve([null, true]), ms)
+  })
+  return Promise.race([
+    promise.then((r) => [r, false] as [T, false]),
+    timeout,
+  ]).finally(() => clearTimeout(timer))
+}
+
 /* ─────────── Types ─────────── */
 type AuthScreen = 'signin' | 'signup' | 'forgot'
 
@@ -90,6 +108,7 @@ export default function AuthPage() {
   const router = useRouter()
   const { setUser, setProfile } = useAetherStore()
   const [screen, setScreen] = useState<AuthScreen>('signin')
+  const [supabaseUnreachable, setSupabaseUnreachable] = useState(false)
 
   // Check if Supabase is configured — memoize the check so it only runs once
   const isSupabaseConfigured = useMemo(() => !!createClientSafe(), [])
@@ -98,10 +117,18 @@ export default function AuthPage() {
   useEffect(() => {
     const supabase = createClientSafe()
     if (!supabase) return // Not configured — stay on auth page
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS).then(([result, timedOut]) => {
+      if (timedOut) {
+        console.warn('[Aether] getSession() timed out on auth page — Supabase may be unreachable.')
+        setSupabaseUnreachable(true)
+        return
+      }
+      if (result?.data?.session?.user) {
         router.replace('/dashboard')
       }
+    }).catch(() => {
+      // Network error — Supabase likely unreachable
+      setSupabaseUnreachable(true)
     })
   }, [router])
 
@@ -185,8 +212,8 @@ export default function AuthPage() {
           {screen === 'signup' && <SignUpForm onSwitch={setScreen} onSuccess={handleAuthSuccess} />}
           {screen === 'forgot' && <ForgotForm onSwitch={setScreen} />}
 
-          {/* Demo Mode — shown when Supabase isn't configured */}
-          {!isSupabaseConfigured && (
+          {/* Demo Mode — shown when Supabase isn't configured OR unreachable */}
+          {(!isSupabaseConfigured || supabaseUnreachable) && (
             <div className="mt-6 pt-6 border-t border-white/10">
               <p className="text-center text-xs text-white/25 mb-3">
                 No account? Try the demo first.
@@ -237,10 +264,18 @@ function SignInForm({ onSwitch, onSuccess }: { onSwitch: (s: AuthScreen) => void
         return
       }
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      const [signInResult, signInTimedOut] = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        AUTH_TIMEOUT_MS
+      )
 
-      if (signInError) {
-        setError(signInError.message)
+      if (signInTimedOut) {
+        setError('Unable to connect to authentication service. Please try again later.')
+        return
+      }
+
+      if (signInResult.error) {
+        setError(signInResult.error.message)
         return
       }
 
@@ -258,7 +293,7 @@ function SignInForm({ onSwitch, onSuccess }: { onSwitch: (s: AuthScreen) => void
 
       onSuccess()
     } catch {
-      setError('An unexpected error occurred. Please try again.')
+      setError('Unable to connect to authentication service. Please try again later.')
     } finally {
       setLoading(false)
     }
@@ -357,19 +392,27 @@ function SignUpForm({ onSwitch, onSuccess }: { onSwitch: (s: AuthScreen) => void
         return
       }
 
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email, password, options: { data: { name } },
-      })
+      const [signUpResult, signUpTimedOut] = await withTimeout(
+        supabase.auth.signUp({
+          email, password, options: { data: { name } },
+        }),
+        AUTH_TIMEOUT_MS
+      )
 
-      if (signUpError) {
-        setError(signUpError.message)
+      if (signUpTimedOut) {
+        setError('Unable to connect to authentication service. Please try again later.')
+        return
+      }
+
+      if (signUpResult.error) {
+        setError(signUpResult.error.message)
         return
       }
 
       // If auto-confirmed (no email verification), user is immediately authenticated
-      if (signUpData.user && signUpData.session) {
+      if (signUpResult.data.user && signUpResult.data.session) {
         try {
-          await supabase.from('profiles').upsert({ id: signUpData.user.id, email, name, plan: 'free' }, { onConflict: 'id' })
+          await supabase.from('profiles').upsert({ id: signUpResult.data.user.id, email, name, plan: 'free' }, { onConflict: 'id' })
         } catch {}
         onSuccess()
         return
@@ -378,7 +421,7 @@ function SignUpForm({ onSwitch, onSuccess }: { onSwitch: (s: AuthScreen) => void
       // Email confirmation required — show confirmation screen
       setConfirmationSent(true)
     } catch {
-      setError('An unexpected error occurred. Please try again.')
+      setError('Unable to connect to authentication service. Please try again later.')
     } finally {
       setLoading(false)
     }
@@ -516,11 +559,18 @@ function ForgotForm({ onSwitch }: { onSwitch: (s: AuthScreen) => void }) {
         setError('Supabase is not configured.')
         return
       }
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email)
-      if (resetError) { setError(resetError.message); return }
+      const [resetResult, resetTimedOut] = await withTimeout(
+        supabase.auth.resetPasswordForEmail(email),
+        AUTH_TIMEOUT_MS
+      )
+      if (resetTimedOut) {
+        setError('Unable to connect to authentication service. Please try again later.')
+        return
+      }
+      if (resetResult.error) { setError(resetResult.error.message); return }
       setSent(true)
     } catch {
-      setError('An unexpected error occurred. Please try again.')
+      setError('Unable to connect to authentication service. Please try again later.')
     } finally {
       setLoading(false)
     }

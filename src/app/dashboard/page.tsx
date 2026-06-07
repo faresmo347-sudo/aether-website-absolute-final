@@ -16,6 +16,24 @@ import { Recaps } from '@/components/aether/Recaps'
 import { Settings } from '@/components/aether/Settings'
 import type { AppView } from '@/components/aether/types'
 
+// Timeout for Supabase auth calls when the project may be paused/unreachable.
+const AUTH_TIMEOUT_MS = 5000
+
+/**
+ * Wraps a promise with a timeout. Returns a tuple of [result, timedOut].
+ * If the promise doesn't settle within the timeout, returns [null, true].
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<[result: T | null, timedOut: boolean]> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<[null, true]>((resolve) => {
+    timer = setTimeout(() => resolve([null, true]), ms)
+  })
+  return Promise.race([
+    promise.then((r) => [r, false] as [T, false]),
+    timeout,
+  ]).finally(() => clearTimeout(timer))
+}
+
 const Constellations = dynamic(() => import('@/components/aether/Constellations'), {
   ssr: false,
   loading: () => (
@@ -219,9 +237,28 @@ export default function DashboardPage() {
 
     const checkAuth = async () => {
       try {
-        // Step 1: Fast local check
-        const { data: { session } } = await supabase.auth.getSession()
+        // Step 1: Fast local check — with timeout for unreachable Supabase
+        const [sessionResult, sessionTimedOut] = await withTimeout(
+          supabase.auth.getSession(),
+          AUTH_TIMEOUT_MS
+        )
         if (!mounted) return
+
+        if (sessionTimedOut) {
+          // Supabase is unreachable — fall back to demo mode
+          console.warn('[Aether] Supabase getSession() timed out in dashboard — Supabase may be paused/unreachable. Falling back to demo mode.')
+          const currentSignedOut = useAetherStore.getState().signedOut
+          if (currentSignedOut) {
+            clearAllStateAndRedirect()
+            return
+          }
+          setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+          setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+          setAuthConfirmed(true)
+          return
+        }
+
+        const { data: { session } } = sessionResult
 
         if (!session?.user) {
           // No local session — redirect immediately
@@ -232,8 +269,28 @@ export default function DashboardPage() {
         // Step 2: CRITICAL — Validate with Supabase server.
         // This is the ONLY place we set authConfirmed=true.
         // A stale session cookie will return null from getUser().
-        const { data: { user: validatedUser } } = await supabase.auth.getUser()
+        // Add timeout for unreachable Supabase.
+        const [userResult, userTimedOut] = await withTimeout(
+          supabase.auth.getUser(),
+          AUTH_TIMEOUT_MS
+        )
         if (!mounted) return
+
+        if (userTimedOut) {
+          // Supabase is unreachable — fall back to demo mode
+          console.warn('[Aether] Supabase getUser() timed out in dashboard — cannot validate session. Falling back to demo mode.')
+          const currentSignedOut = useAetherStore.getState().signedOut
+          if (currentSignedOut) {
+            clearAllStateAndRedirect()
+            return
+          }
+          setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+          setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+          setAuthConfirmed(true)
+          return
+        }
+
+        const { data: { user: validatedUser } } = userResult
 
         if (!validatedUser) {
           // Stale/expired session — clear and redirect
@@ -255,7 +312,16 @@ export default function DashboardPage() {
         )
       } catch {
         if (mounted) {
-          clearAllStateAndRedirect()
+          // Network error or other unexpected failure — fall back to demo mode
+          console.warn('[Aether] Auth check failed in dashboard — Supabase may be unreachable. Falling back to demo mode.')
+          const currentSignedOut = useAetherStore.getState().signedOut
+          if (currentSignedOut) {
+            clearAllStateAndRedirect()
+            return
+          }
+          setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+          setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+          setAuthConfirmed(true)
         }
       }
     }
