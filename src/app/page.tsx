@@ -60,10 +60,10 @@ export default function Home() {
 
     const supabase = createClientSafe()
     if (!supabase) {
-      // Supabase is not configured — schedule error state via microtask
-      // to avoid synchronous setState within the effect body
-      console.error('[Aether] Supabase client could not be created. Check environment variables.')
-      queueMicrotask(() => setAuthState('error'))
+      // Supabase not configured — show landing page (demo mode)
+      // Users can still navigate to /dashboard to preview the UI
+      console.warn('[Aether] Supabase not configured — showing landing page in demo mode.')
+      queueMicrotask(() => setAuthState('unauthenticated'))
       return
     }
 

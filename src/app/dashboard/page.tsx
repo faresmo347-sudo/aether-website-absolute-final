@@ -197,9 +197,12 @@ export default function DashboardPage() {
 
     const supabase = createClientSafe()
     if (!supabase) {
-      // Supabase not configured — cannot access dashboard
-      console.error('[Aether] Cannot access dashboard — Supabase not configured.')
-      router.replace('/')
+      // Supabase not configured — allow demo mode with a mock user
+      // This lets users preview the dashboard UI before configuring Supabase
+      console.warn('[Aether] Supabase not configured — running in demo mode.')
+      setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+      setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+      setAuthConfirmed(true)
       return
     }
 

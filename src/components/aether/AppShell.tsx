@@ -312,20 +312,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      {/* ─── Desktop FAB ─── */}
-      <button
-        onClick={() => setCaptureModalOpen(true)}
-        className="cursor-pointer hidden md:flex fixed z-40 bottom-8 right-8 h-12 w-12 rounded-full items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 animate-capture-button-pulse"
-        style={{
-          background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          boxShadow: '0 4px 24px rgba(157, 139, 167, 0.4), 0 0 0 0 rgba(157, 139, 167, 0)',
-        }}
-        aria-label="Quick capture"
-      >
-        <Plus size={22} className="stroke-[2.5] text-white" />
-      </button>
+      {/* ─── Desktop FAB ─── — navigates to dashboard where CaptureBar lives */}
+      {currentView !== 'dashboard' && (
+        <button
+          onClick={() => setCurrentView('dashboard')}
+          className="cursor-pointer hidden md:flex fixed z-40 bottom-8 right-8 h-12 w-12 rounded-full items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
+            boxShadow: '0 4px 24px rgba(157, 139, 167, 0.4)',
+          }}
+          aria-label="Go to capture"
+        >
+          <Plus size={22} className="stroke-[2.5] text-white" />
+        </button>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════
          MOBILE BOTTOM NAV — glassmorphic + center FAB
@@ -348,10 +348,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
               return (
                 <button
                   key="capture-fab"
-                  onClick={() => setCaptureModalOpen(true)}
+                  onClick={() => setCurrentView('dashboard')}
                   className="relative -mt-6 cursor-pointer flex items-center justify-center transition-transform duration-150 active:scale-90 z-50"
                   style={{ width: '20%' }}
-                  aria-label="Capture new memory"
+                  aria-label="Go to capture"
                 >
                   <div
                     className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg"

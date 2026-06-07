@@ -67,9 +67,14 @@ export async function proxy(request: NextRequest) {
     // Also check for Supabase project-specific cookie prefix
     request.cookies.getAll().some((c) => c.name.startsWith('sb-') && c.value.length > 20)
 
+  // If Supabase is not configured, skip auth-based redirects (demo mode)
+  // This lets users preview the dashboard UI without Supabase credentials
+  const supabaseConfigured = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+
   // If trying to access protected route without auth cookies → redirect to landing page
+  // But only if Supabase is configured (otherwise we're in demo mode)
   const isProtectedPath = PROTECTED_PATHS.some((path) => pathname.startsWith(path))
-  if (isProtectedPath && !hasAuthCookies) {
+  if (isProtectedPath && !hasAuthCookies && supabaseConfigured) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/'
     const redirectResponse = NextResponse.redirect(redirectUrl)

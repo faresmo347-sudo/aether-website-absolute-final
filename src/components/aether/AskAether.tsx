@@ -12,6 +12,7 @@ import {
   Loader2,
   Plus,
   AlertCircle,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAetherStore } from '@/store/aether-store'
@@ -29,6 +30,20 @@ function getSupportedMimeType(): string {
     if (MediaRecorder.isTypeSupported(type)) return type
   }
   return '' // let browser decide
+}
+
+function formatRelativeDate(iso: string): string {
+  const now = new Date()
+  const date = new Date(iso)
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  if (diffMins < 1) return 'just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 const starterQuestions = [
@@ -616,9 +631,38 @@ export function AskAether() {
                 <Brain size={22} className="text-[#9D8BA7]/70 md:size-7" />
               </div>
               <h3 className="text-base md:text-lg font-semibold text-foreground mb-1 md:mb-2">What would you like to know?</h3>
-              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed mb-6">
                 Ask about your memories or just say hi — I&apos;ll understand what you need.
               </p>
+              {/* PRINCIPLE 4: The Dopamine Hit — Rediscover button */}
+              <motion.button
+                onClick={() => {
+                  if (memories.length === 0) return
+                  const randomIndex = Math.floor(Math.random() * memories.length)
+                  const memory = memories[randomIndex]
+                  const typeEmoji = memory.type === 'link' ? '🔗' : memory.type === 'voice' ? '🎤' : memory.type === 'image' ? '🖼️' : '💭'
+                  const rediscoverMsg: ChatMessage = {
+                    id: `assistant-${Date.now()}`,
+                    role: 'assistant',
+                    content: `I found this from your past ${typeEmoji}\n\n**${memory.title}**\n${memory.content.slice(0, 200)}${memory.content.length > 200 ? '...' : ''}\n\n_Saved ${formatRelativeDate(memory.createdAt)}_${memory.tags.length > 0 ? ` · ${memory.tags.slice(0, 3).join(' ')}` : ''}`,
+                    referencedMemories: [memory.id],
+                    timestamp: new Date().toISOString(),
+                  }
+                  setMessages([rediscoverMsg])
+                }}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-medium transition-all duration-200 min-h-[48px] shadow-lg active:scale-95 cursor-pointer"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(157,139,167,0.15), rgba(192,132,252,0.15))',
+                  border: '1px solid rgba(157,139,167,0.2)',
+                  color: darkMode ? '#c084fc' : '#9333ea',
+                  boxShadow: '0 4px 20px rgba(157,139,167,0.15)',
+                }}
+              >
+                <Sparkles size={16} />
+                Rediscover a thought ✨
+              </motion.button>
             </div>
           )}
 
@@ -657,6 +701,35 @@ export function AskAether() {
         }`}
       >
         <div className="md:max-w-3xl md:mx-auto px-3 md:px-6 py-2 md:py-3">
+          {/* Rediscover button — shown when there are messages */}
+          {messages.length > 0 && memories.length > 0 && (
+            <div className="mb-2 flex justify-center">
+              <motion.button
+                onClick={() => {
+                  const randomIndex = Math.floor(Math.random() * memories.length)
+                  const memory = memories[randomIndex]
+                  const typeEmoji = memory.type === 'link' ? '🔗' : memory.type === 'voice' ? '🎤' : memory.type === 'image' ? '🖼️' : '💭'
+                  const rediscoverMsg: ChatMessage = {
+                    id: `assistant-${Date.now()}`,
+                    role: 'assistant',
+                    content: `I found this from your past ${typeEmoji}\n\n**${memory.title}**\n${memory.content.slice(0, 200)}${memory.content.length > 200 ? '...' : ''}\n\n_Saved ${formatRelativeDate(memory.createdAt)}_${memory.tags.length > 0 ? ` · ${memory.tags.slice(0, 3).join(' ')}` : ''}`,
+                    referencedMemories: [memory.id],
+                    timestamp: new Date().toISOString(),
+                  }
+                  setMessages((prev) => [...prev, rediscoverMsg])
+                }}
+                whileTap={{ scale: 0.95 }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 cursor-pointer ${
+                  darkMode
+                    ? 'text-[#c084fc]/70 hover:text-[#c084fc] bg-[#9D8BA7]/5 hover:bg-[#9D8BA7]/10'
+                    : 'text-purple-600/70 hover:text-purple-600 bg-purple-50 hover:bg-purple-100'
+                }`}
+              >
+                <Sparkles size={12} />
+                Rediscover ✨
+              </motion.button>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             {/* Input field */}
             <div className="flex-1 relative">
