@@ -61,6 +61,12 @@ function LoadingSpinner() {
 
 /* ═══════════════════════════════════════════════════════════════
    DASHBOARD PAGE — Protected route for authenticated users
+
+   CRITICAL: The auth gate is BULLETPROOF.
+   - We NEVER set authConfirmed=true based on getSession() alone.
+   - getUser() MUST validate the session with the Supabase server.
+   - Stale/expired sessions are immediately rejected → redirect to /.
+   - SIGNED_OUT events clear all state and redirect to /.
    ═══════════════════════════════════════════════════════════════ */
 
 export default function DashboardPage() {
@@ -164,6 +170,24 @@ export default function DashboardPage() {
     }
   }, [setUser, setProfile, setMemories, setCollections, setIsLoadingMemories])
 
+  // ── FULL STATE CLEAR on sign-out ──
+  const clearAllStateAndRedirect = useCallback(() => {
+    dataLoadedRef.current = false
+    setAuthConfirmed(false)
+    setUser(null)
+    setProfile({ name: '', email: '', initials: '' })
+    setMemories([])
+    setCollections([])
+    // Clear localStorage to prevent stale data on next login
+    try {
+      localStorage.removeItem('aether-memories')
+      localStorage.removeItem('aether-collections')
+      localStorage.removeItem('aether-profile')
+      localStorage.removeItem('aether-view')
+    } catch {}
+    router.replace('/')
+  }, [router, setUser, setProfile, setMemories, setCollections])
+
   // Auth check + data loading — runs once on mount
   useEffect(() => {
     if (authInitializedRef.current) return
@@ -180,52 +204,44 @@ export default function DashboardPage() {
 
     const checkAuth = async () => {
       try {
+        // Step 1: Fast local check
         const { data: { session } } = await supabase.auth.getSession()
-
         if (!mounted) return
 
-        if (session?.user) {
-          const email = session.user.email || ''
-          const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0]
-          const initials = getInitials(name || email)
-          setUser({ id: session.user.id, name, email, initials })
-          setAuthConfirmed(true)
-
-          // Validate session AND load data in PARALLEL
-          const [userResult] = await Promise.allSettled([
-            supabase.auth.getUser(),
-            loadUserData(session.user.id),
-          ])
-
-          if (userResult.status === 'fulfilled' && mounted) {
-            const { data: { user: validatedUser } } = userResult.value
-            if (!validatedUser) {
-              dataLoadedRef.current = false
-              setUser(null)
-              setProfile({ name: '', email: '', initials: '' })
-              router.replace('/auth')
-            }
-          }
+        if (!session?.user) {
+          // No local session — redirect immediately
+          router.replace('/')
           return
         }
 
-        // No session — try getUser() (validates with server)
-        const { data: { user } } = await supabase.auth.getUser()
+        // Step 2: CRITICAL — Validate with Supabase server.
+        // This is the ONLY place we set authConfirmed=true.
+        // A stale session cookie will return null from getUser().
+        const { data: { user: validatedUser } } = await supabase.auth.getUser()
         if (!mounted) return
 
-        if (user) {
-          const email = user.email || ''
-          const name = user.user_metadata?.full_name || user.user_metadata?.name || email.split('@')[0]
-          const initials = getInitials(name || email)
-          setUser({ id: user.id, name, email, initials })
-          setAuthConfirmed(true)
-          loadUserData(user.id).catch((err) => console.warn('[Aether] Background data load failed:', err))
-        } else {
-          // Not authenticated — redirect to landing
-          router.replace('/')
+        if (!validatedUser) {
+          // Stale/expired session — clear and redirect
+          try { await supabase.auth.signOut() } catch {}
+          clearAllStateAndRedirect()
+          return
         }
+
+        // ── SESSION IS VALIDATED ──
+        const email = validatedUser.email || ''
+        const name = validatedUser.user_metadata?.full_name || validatedUser.user_metadata?.name || email.split('@')[0]
+        const initials = getInitials(name || email)
+        setUser({ id: validatedUser.id, name, email, initials, plan: 'free' })
+        setAuthConfirmed(true)
+
+        // Load user data in the background
+        loadUserData(validatedUser.id).catch((err) =>
+          console.warn('[Aether] Background data load failed:', err)
+        )
       } catch {
-        if (mounted) router.replace('/')
+        if (mounted) {
+          clearAllStateAndRedirect()
+        }
       }
     }
 
@@ -234,23 +250,22 @@ export default function DashboardPage() {
     // Subscribe to auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
-      if (event === 'INITIAL_SESSION') return
+      if (event === 'INITIAL_SESSION') return // Already handled in checkAuth
 
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+        // Fresh sign-in or token refresh
         dataLoadedRef.current = false
         const email = session.user.email || ''
         const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0]
         const initials = getInitials(name || email)
         setUser({ id: session.user.id, name, email, initials, plan: 'free' })
         setAuthConfirmed(true)
-        loadUserData(session.user.id).catch((err) => console.warn('[Aether] Background data load failed:', err))
+        loadUserData(session.user.id).catch((err) =>
+          console.warn('[Aether] Background data load failed:', err)
+        )
       } else if (event === 'SIGNED_OUT') {
-        dataLoadedRef.current = false
-        setUser(null)
-        setProfile({ name: '', email: '', initials: '' })
-        setMemories([])
-        setCollections([])
-        router.replace('/')
+        // ── SIGN OUT: Clear everything and redirect ──
+        clearAllStateAndRedirect()
       }
     })
 
@@ -282,7 +297,7 @@ export default function DashboardPage() {
       unsubComplete()
       window.removeEventListener('aether:memory-synced', handleMemorySynced)
     }
-  }, [])
+  }, [clearAllStateAndRedirect, loadUserData, setCurrentView, setSelectedMemoryId, setIsSyncing, setPendingSyncCount, setLastSyncedAt, updateMemory])
 
   // URL-based navigation: read the current URL path to determine which view to show
   useEffect(() => {

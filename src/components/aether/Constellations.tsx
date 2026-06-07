@@ -244,10 +244,7 @@ function categorizeMemories(memories: Memory[]): CategorizedGroup[] {
    Generates a 2-3 sentence summary of the user's "life" in this area
    ═══════════════════════════════════════════════════════════════ */
 
-async function generateCategoryRecap(categoryName: string, memories: Memory[]): Promise<string> {
-  // Simulate AI processing delay
-  await new Promise(resolve => setTimeout(resolve, 1200 + Math.random() * 1800))
-
+function generateCategoryRecap(categoryName: string, memories: Memory[]): string {
   if (memories.length === 0) {
     return `No memories in ${categoryName} yet. Start saving notes, links, or ideas and Aether will paint a picture of your life here.`
   }
@@ -381,7 +378,7 @@ function StarfieldCanvas({ darkMode }: { darkMode: boolean }) {
     window.addEventListener('resize', resize)
 
     if (darkMode) {
-      const STAR_COUNT = isMobile ? 150 : 400
+      const STAR_COUNT = isMobile ? 80 : 250
       const rand = seededRandom(777)
       const stars = Array.from({ length: STAR_COUNT }, (_, i) => ({
         x: rand() * canvas.width,
@@ -433,7 +430,7 @@ function StarfieldCanvas({ darkMode }: { darkMode: boolean }) {
       }
       draw()
     } else {
-      const CLOUD_COUNT = isMobile ? 6 : 10
+      const CLOUD_COUNT = isMobile ? 4 : 6
       const rand = seededRandom(999)
       const clouds: CloudData[] = Array.from({ length: CLOUD_COUNT }, () => {
         const baseX = rand() * canvas.width
@@ -836,9 +833,8 @@ interface ConstellationPanelProps {
 function ConstellationPanel({ group, darkMode, onClose }: ConstellationPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
 
-  // Recap state — triggers when group changes
-  const [recapState, setRecapState] = useState<{ loading: boolean; recap: string | null; groupId: string }>({
-    loading: false,
+  // Recap — computed synchronously (instant, no fake delays)
+  const [recapState, setRecapState] = useState<{ recap: string | null; groupId: string }>({
     recap: null,
     groupId: '',
   })
@@ -847,15 +843,12 @@ function ConstellationPanel({ group, darkMode, onClose }: ConstellationPanelProp
   const needsNewRecap = currentGroupId !== recapState.groupId
 
   if (needsNewRecap && group) {
-    setRecapState({ loading: true, recap: null, groupId: currentGroupId })
-    generateCategoryRecap(group.name, group.memories).then((result) => {
-      setRecapState(prev => prev.groupId === currentGroupId ? { loading: false, recap: result, groupId: currentGroupId } : prev)
-    })
+    const result = generateCategoryRecap(group.name, group.memories)
+    setRecapState({ recap: result, groupId: currentGroupId })
   } else if (needsNewRecap && !group) {
-    setRecapState({ loading: false, recap: null, groupId: '' })
+    setRecapState({ recap: null, groupId: '' })
   }
 
-  const isLoadingRecap = recapState.loading
   const recap = recapState.recap
 
   // Close on Escape key
@@ -965,42 +958,25 @@ function ConstellationPanel({ group, darkMode, onClose }: ConstellationPanelProp
               </h3>
             </div>
 
-            {/* Glowing recap card */}
+            {/* Glowing recap card — instant, no loading delay */}
             <div
-              className="rounded-xl md:rounded-2xl p-2.5 md:p-4 transition-all duration-500"
+              className="rounded-xl md:rounded-2xl p-2.5 md:p-4"
               style={darkMode
                 ? {
                     background: 'rgba(147,51,234,0.08)',
                     border: '1px solid rgba(147,51,234,0.15)',
-                    boxShadow: isLoadingRecap ? '0 0 20px rgba(147,51,234,0.1)' : '0 0 30px rgba(147,51,234,0.08)',
+                    boxShadow: '0 0 30px rgba(147,51,234,0.08)',
                   }
                 : {
                     background: 'rgba(147,51,234,0.06)',
                     border: '1px solid rgba(147,51,234,0.12)',
-                    boxShadow: isLoadingRecap ? '0 0 20px rgba(147,51,234,0.06)' : '0 0 30px rgba(147,51,234,0.05)',
+                    boxShadow: '0 0 30px rgba(147,51,234,0.05)',
                   }
               }
             >
-              {isLoadingRecap ? (
-                <div className="flex items-start gap-3">
-                  <motion.span
-                    className="text-lg shrink-0"
-                    animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.1, 0.95] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  >
-                    ✨
-                  </motion.span>
-                  <div className="flex-1 space-y-2.5 py-0.5">
-                    <div className={`h-3 rounded-full ${darkMode ? 'bg-purple-500/15' : 'bg-purple-500/10'}`} style={{ width: '90%' }} />
-                    <div className={`h-3 rounded-full ${darkMode ? 'bg-purple-500/15' : 'bg-purple-500/10'}`} style={{ width: '75%' }} />
-                    <div className={`h-3 rounded-full ${darkMode ? 'bg-purple-500/10' : 'bg-purple-500/8'}`} style={{ width: '60%' }} />
-                  </div>
-                </div>
-              ) : (
-                <p className={`text-sm leading-relaxed ${darkMode ? 'text-white/70' : 'text-sky-900/70'}`}>
-                  {recap}
-                </p>
-              )}
+              <p className={`text-sm leading-relaxed ${darkMode ? 'text-white/70' : 'text-sky-900/70'}`}>
+                {recap}
+              </p>
             </div>
           </motion.div>
 

@@ -6,12 +6,15 @@ import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
 import LandingPage from '@/components/aether/LandingPage'
 
 /* ═══════════════════════════════════════════════════════════════
-   ROOT PAGE — Routing Bouncer
+   ROOT PAGE — Routing Bouncer (Bulletproof)
 
    Logic:
-   1. Show a simple loading spinner while checking the Supabase session.
-   2. If session exists (user is logged in): Redirect to /dashboard.
-   3. If session is null (user is logged out): Render the <LandingPage />.
+   1. Show a loading spinner while checking the Supabase session.
+   2. Validate session with BOTH getSession() AND getUser() before
+      considering a user "authenticated".
+   3. If authenticated: redirect to /dashboard.
+   4. If NOT authenticated: render the <LandingPage />.
+   5. Listen for SIGNED_OUT events to immediately show landing page.
    ═══════════════════════════════════════════════════════════════ */
 
 function SimpleSpinner() {
@@ -27,21 +30,27 @@ function SimpleSpinner() {
 
 export default function Home() {
   const router = useRouter()
-  const [showLanding, setShowLanding] = useState(false)
-  const authInitializedRef = useRef(false)
+  const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>('checking')
+  const initializedRef = useRef(false)
 
-  // If Supabase isn't configured, skip the check and show landing immediately
+  // If Supabase isn't configured, we know immediately the user is unauthenticated
   const supabaseConfigured = isSupabaseConfigured()
+
+  // For the case where Supabase isn't configured, bypass the async check
+  if (!supabaseConfigured && authState === 'checking') {
+    // Use initial state to avoid the lint warning about setState in effect
+  }
 
   useEffect(() => {
     // Prevent double-initialization (React strict mode / HMR)
-    if (authInitializedRef.current) return
-    authInitializedRef.current = true
+    if (initializedRef.current) return
+    initializedRef.current = true
 
-    if (!supabaseConfigured) {
+    // If Supabase isn't configured, skip auth check entirely
+    if (!isSupabaseConfigured()) {
       console.info('[Aether] Supabase not configured — showing landing page.')
-      // Use microtask to avoid synchronous setState in effect
-      queueMicrotask(() => setShowLanding(true))
+      // Use queueMicrotask to avoid synchronous setState in effect
+      queueMicrotask(() => setAuthState('unauthenticated'))
       return
     }
 
@@ -52,42 +61,46 @@ export default function Home() {
       try {
         // Step 1: getSession() reads from local cookie storage (fast, no network)
         const { data: { session } } = await supabase.auth.getSession()
-
         if (!mounted) return
 
-        if (session?.user) {
-          // Session found — redirect to dashboard
-          router.replace('/dashboard')
+        if (!session?.user) {
+          // No local session — definitely not authenticated
+          setAuthState('unauthenticated')
           return
         }
 
-        // Step 2: No cookie session — validate with server
+        // Step 2: Validate the session with the server.
+        // A stale/expired session will return null user from getUser().
         const { data: { user } } = await supabase.auth.getUser()
-
         if (!mounted) return
 
         if (user) {
-          // Authenticated via server validation
+          // Validated — redirect to dashboard
+          setAuthState('authenticated')
           router.replace('/dashboard')
         } else {
-          // Not authenticated — show landing page
-          setShowLanding(true)
+          // Stale session cookie — treat as unauthenticated
+          // Clear the stale session to prevent ghost access
+          try { await supabase.auth.signOut() } catch {}
+          setAuthState('unauthenticated')
         }
       } catch {
-        if (mounted) {
-          setShowLanding(true)
-        }
+        if (mounted) setAuthState('unauthenticated')
       }
     }
 
     checkAuth()
 
-    // Also listen for auth state changes (e.g. magic link callback)
+    // Also listen for auth state changes (e.g. magic link callback, sign out from another tab)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
 
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        setAuthState('authenticated')
         router.replace('/dashboard')
+      } else if (event === 'SIGNED_OUT') {
+        // User signed out (possibly from another tab) — show landing immediately
+        setAuthState('unauthenticated')
       }
     })
 
@@ -95,18 +108,23 @@ export default function Home() {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [router, supabaseConfigured])
+  }, [router])
 
-  // If Supabase isn't configured and we haven't set state yet, show landing
-  if (!supabaseConfigured && !showLanding) {
+  // If Supabase isn't configured, show landing immediately (no spinner)
+  if (!supabaseConfigured) {
     return <LandingPage />
   }
 
-  // If still checking (showLanding is false), show spinner
-  if (!showLanding) {
+  // Show spinner while checking auth
+  if (authState === 'checking') {
     return <SimpleSpinner />
   }
 
-  // Not authenticated — show the landing page
+  // Authenticated users get redirected to /dashboard (handled in useEffect)
+  if (authState === 'authenticated') {
+    return <SimpleSpinner />
+  }
+
+  // Unauthenticated — show the landing page
   return <LandingPage />
 }

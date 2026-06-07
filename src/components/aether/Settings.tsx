@@ -47,6 +47,17 @@ import {
 } from '@/components/ui/alert-dialog'
 import type { CaptureTab } from './types'
 
+/* ─── Helper: Clear all local state for sign-out ─── */
+function clearLocalState() {
+  try {
+    localStorage.removeItem('aether-memories')
+    localStorage.removeItem('aether-collections')
+    localStorage.removeItem('aether-profile')
+    localStorage.removeItem('aether-view')
+    localStorage.removeItem('aether-settings')
+  } catch {}
+}
+
 export function Settings() {
   const router = useRouter()
   const {
@@ -151,6 +162,8 @@ export function Settings() {
   // ──── Delete account handler ────
   const handleDeleteAccount = useCallback(async () => {
     try {
+      // Clear all local state first for instant feedback
+      clearLocalState()
       await signOut()
       router.replace('/')
       toast({ title: 'Signed out', description: 'Your account session has been ended.' })
@@ -339,10 +352,14 @@ export function Settings() {
   // ──── Logout handler ────
   const handleLogout = useCallback(async () => {
     try {
+      // Clear all local state first for instant feedback
+      clearLocalState()
       await signOut()
       router.replace('/')
     } catch (err) {
       console.error('Sign out failed:', err)
+      // Even if signOut fails, redirect to be safe
+      router.replace('/')
     }
   }, [router])
 
