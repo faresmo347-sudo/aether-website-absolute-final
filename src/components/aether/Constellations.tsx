@@ -594,7 +594,7 @@ const MiniConstellationSVG = memo(function MiniConstellationSVG({ theme, seed, i
       delay: i * 0.3,
     }))
 
-    const lines = []
+    const lines: Array<{ x1: number; y1: number; x2: number; y2: number; delay: number }> = []
     for (let i = 0; i < stars.length - 1; i++) {
       lines.push({
         x1: stars[i].x,

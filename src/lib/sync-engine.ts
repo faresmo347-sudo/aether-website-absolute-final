@@ -108,8 +108,8 @@ async function processQueueItem(item: SyncQueueItem): Promise<void> {
   switch (item.type) {
     case 'create':
       if (item.entityType === 'memory') {
-        const { tempId, ...createData } = item.data
-        const saved = await createMemory(createData)
+        const { tempId, ...createData } = item.data as Record<string, unknown>
+        const saved = await createMemory(createData as Parameters<typeof createMemory>[0])
         // If there's a tempId, we need to notify the store to replace it
         if (item.tempId && tempId) {
           // The store will handle replacing the temp ID with the real one

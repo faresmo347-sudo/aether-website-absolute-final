@@ -42,17 +42,17 @@ export function useMobileKeyboard() {
     // Fallback: listen for focus events on input/textarea elements
     const onFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || (target as HTMLElement).isContentEditable)) {
         setIsKeyboardOpen(true)
       }
     }
 
     const onFocusOut = (e: FocusEvent) => {
       const target = e.target as HTMLElement
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || (target as HTMLElement).isContentEditable)) {
         // Small delay to allow for focus switching between inputs
         setTimeout(() => {
-          const active = document.activeElement
+          const active = document.activeElement as HTMLElement | null
           if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA' && !active.isContentEditable)) {
             setIsKeyboardOpen(false)
           }

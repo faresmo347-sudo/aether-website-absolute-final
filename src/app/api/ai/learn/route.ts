@@ -113,7 +113,7 @@ Return empty array [] if nothing concrete was learned. Never make assumptions.`
     const formattedNewFacts: LearnedFact[] = newFacts.map((f) => ({
       fact: f.fact,
       category: f.category || 'personal',
-      confidence: f.confidence || 'medium',
+      confidence: (['high', 'medium', 'low'].includes(f.confidence) ? f.confidence : 'medium') as 'high' | 'medium' | 'low',
       learned_at: now,
     }))
 
