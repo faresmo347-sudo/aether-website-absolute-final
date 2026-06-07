@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
   Brain,
@@ -20,11 +20,11 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,13 @@ import { useToast } from '@/hooks/use-toast'
 import { deleteMemoryById, updateMemoryById } from '@/lib/supabase/data'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 import type { Memory, MemoryType } from '@/components/aether/types'
+
+// ────────────────────────────────────────────────────────────
+// SPRING PHYSICS
+// ────────────────────────────────────────────────────────────
+
+const SPRING_BOUNCE = { type: 'spring' as const, stiffness: 400, damping: 17 }
+const SPRING_SMOOTH = { type: 'spring' as const, stiffness: 260, damping: 22 }
 
 const typeConfig: Record<MemoryType, { icon: typeof Mic; label: string; color: string }> = {
   text: { icon: FileText, label: 'Text', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -58,25 +65,14 @@ function formatDate(dateStr: string): string {
   })
 }
 
-/**
- * Parse the site name from enriched link content.
- * Looks for the "[From SiteName]" pattern at the start of content,
- * or falls back to the memory.siteName field.
- */
 function parseSiteName(memory: Memory): string | null {
   if (memory.siteName) return memory.siteName
   if (memory.type !== 'link') return null
-
-  // Try to extract [From SiteName] from the beginning of content
   const match = memory.content.match(/^\[From\s+(.+?)\]/)
   if (match) return match[1]
-
   return null
 }
 
-/**
- * Strip the [From SiteName] prefix from content for display.
- */
 function stripSiteNamePrefix(content: string): string {
   return content.replace(/^\[From\s+.+?\]\s*\n*/, '').trim()
 }
@@ -87,9 +83,12 @@ function RelatedMemoryCard({ memory, onClick }: { memory: Memory; onClick: () =>
   const Icon = config.icon
 
   return (
-    <button
+    <motion.button
+      whileHover={{ y: -2, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+      whileTap={{ scale: 0.98 }}
+      transition={SPRING_BOUNCE}
       onClick={onClick}
-      className="min-w-[260px] text-left rounded-2xl border border-border bg-card p-4 shadow-sm hover:shadow-md hover:border-[#9D8BA7]/20 transition-all duration-300 group flex-shrink-0"
+      className="min-w-[260px] text-left rounded-2xl border border-border bg-card p-4 shadow-sm group flex-shrink-0"
     >
       <div className="flex items-start gap-3">
         <div className="h-9 w-9 rounded-xl bg-[#9D8BA7]/8 flex items-center justify-center flex-shrink-0 group-hover:bg-[#9D8BA7]/15 transition-colors duration-300">
@@ -104,7 +103,7 @@ function RelatedMemoryCard({ memory, onClick }: { memory: Memory; onClick: () =>
           </p>
         </div>
       </div>
-    </button>
+    </motion.button>
   )
 }
 
@@ -130,18 +129,10 @@ function DeleteDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-row gap-2 sm:justify-end">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="rounded-xl border-border text-foreground hover:bg-muted"
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl border-border text-foreground hover:bg-muted">
             Cancel
           </Button>
-          <Button
-            variant="destructive"
-            onClick={onConfirm}
-            className="rounded-xl"
-          >
+          <Button variant="destructive" onClick={onConfirm} className="rounded-xl">
             Delete
           </Button>
         </DialogFooter>
@@ -150,36 +141,38 @@ function DeleteDialog({
   )
 }
 
-/* ─────────── Memory Detail View ─────────── */
-export function MemoryDetail() {
-  const { memories, selectedMemoryId, setSelectedMemoryId, setCurrentView, deleteMemory, updateMemory } = useAetherStore()
-  const { toast } = useToast()
-  const isOnline = useOnlineStatus()
+/* ─────────── Streaming AI Recap Hook ─────────── */
+function useStreamingInsight(memory: Memory | undefined) {
+  const [streamedText, setStreamedText] = useState('')
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [error, setError] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
 
-  const [isEditing, setIsEditing] = useState(false)
-  const [editContent, setEditContent] = useState('')
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [newTag, setNewTag] = useState('')
-  const tagInputRef = useRef<HTMLInputElement>(null)
-  const [aiInsight, setAiInsight] = useState('')
-  const [isLoadingInsight, setIsLoadingInsight] = useState(false)
-  const [insightError, setInsightError] = useState(false)
-  const [showOriginal, setShowOriginal] = useState(false)
-
-  const memory = useMemo(
-    () => memories.find((m) => m.id === selectedMemoryId),
-    [memories, selectedMemoryId]
-  )
-
+  // Reset when memory changes
   useEffect(() => {
+    setStreamedText('')
+    setIsStreaming(false)
+    setError(false)
+
     if (!memory) return
-    let cancelled = false
-    const doFetch = async () => {
-      setIsLoadingInsight(true)
-      setInsightError(false)
-      setAiInsight('')
+
+    // If the memory already has an AI summary, use it immediately
+    if (memory.aiSummary || memory.aiInsight) {
+      setStreamedText(memory.aiSummary || memory.aiInsight || '')
+      return
+    }
+
+    // Start streaming
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    const streamInsight = async () => {
+      setIsStreaming(true)
+      setError(false)
+      setStreamedText('')
+
       try {
-        const res = await fetch('/api/ai/insights', {
+        const res = await fetch('/api/ai/insights/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -188,29 +181,162 @@ export function MemoryDetail() {
             tags: memory.tags,
             title: memory.title,
           }),
+          signal: controller.signal,
         })
-        if (!cancelled) {
+
+        if (!res.ok || !res.body) {
+          throw new Error('Stream failed')
+        }
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+
+          // Parse SSE lines
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6).trim()
+              if (data === '[DONE]') {
+                setIsStreaming(false)
+                return
+              }
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.text) {
+                  setStreamedText(prev => prev + parsed.text)
+                }
+              } catch {}
+            }
+          }
+        }
+
+        setIsStreaming(false)
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return
+        setError(true)
+        setIsStreaming(false)
+
+        // Fallback: try the non-streaming endpoint
+        try {
+          const res = await fetch('/api/ai/insights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: memory.content,
+              type: memory.type,
+              tags: memory.tags,
+              title: memory.title,
+            }),
+          })
           const data = await res.json()
-          setAiInsight(data.insight || '')
-        }
-      } catch {
-        if (!cancelled) {
-          setAiInsight('')
-          setInsightError(true)
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingInsight(false)
-        }
+          if (data.insight) {
+            setStreamedText(data.insight)
+            setError(false)
+          }
+        } catch {}
       }
     }
-    doFetch()
-    return () => {
-      cancelled = true
-    }
-  }, [memory?.id, memory?.content, memory?.tags])
 
-  // Find related memories: same collection or matching tags
+    streamInsight()
+
+    return () => {
+      controller.abort()
+    }
+  }, [memory?.id])
+
+  const retry = useCallback(() => {
+    if (!memory) return
+    setError(false)
+    setStreamedText('')
+    setIsStreaming(true)
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    const streamInsight = async () => {
+      try {
+        const res = await fetch('/api/ai/insights/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: memory.content,
+            type: memory.type,
+            tags: memory.tags,
+            title: memory.title,
+          }),
+          signal: controller.signal,
+        })
+
+        if (!res.ok || !res.body) throw new Error('Stream failed')
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6).trim()
+              if (data === '[DONE]') { setIsStreaming(false); return }
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.text) setStreamedText(prev => prev + parsed.text)
+              } catch {}
+            }
+          }
+        }
+        setIsStreaming(false)
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return
+        setError(true)
+        setIsStreaming(false)
+      }
+    }
+
+    streamInsight()
+  }, [memory])
+
+  return { streamedText, isStreaming, error, retry }
+}
+
+/* ─────────── Memory Detail View ─────────── */
+export function MemoryDetail() {
+  const { memories, selectedMemoryId, setSelectedMemoryId, setCurrentView, deleteMemory, updateMemory, darkMode } = useAetherStore()
+  const { toast } = useToast()
+  const isOnline = useOnlineStatus()
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [editContent, setEditContent] = useState('')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [newTag, setNewTag] = useState('')
+  const tagInputRef = useRef<HTMLInputElement>(null)
+  const [showOriginal, setShowOriginal] = useState(false)
+
+  const memory = useMemo(
+    () => memories.find((m) => m.id === selectedMemoryId),
+    [memories, selectedMemoryId]
+  )
+
+  // Streaming AI insight
+  const { streamedText: aiInsight, isStreaming, error: insightError, retry } = useStreamingInsight(memory)
+
+  // Related memories
   const relatedMemories = useMemo(() => {
     if (!memory) return []
     return memories
@@ -236,16 +362,12 @@ export function MemoryDetail() {
   const handleEdit = async () => {
     if (!memory) return
     if (isEditing) {
-      // Save — update content in the store and Supabase
       if (editContent.trim() !== memory.content) {
         updateMemory(memory.id, { content: editContent.trim() })
         try {
           await updateMemoryById(memory.id, { content: editContent.trim() })
-        } catch {
-          // Supabase update failed silently — store is already updated locally
-          // If offline, data.ts handles queueing
-        }
-        toast({ title: 'Memory updated!', description: !isOnline ? 'Changes saved locally — will sync when you reconnect.' : 'Your changes have been saved.' })
+        } catch {}
+        toast({ title: 'Memory updated!', description: !isOnline ? 'Changes saved locally.' : 'Your changes have been saved.' })
       }
       setIsEditing(false)
     } else {
@@ -262,23 +384,18 @@ export function MemoryDetail() {
     setCurrentView('dashboard')
     try {
       await deleteMemoryById(memory.id)
-    } catch {
-      // Supabase delete failed silently — already removed from local store
-    }
+    } catch {}
   }
 
   const handleAddTag = async () => {
     if (!newTag.trim() || !memory) return
-    // Enforce max 6 tags
     if (memory.tags.length >= 6) {
       toast({ title: 'Maximum tags reached', description: 'You can have up to 6 tags per memory.' })
       return
     }
-    // Normalize: strip leading #s then add exactly one #
     let tagToAdd = newTag.trim()
     tagToAdd = tagToAdd.replace(/^#+/, '')
     tagToAdd = `#${tagToAdd}`
-    // Avoid duplicate tags
     if (memory.tags.includes(tagToAdd)) {
       setNewTag('')
       setTimeout(() => tagInputRef.current?.focus(), 0)
@@ -289,13 +406,10 @@ export function MemoryDetail() {
     updateMemory(memory.id, { tags: updatedTags })
     setNewTag('')
     setTimeout(() => tagInputRef.current?.focus(), 0)
-    // Keep input open so user can keep typing more tags
-    toast({ title: 'Tag added!', description: !isOnline ? 'Tag saved locally — will sync when you reconnect.' : `"${tagToAdd}" has been added to this memory.` })
+    toast({ title: 'Tag added!', description: !isOnline ? 'Tag saved locally.' : `"${tagToAdd}" has been added.` })
     try {
       await updateMemoryById(memory.id, { tags: updatedTags })
-    } catch {
-      // Supabase update failed silently — store is already updated locally
-    }
+    } catch {}
   }
 
   // Empty state
@@ -338,23 +452,30 @@ export function MemoryDetail() {
       transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
       className="bg-background flex-1 min-h-0 overflow-y-auto ios-scroll pb-28 md:pb-6"
     >
-      {/* Full width on mobile, centered on larger screens */}
       <div className="md:max-w-3xl md:mx-auto px-3 sm:px-6 py-3 sm:py-10">
         {/* ── Back Button ── */}
-        <button
+        <motion.button
+          whileHover={{ x: -3 }}
+          whileTap={{ scale: 0.95 }}
+          transition={SPRING_BOUNCE}
           onClick={handleBack}
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-[#9D8BA7] transition-colors duration-300 mb-4 sm:mb-6 group min-h-[44px] min-w-[44px]"
         >
           <ArrowLeft size={20} className="transition-transform duration-300 group-hover:-translate-x-1" />
           <span className="hidden sm:inline">Back to Dashboard</span>
-        </button>
+        </motion.button>
 
-        {/* ── Memory HEADER ── */}
-        <motion.div
+        {/* ═══════════════════════════════════════════════════════
+           THE ORIGINAL MEMORY — What the user typed/pasted
+           Pristine, unedited, preserved perfectly
+           ═══════════════════════════════════════════════════════ */}
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
+          transition={{ delay: 0.1, ...SPRING_SMOOTH }}
+          className="mb-4 sm:mb-6"
         >
+          {/* ── Memory HEADER ── */}
           <div className="flex items-start gap-3 sm:gap-4 mb-2">
             <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-2xl bg-[#9D8BA7]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
               <TypeIcon size={20} className="text-[#9D8BA7] sm:size-[22px]" />
@@ -363,7 +484,6 @@ export function MemoryDetail() {
               <h1 className="text-lg sm:text-3xl font-bold text-foreground leading-tight">
                 {memory.title}
               </h1>
-              {/* Site name badge for link memories */}
               {memory.type === 'link' && siteName && (
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1 font-medium">
                   From {siteName}
@@ -385,7 +505,6 @@ export function MemoryDetail() {
               <TypeIcon size={12} className="mr-1" />
               {config.label}
             </Badge>
-            {/* Open Link button for link memories */}
             {memory.type === 'link' && (memory.source || memory.sourceUrl) && (
               <a
                 href={memory.source || memory.sourceUrl}
@@ -397,18 +516,6 @@ export function MemoryDetail() {
                 Open Link
               </a>
             )}
-            {memory.type !== 'link' && memory.source && (
-              <a
-                href={memory.source}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-xs text-[#9D8BA7] hover:text-[#6D597A] transition-colors duration-300 group"
-              >
-                <Link2 size={12} />
-                <span className="truncate max-w-[140px] sm:max-w-[200px] inline-block align-bottom">{memory.source.replace(/^https?:\/\//, '')}</span>
-                <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </a>
-            )}
           </div>
 
           {/* ── Link Preview Card ── */}
@@ -416,7 +523,7 @@ export function MemoryDetail() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.11, duration: 0.3 }}
+              transition={{ delay: 0.11, ...SPRING_SMOOTH }}
               className="mb-4 sm:mb-6"
             >
               <div
@@ -430,138 +537,43 @@ export function MemoryDetail() {
                   src={memory.linkImage || memory.imagePreview}
                   alt={memory.title}
                   className="w-full max-h-[200px] object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                  onError={(e) => {
-                    // Hide broken images
-                    ;(e.target as HTMLImageElement).style.display = 'none'
-                  }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                 />
               </div>
             </motion.div>
           )}
-        </motion.div>
 
-        {/* ── AI Insights ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12, duration: 0.4 }}
-          className="mb-4 sm:mb-6"
-        >
-          <div className="rounded-2xl bg-card border border-border p-3 sm:p-6 shadow-sm border-l-4 border-l-[#9D8BA7]">
-            <div className="flex items-center gap-2 mb-3">
-              <Brain size={16} className="text-[#9D8BA7]" />
-              <span className="text-xs font-semibold text-[#9D8BA7] uppercase tracking-wider">
-                Aether Insights
-              </span>
+          {/* ── THE SOURCE — Pristine, unedited ── */}
+          {isEditing ? (
+            <div className="space-y-3">
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="min-h-[50vh] sm:min-h-[180px] rounded-2xl border-border bg-card text-foreground text-base leading-relaxed focus-visible:border-[#9D8BA7]/30 focus-visible:ring-[#9D8BA7]/10 resize-none"
+              />
+              <div className="flex gap-2 justify-end">
+                <motion.div whileTap={{ scale: 0.95 }}>
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(false)} className="rounded-xl border-border min-h-[44px]">
+                    <X size={14} className="mr-1" /> Cancel
+                  </Button>
+                </motion.div>
+                <motion.div whileTap={{ scale: 0.95 }}>
+                  <Button size="sm" onClick={handleEdit} className="rounded-xl bg-[#9D8BA7] hover:bg-[#6D597A] text-white min-h-[44px]">
+                    <Check size={14} className="mr-1" /> Save
+                  </Button>
+                </motion.div>
+              </div>
             </div>
-            {isLoadingInsight ? (
-              <div className="space-y-3">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-4/6" />
-                <Skeleton className="h-4 w-3/4" />
-                <p className="text-xs text-muted-foreground italic mt-2">Aether is thinking...</p>
-              </div>
-            ) : insightError ? (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm text-muted-foreground italic">
-                  Could not generate insight right now — try again
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    // Re-trigger insight fetch by toggling the memory id
-                    if (memory) {
-                      setIsLoadingInsight(true)
-                      setInsightError(false)
-                      setAiInsight('')
-                      fetch('/api/ai/insights', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          content: memory.content,
-                          type: memory.type,
-                          tags: memory.tags,
-                          title: memory.title,
-                        }),
-                      })
-                        .then((res) => res.json())
-                        .then((data) => setAiInsight(data.insight || ''))
-                        .catch(() => setInsightError(true))
-                        .finally(() => setIsLoadingInsight(false))
-                    }
-                  }}
-                  className="rounded-xl border-[#9D8BA7]/20 text-[#9D8BA7] hover:bg-[#9D8BA7]/5 w-fit"
-                >
-                  Retry
-                </Button>
-              </div>
-            ) : aiInsight ? (
-              <p className="text-sm text-foreground leading-relaxed">
-                {aiInsight}
-              </p>
-            ) : null}
-          </div>
-        </motion.div>
-
-        {/* ── View Original Memory Toggle ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.14, duration: 0.4 }}
-          className="mb-4 sm:mb-6"
-        >
-          <Button
-            onClick={() => setShowOriginal(!showOriginal)}
-            className={`rounded-xl transition-all duration-300 w-full md:w-auto min-h-[48px] font-semibold shadow-sm ${
-              showOriginal
-                ? 'bg-[#9D8BA7] text-white hover:bg-[#6D597A] shadow-md'
-                : 'bg-[#9D8BA7]/10 text-[#9D8BA7] border border-[#9D8BA7]/20 hover:bg-[#9D8BA7] hover:text-white shadow-md hover:shadow-lg'
-            }`}
-          >
-            {showOriginal ? (
-              <>
-                <EyeOff size={16} className="mr-2" />
-                Hide Original Memory
-              </>
-            ) : (
-              <>
-                <Eye size={16} className="mr-2" />
-                View Original Memory
-              </>
-            )}
-          </Button>
-        </motion.div>
-
-        {/* ── Original Memory Content ── */}
-        {showOriginal && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="mb-4 sm:mb-6 overflow-hidden"
-          >
+          ) : (
             <div className="rounded-2xl bg-card border border-border p-3 sm:p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Your original memory
-                </span>
-              </div>
-
               {/* Image memories: show the uploaded image */}
               {memory.type === 'image' && memory.imagePreview && (
                 <div className="rounded-xl overflow-hidden border border-border mb-4">
-                  <img
-                    src={memory.imagePreview}
-                    alt={memory.title}
-                    className="w-full max-h-[400px] object-contain bg-muted/30"
-                  />
+                  <img src={memory.imagePreview} alt={memory.title} className="w-full max-h-[400px] object-contain bg-muted/30" />
                 </div>
               )}
 
-              {/* Voice memories: show raw transcription and AI summary */}
+              {/* Voice memories: show raw transcription */}
               {memory.type === 'voice' && (
                 <div className="space-y-4">
                   <div>
@@ -570,14 +582,6 @@ export function MemoryDetail() {
                       {memory.content}
                     </p>
                   </div>
-                  {memory.aiSummary && (
-                    <div>
-                      <span className="text-xs font-medium text-[#9D8BA7] mb-1 block">AI Summary</span>
-                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-[#9D8BA7]/5 rounded-xl p-3 sm:p-4 border border-[#9D8BA7]/10">
-                        {memory.aiSummary}
-                      </p>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -608,69 +612,109 @@ export function MemoryDetail() {
 
               {/* Text memories: show original text as typed */}
               {memory.type === 'text' && (
-                <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                <p className="text-foreground text-base leading-[1.65] whitespace-pre-wrap">
                   {memory.content}
                 </p>
               )}
             </div>
-          </motion.div>
-        )}
+          )}
+        </motion.section>
 
-        {/* ── Content ── */}
-        <motion.div
+        {/* ═══════════════════════════════════════════════════════
+           THE AI LAYER — Generated recap/tags
+           Visually separated: glowing glassmorphic box
+           ═══════════════════════════════════════════════════════ */}
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.4 }}
-          className="mb-6 sm:mb-8"
+          transition={{ delay: 0.12, ...SPRING_SMOOTH }}
+          className="mb-4 sm:mb-6"
         >
-          {isEditing ? (
-            <div className="space-y-3">
-              <Textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="min-h-[50vh] sm:min-h-[180px] rounded-2xl border-border bg-card text-foreground text-base leading-relaxed focus-visible:border-[#9D8BA7]/30 focus-visible:ring-[#9D8BA7]/10 resize-none"
-              />
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(false)}
-                  className="rounded-xl border-border min-h-[44px]"
-                >
-                  <X size={14} className="mr-1" />
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleEdit}
-                  className="rounded-xl bg-[#9D8BA7] hover:bg-[#6D597A] text-white min-h-[44px]"
-                >
-                  <Check size={14} className="mr-1" />
-                  Save
-                </Button>
-              </div>
+          <div
+            className="rounded-2xl p-3 sm:p-6 relative overflow-hidden"
+            style={{
+              background: darkMode
+                ? 'rgba(157, 139, 167, 0.04), rgba(15, 14, 23, 0.8)'
+                : 'rgba(157, 139, 167, 0.04)',
+              border: darkMode
+                ? '1px solid rgba(192, 132, 252, 0.12)'
+                : '1px solid rgba(157, 139, 167, 0.12)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              boxShadow: darkMode
+                ? '0 0 30px rgba(192, 132, 252, 0.06), inset 0 1px 0 rgba(255,255,255,0.03)'
+                : '0 0 20px rgba(157, 139, 167, 0.04)',
+            }}
+          >
+            {/* Subtle glow accent at top */}
+            <div
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-px"
+              style={{
+                background: 'linear-gradient(90deg, transparent, rgba(192, 132, 252, 0.3), transparent)',
+              }}
+            />
+
+            <div className="flex items-center gap-2 mb-3">
+              <motion.div
+                animate={isStreaming ? { rotate: [0, 360] } : {}}
+                transition={isStreaming ? { duration: 2, repeat: Infinity, ease: 'linear' } : {}}
+              >
+                <Brain size={16} className="text-[#c084fc]" />
+              </motion.div>
+              <span className="text-xs font-semibold text-[#c084fc] uppercase tracking-wider">
+                Aether&apos;s Understanding
+              </span>
+              {isStreaming && (
+                <span className="text-[10px] text-[#c084fc]/40 ml-auto animate-pulse">
+                  Thinking...
+                </span>
+              )}
             </div>
-          ) : (
-            <div className="rounded-2xl bg-gradient-to-b from-card to-[#9D8BA7]/[0.03] border border-border p-3 sm:p-6 shadow-sm">
-              <p className="text-foreground text-base leading-[1.65] whitespace-pre-wrap">
-                {displayContent}
-              </p>
+
+            {/* Streaming text with blinking cursor */}
+            <div className="min-h-[40px]">
+              {isStreaming && !aiInsight ? (
+                // Blinking cursor before first token arrives
+                <span className="text-sm text-foreground/60 animate-blink-cursor">▊</span>
+              ) : aiInsight ? (
+                <p className="text-sm text-foreground leading-relaxed">
+                  {aiInsight}
+                  {isStreaming && (
+                    <span className="animate-blink-cursor text-[#c084fc]">▊</span>
+                  )}
+                </p>
+              ) : insightError ? (
+                <div className="flex flex-col gap-3">
+                  <p className="text-sm text-muted-foreground italic">
+                    Could not generate insight right now
+                  </p>
+                  <motion.div whileTap={{ scale: 0.95 }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={retry}
+                      className="rounded-xl border-[#9D8BA7]/20 text-[#9D8BA7] hover:bg-[#9D8BA7]/5 w-fit"
+                    >
+                      Retry
+                    </Button>
+                  </motion.div>
+                </div>
+              ) : null}
             </div>
-          )}
-        </motion.div>
+          </div>
+        </motion.section>
 
         {/* ── Tags ── */}
-        <motion.div
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
+          transition={{ delay: 0.2, ...SPRING_SMOOTH }}
           className="mb-6 sm:mb-8"
         >
           <div className="flex items-center gap-2 mb-3">
             <Tag size={14} className="text-[#9D8BA7]" />
             <h3 className="text-sm font-semibold text-foreground">Tags</h3>
           </div>
-          {/* Horizontally scrollable tags on mobile, wrapping on desktop */}
           <div className="overflow-x-auto scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible">
             <div className="flex items-center gap-2 md:flex-wrap">
               {memory.tags.map((tag) => (
@@ -684,11 +728,7 @@ export function MemoryDetail() {
                       if (!memory) return
                       const updatedTags = memory.tags.filter((t) => t !== tag)
                       updateMemory(memory.id, { tags: updatedTags })
-                      try {
-                        await updateMemoryById(memory.id, { tags: updatedTags })
-                      } catch {
-                        // Supabase update failed silently
-                      }
+                      try { await updateMemoryById(memory.id, { tags: updatedTags }) } catch {}
                     }}
                     className="ml-0.5 size-3.5 rounded-full flex items-center justify-center hover:bg-[#9D8BA7]/25 transition-colors"
                     aria-label={`Remove tag ${tag}`}
@@ -697,7 +737,6 @@ export function MemoryDetail() {
                   </button>
                 </span>
               ))}
-              {/* Tag input — always visible when under 6 tags */}
               {memory.tags.length < 6 && (
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <input
@@ -710,15 +749,11 @@ export function MemoryDetail() {
                         e.preventDefault()
                         handleAddTag()
                       }
-                      // Space also confirms on mobile (but only if there's content)
                       if (e.key === ' ' && newTag.trim() && newTag.trim().length >= 2) {
                         e.preventDefault()
                         handleAddTag()
                       }
-                      if (e.key === 'Escape') {
-                        setNewTag('')
-                      }
-                      // Backspace on empty input removes last tag
+                      if (e.key === 'Escape') setNewTag('')
                       if (e.key === 'Backspace' && !newTag && memory.tags.length > 0) {
                         const lastTag = memory.tags[memory.tags.length - 1]
                         const updatedTags = memory.tags.slice(0, -1)
@@ -734,40 +769,17 @@ export function MemoryDetail() {
               )}
             </div>
           </div>
-        </motion.div>
-
-        {/* ── AI Summary ── */}
-        {memory.aiSummary && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.4 }}
-            className="mb-6 sm:mb-8"
-          >
-            <div className="rounded-2xl bg-card border border-border p-3 sm:p-6 shadow-sm border-l-4 border-l-[#9D8BA7]">
-              <div className="flex items-center gap-2 mb-3">
-                <Brain size={16} className="text-[#9D8BA7]" />
-                <span className="text-xs font-semibold text-[#9D8BA7] uppercase tracking-wider">
-                  Aether&apos;s Understanding
-                </span>
-              </div>
-              <p className="text-sm text-foreground leading-relaxed">
-                {memory.aiSummary}
-              </p>
-            </div>
-          </motion.div>
-        )}
+        </motion.section>
 
         {/* ── Related Memories ── */}
         {relatedMemories.length > 0 && (
-          <motion.div
+          <motion.section
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
+            transition={{ delay: 0.3, ...SPRING_SMOOTH }}
             className="mb-6 sm:mb-8"
           >
             <h3 className="text-sm font-semibold text-foreground mb-3 sm:mb-4">Related Memories</h3>
-            {/* Horizontal scroll on mobile, grid on desktop */}
             <div className="overflow-x-auto scrollbar-none -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible">
               <div className="flex gap-3 md:grid md:grid-cols-2 lg:grid-cols-3">
                 {relatedMemories.map((relMemory) => (
@@ -783,56 +795,48 @@ export function MemoryDetail() {
                 ))}
               </div>
             </div>
-          </motion.div>
+          </motion.section>
         )}
 
-        {/* ── Action Buttons (Desktop only — inline layout) ── */}
-        <motion.div
+        {/* ── Desktop Action Buttons ── */}
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35, duration: 0.4 }}
+          transition={{ delay: 0.35, ...SPRING_SMOOTH }}
           className="hidden md:flex flex-wrap gap-3 pt-4 border-t border-border"
         >
-          <Button
-            onClick={handleShare}
-            variant="outline"
-            className="rounded-xl border-border text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/20 hover:text-[#9D8BA7] transition-all duration-300"
-          >
-            <Share2 size={16} className="mr-2" />
-            Share
-          </Button>
-          {memory.type === 'text' && (
+          <motion.div whileTap={{ scale: 0.95 }}>
             <Button
-              onClick={handleEdit}
+              onClick={handleShare}
               variant="outline"
-              className={`rounded-xl border-border transition-all duration-300 ${
-                isEditing
-                  ? 'bg-[#9D8BA7]/10 border-[#9D8BA7]/20 text-[#9D8BA7]'
-                  : 'text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/20 hover:text-[#9D8BA7]'
-              }`}
+              className="rounded-xl border-border text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/20 hover:text-[#9D8BA7] transition-all duration-300"
             >
-              {isEditing ? (
-                <>
-                  <Check size={16} className="mr-2" />
-                  Editing...
-                </>
-              ) : (
-                <>
-                  <Pencil size={16} className="mr-2" />
-                  Edit
-                </>
-              )}
+              <Share2 size={16} className="mr-2" /> Share
             </Button>
+          </motion.div>
+          {memory.type === 'text' && (
+            <motion.div whileTap={{ scale: 0.95 }}>
+              <Button
+                onClick={handleEdit}
+                variant="outline"
+                className={`rounded-xl border-border transition-all duration-300 ${
+                  isEditing ? 'bg-[#9D8BA7]/10 border-[#9D8BA7]/20 text-[#9D8BA7]' : 'text-foreground hover:bg-[#9D8BA7]/5 hover:border-[#9D8BA7]/20 hover:text-[#9D8BA7]'
+                }`}
+              >
+                {isEditing ? <><Check size={16} className="mr-2" /> Editing...</> : <><Pencil size={16} className="mr-2" /> Edit</>}
+              </Button>
+            </motion.div>
           )}
-          <Button
-            onClick={() => setDeleteDialogOpen(true)}
-            variant="outline"
-            className="rounded-xl border-border text-red-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
-          >
-            <Trash2 size={16} className="mr-2" />
-            Delete
-          </Button>
-        </motion.div>
+          <motion.div whileTap={{ scale: 0.95 }}>
+            <Button
+              onClick={() => setDeleteDialogOpen(true)}
+              variant="outline"
+              className="rounded-xl border-border text-red-500 hover:bg-red-50 hover:border-red-200 hover:text-red-600 transition-all duration-300"
+            >
+              <Trash2 size={16} className="mr-2" /> Delete
+            </Button>
+          </motion.div>
+        </motion.section>
       </div>
 
       {/* ── Fixed Action Bar (Mobile only) ── */}
@@ -850,9 +854,7 @@ export function MemoryDetail() {
             <button
               onClick={handleEdit}
               className={`flex flex-col items-center justify-center gap-1 min-w-[48px] min-h-[48px] rounded-xl transition-colors duration-150 ${
-                isEditing
-                  ? 'text-[#9D8BA7] bg-[#9D8BA7]/10'
-                  : 'text-muted-foreground hover:text-[#9D8BA7] active:bg-[#9D8BA7]/5'
+                isEditing ? 'text-[#9D8BA7] bg-[#9D8BA7]/10' : 'text-muted-foreground hover:text-[#9D8BA7] active:bg-[#9D8BA7]/5'
               }`}
               aria-label={isEditing ? 'Save changes' : 'Edit memory'}
             >
@@ -871,7 +873,7 @@ export function MemoryDetail() {
         </div>
       </div>
 
-      {/* ── Delete Confirmation Dialog ── */}
+      {/* ── Delete Confirmation ── */}
       <DeleteDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}

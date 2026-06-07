@@ -181,6 +181,112 @@ export async function callAI(
 }
 
 // ─────────────────────────────────────────────────────────
+// GEMINI STREAMING CALL
+// ─────────────────────────────────────────────────────────
+
+async function* streamGemini(
+  systemPrompt: string,
+  userPrompt: string,
+  temperature: number,
+  maxTokens: number
+): AsyncGenerator<string> {
+  const genAI = getGeminiClient()
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    generationConfig: {
+      temperature,
+      maxOutputTokens: maxTokens,
+    },
+    systemInstruction: systemPrompt,
+  })
+
+  const result = await model.generateContentStream(userPrompt)
+
+  for await (const chunk of result.stream) {
+    const text = chunk.text()
+    if (text) yield text
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// GROQ STREAMING CALL
+// ─────────────────────────────────────────────────────────
+
+async function* streamGroq(
+  systemPrompt: string,
+  userPrompt: string,
+  temperature: number,
+  maxTokens: number
+): AsyncGenerator<string> {
+  const groq = getGroqClient()
+
+  const stream = await groq.chat.completions.create({
+    model: GROQ_MODEL,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature,
+    max_tokens: maxTokens,
+    stream: true,
+  })
+
+  for await (const chunk of stream) {
+    const content = chunk.choices[0]?.delta?.content
+    if (content) yield content
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// MASTER callAIStream — STREAMING VERSION
+// ─────────────────────────────────────────────────────────
+
+/**
+ * Streaming version of callAI. Yields text chunks as they arrive.
+ * Uses Gemini streaming with Groq fallback.
+ */
+export async function* callAIStream(
+  systemPrompt: string,
+  userPrompt: string,
+  temperature: number = 0.6,
+  maxTokens: number = 1024
+): AsyncGenerator<string> {
+  const geminiAvailable = Date.now() >= geminiFailedUntil
+
+  if (geminiAvailable) {
+    try {
+      let hasYielded = false
+      for await (const chunk of streamGemini(systemPrompt, userPrompt, temperature, maxTokens)) {
+        hasYielded = true
+        yield chunk
+      }
+      if (hasYielded) {
+        geminiFailedUntil = 0
+        return
+      }
+    } catch (error) {
+      if (isRateLimitError(error)) {
+        geminiFailedUntil = Date.now() + GEMINI_COOLDOWN_MS
+      }
+      // Fall through to Groq
+    }
+  }
+
+  // Groq fallback
+  try {
+    for await (const chunk of streamGroq(systemPrompt, userPrompt, temperature, maxTokens)) {
+      yield chunk
+    }
+  } catch (error) {
+    if (isRateLimitError(error)) {
+      throw new Error('ALL_PROVIDERS_EXHAUSTED')
+    }
+    throw new Error('ALL_PROVIDERS_EXHAUSTED')
+  }
+}
+
+// ─────────────────────────────────────────────────────────
 // callAIWithHistory — for chat routes that need history
 // ─────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client'
+import { createClient, createClientSafe } from '@/lib/supabase/client'
 import type { Memory, Collection, UserProfile } from '@/components/aether/types'
 import {
   cacheMemories,
@@ -15,22 +15,30 @@ import { getIsOnline } from '@/hooks/use-online-status'
 
 const PAGE_SIZE = 20
 
+// Helper: Get Supabase client or return cached data if unavailable (demo mode)
+function getSupabase() {
+  return createClientSafe()
+}
+
 // ─── AUTH ───
 
 export async function getCurrentUser() {
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return null
   const { data: { user } } = await supabase.auth.getUser()
   return user
 }
 
 export async function getSession() {
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return null
   const { data: { session } } = await supabase.auth.getSession()
   return session
 }
 
 export async function signOut() {
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return
   await supabase.auth.signOut()
 }
 
@@ -44,7 +52,8 @@ export async function signOut() {
  * Uses upsert with onConflict so it's safe to call multiple times.
  */
 export async function ensureProfile(userId: string): Promise<UserProfile | null> {
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return null
 
   // First, check if profile already exists
   const { data: existingProfile } = await supabase
@@ -104,7 +113,8 @@ export async function ensureProfile(userId: string): Promise<UserProfile | null>
 }
 
 export async function getProfile(userId: string): Promise<UserProfile | null> {
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return null
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -125,7 +135,6 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
 
 export async function updateProfile(userId: string, updates: { name?: string; avatar_url?: string }) {
   if (!getIsOnline()) {
-    // Queue for later sync
     await addToSyncQueue({
       type: 'update',
       entityType: 'memory',
@@ -135,7 +144,8 @@ export async function updateProfile(userId: string, updates: { name?: string; av
     return
   }
 
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return
   const { error } = await supabase
     .from('profiles')
     .update(updates)
@@ -158,7 +168,13 @@ export async function fetchMemories(page: number = 0): Promise<{ memories: Memor
     }
   }
 
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) {
+    const cached = await getCachedMemories()
+    const from = page * PAGE_SIZE
+    const to = from + PAGE_SIZE
+    return { memories: cached.slice(from, to), hasMore: to < cached.length }
+  }
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     // Not authenticated — return cached memories from IndexedDB
@@ -260,7 +276,10 @@ export async function createMemory(memory: {
   // This ensures memories are NEVER lost even if the session expires,
   // Supabase is unreachable, or getUser() throws.
   try {
-    const supabase = createClient()
+    const supabase = getSupabase()
+    if (!supabase) {
+      return saveMemoryLocally(memory)
+    }
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       // Not authenticated — fall back to local-only save
@@ -348,7 +367,8 @@ export async function updateMemoryById(id: string, updates: { content?: string; 
     return
   }
 
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return
   const { error } = await supabase
     .from('memories')
     .update(dbUpdates)
@@ -370,7 +390,8 @@ export async function updateMemoryById(id: string, updates: { content?: string; 
  */
 async function regenerateEmbeddingFireAndForget(memoryId: string): Promise<void> {
   try {
-    const supabase = createClient()
+    const supabase = getSupabase()
+    if (!supabase) return
     const { data } = await supabase
       .from('memories')
       .select('title, content, tags, summary')
@@ -419,7 +440,8 @@ export async function deleteMemoryById(id: string) {
     return
   }
 
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return
   const { error } = await supabase
     .from('memories')
     .delete()
@@ -430,12 +452,15 @@ export async function deleteMemoryById(id: string) {
 
 export async function getMemoryCount(): Promise<number> {
   if (!getIsOnline()) {
-    // Return cached count
     const cached = await getCachedMemories()
     return cached.length
   }
 
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) {
+    const cached = await getCachedMemories()
+    return cached.length
+  }
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return 0
 
@@ -455,7 +480,8 @@ export async function fetchCollections(): Promise<Collection[]> {
     return getCachedCollections()
   }
 
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return getCachedCollections()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
@@ -521,7 +547,8 @@ export async function createCollection(collection: {
     return offlineCollection
   }
 
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) throw new Error('Supabase not configured')
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
@@ -561,7 +588,8 @@ export async function addMemoryToCollection(memoryId: string, collectionId: stri
     return
   }
 
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return
   const { error } = await supabase
     .from('memory_collections')
     .insert({ memory_id: memoryId, collection_id: collectionId })
@@ -577,7 +605,8 @@ export async function getMemoriesForCollection(collectionId: string): Promise<Me
     return cached
   }
 
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) return getCachedMemories()
   const { data, error } = await supabase
     .from('memory_collections')
     .select('memory_id, memories(*)')
@@ -599,7 +628,11 @@ export async function exportAllMemories(): Promise<string> {
     return JSON.stringify(cached, null, 2)
   }
 
-  const supabase = createClient()
+  const supabase = getSupabase()
+  if (!supabase) {
+    const cached = await getCachedMemories()
+    return JSON.stringify(cached, null, 2)
+  }
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
@@ -720,7 +753,8 @@ async function storeEmbeddingFireAndForget(
     // Don't store zero vectors (means generation failed)
     if (isZeroVector(embedding)) return
 
-    const supabase = createClient()
+    const supabase = getSupabase()
+    if (!supabase) return
 
     // Use the service role approach — call the update_memory_embedding function
     // which runs as SECURITY DEFINER
@@ -750,7 +784,8 @@ export async function semanticSearchMemories(
   matchThreshold: number = 0.3
 ): Promise<Memory[]> {
   try {
-    const supabase = createClient()
+    const supabase = getSupabase()
+    if (!supabase) return []
 
     const { data, error } = await supabase.rpc('match_memories', {
       query_embedding: queryEmbedding,

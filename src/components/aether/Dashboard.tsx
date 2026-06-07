@@ -3,7 +3,6 @@
 import { useState, useCallback, useMemo, memo, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Mic, FileText, Link2, ImageIcon, X, Plus, Brain, Loader2, Sparkles, Send, ImagePlus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { useAetherStore } from '@/store/aether-store'
 import { createMemory, getMemoryCount, updateMemoryById, deleteMemoryById } from '@/lib/supabase/data'
 import { getCachedTags, setCachedTags } from '@/lib/tag-cache'
@@ -11,25 +10,39 @@ import type { Memory, MemoryType } from '@/components/aether/types'
 import { useToast } from '@/hooks/use-toast'
 
 // ────────────────────────────────────────────────────────────
-// Helpers
+// SPRING PHYSICS — Premium, physical, alive
 // ────────────────────────────────────────────────────────────
 
-function getSupportedMimeType(): string {
-  const types = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/ogg;codecs=opus',
-    'audio/mp4',
-  ]
-  for (const type of types) {
-    if (MediaRecorder.isTypeSupported(type)) return type
-  }
-  return ''
+const SPRING_BOUNCE = { type: 'spring' as const, stiffness: 400, damping: 17 }
+const SPRING_SMOOTH = { type: 'spring' as const, stiffness: 260, damping: 22 }
+const SPRING_GENTLE = { type: 'spring' as const, stiffness: 180, damping: 20 }
+
+// ────────────────────────────────────────────────────────────
+// STAGGER CONTAINERS — "Like a machine sorting your thoughts"
+// ────────────────────────────────────────────────────────────
+
+const feedContainerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+const feedItemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: SPRING_SMOOTH,
+  },
 }
 
 // ────────────────────────────────────────────────────────────
-// MIDNIGHT OASIS — Muted Tag Colors
-// Practically invisible until you look for them
+// Helpers
 // ────────────────────────────────────────────────────────────
 
 const CATEGORY_TAG_MAP: Record<string, string> = {
@@ -79,9 +92,7 @@ const TAG_COLOR_SCHEMES: Record<string, { dark: { bg: string; text: string }; li
 function getTagColorScheme(tag: string) {
   const lowerTag = tag.toLowerCase()
   const category = CATEGORY_TAG_MAP[lowerTag]
-  if (category && TAG_COLOR_SCHEMES[category]) {
-    return TAG_COLOR_SCHEMES[category]
-  }
+  if (category && TAG_COLOR_SCHEMES[category]) return TAG_COLOR_SCHEMES[category]
   let hash = 0
   for (let i = 0; i < lowerTag.length; i++) {
     hash = lowerTag.charCodeAt(i) + ((hash << 5) - hash)
@@ -108,14 +119,10 @@ const TYPE_ACCENT_COLORS_LIGHT: Record<MemoryType, { border: string; bg: string;
 function typeIcon(type: MemoryType, size = 'size-4') {
   const accent = TYPE_ACCENT_COLORS_DARK[type]
   switch (type) {
-    case 'voice':
-      return <Mic className={size} style={{ color: accent.text }} />
-    case 'link':
-      return <Link2 className={size} style={{ color: accent.text }} />
-    case 'image':
-      return <ImageIcon className={size} style={{ color: accent.text }} />
-    default:
-      return <FileText className={size} style={{ color: accent.text }} />
+    case 'voice': return <Mic className={size} style={{ color: accent.text }} />
+    case 'link': return <Link2 className={size} style={{ color: accent.text }} />
+    case 'image': return <ImageIcon className={size} style={{ color: accent.text }} />
+    default: return <FileText className={size} style={{ color: accent.text }} />
   }
 }
 
@@ -204,8 +211,7 @@ function AuroraBackground() {
 }
 
 // ────────────────────────────────────────────────────────────
-// MIDNIGHT OASIS — Memory Card
-// Glassmorphism 2.0, Buttery Hover, Invisible Tags
+// MEMORY CARD — Spring physics, stagger animation, hover glow
 // ────────────────────────────────────────────────────────────
 
 const MemoryCard = memo(function MemoryCard({
@@ -239,12 +245,7 @@ const MemoryCard = memo(function MemoryCard({
 
   return (
     <motion.div
-      initial={isNew ? { opacity: 0, scale: 0.92, y: 16 } : { opacity: 0, y: 6 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={isNew
-        ? { type: 'spring', stiffness: 260, damping: 22, delay: 0.05 }
-        : { duration: 0.35, delay: Math.min(index * 0.03, 0.2) }
-      }
+      variants={feedItemVariants}
       className="relative w-full group"
     >
       {/* Dopamine glow pulse on new cards */}
@@ -261,19 +262,19 @@ const MemoryCard = memo(function MemoryCard({
         />
       )}
 
-      <div
+      <motion.div
         onClick={onClick}
-        className={`relative w-full text-left p-4 md:p-5 cursor-pointer rounded-2xl transition-all duration-300 ${
-          darkMode
-            ? 'hover:-translate-y-[2px] hover:shadow-[0_8px_30px_rgba(124,58,237,0.08)]'
-            : 'hover:-translate-y-[2px] hover:shadow-md'
-        }`}
+        whileHover={{ y: -2, boxShadow: darkMode ? '0 8px 30px rgba(124,58,237,0.08)' : '0 4px 12px rgba(0,0,0,0.08)' }}
+        whileTap={{ scale: 0.98 }}
+        transition={SPRING_GENTLE}
+        className="relative w-full text-left p-4 md:p-5 cursor-pointer rounded-2xl"
         style={darkMode
           ? {
               background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: isNew ? `1px solid rgba(192,132,252,0.5)` : '1px solid rgba(255,255,255,0.06)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
+              transition: 'border-color 1.5s ease-out',
             }
           : {
               background: 'rgba(255,255,255,0.85)',
@@ -300,12 +301,25 @@ const MemoryCard = memo(function MemoryCard({
                 {displayTitle}
               </h3>
               <div className="flex items-center gap-2 shrink-0">
+                {/* Syncing indicator — tiny, elegant */}
+                {isSyncing && !isTagging && (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative flex size-2"
+                  >
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400/20 opacity-75" />
+                    <span className="relative inline-flex rounded-full size-2 bg-amber-500/30" />
+                  </motion.span>
+                )}
                 <span className={`text-[11px] whitespace-nowrap ${darkMode ? 'text-white/15' : 'text-gray-400'}`}>
                   {formatRelativeDate(memory.createdAt)}
                 </span>
                 {/* 3-dot menu — only on hover */}
                 <div className="relative">
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
                     onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
                     className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded-lg ${
                       darkMode ? 'hover:bg-white/5 text-white/20 hover:text-white/50' : 'hover:bg-black/5 text-gray-400 hover:text-gray-600'
@@ -313,18 +327,16 @@ const MemoryCard = memo(function MemoryCard({
                     aria-label="More actions"
                   >
                     <MoreHorizontal size={14} />
-                  </button>
+                  </motion.button>
                   <AnimatePresence>
                     {showMenu && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: -4 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                        transition={{ duration: 0.15 }}
+                        transition={SPRING_BOUNCE}
                         className={`absolute right-0 top-8 z-50 rounded-xl shadow-xl border py-1 min-w-[140px] ${
-                          darkMode
-                            ? 'bg-[#161428] border-white/10'
-                            : 'bg-white border-gray-200'
+                          darkMode ? 'bg-[#161428] border-white/10' : 'bg-white border-gray-200'
                         }`}
                       >
                         <button
@@ -357,7 +369,7 @@ const MemoryCard = memo(function MemoryCard({
               {previewContent || <em className={darkMode ? 'text-white/10' : 'text-gray-300'}>No content</em>}
             </p>
 
-            {/* INVISIBLE TAGS — Practically hidden until you look */}
+            {/* INVISIBLE TAGS + Status indicators */}
             <div className="flex items-center gap-1.5 mt-3 flex-wrap min-w-0">
               {memory.tags.slice(0, 3).map((tag, i) => {
                 const colorScheme = getTagColorScheme(tag)
@@ -366,10 +378,7 @@ const MemoryCard = memo(function MemoryCard({
                   <span
                     key={tag}
                     className="text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap font-medium transition-all duration-300"
-                    style={{
-                      background: colors.bg,
-                      color: colors.text,
-                    }}
+                    style={{ background: colors.bg, color: colors.text }}
                   >
                     {isTagging ? (
                       <span className="animate-pulse" style={{ animationDelay: `${i * 200}ms` }}>
@@ -379,15 +388,6 @@ const MemoryCard = memo(function MemoryCard({
                   </span>
                 )
               })}
-              {isSyncing && !isTagging && (
-                <span className="inline-flex items-center gap-1 text-[10px] text-amber-500/30 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                  <span className="relative flex size-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400/15 opacity-75" />
-                    <span className="relative inline-flex rounded-full size-1.5 bg-amber-500/25" />
-                  </span>
-                  Syncing
-                </span>
-              )}
               {isTagging && (
                 <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full whitespace-nowrap"
                   style={{ color: darkMode ? 'rgba(157,139,167,0.3)' : 'rgba(157,139,167,0.5)' }}
@@ -404,7 +404,7 @@ const MemoryCard = memo(function MemoryCard({
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Click outside to close menu */}
       {showMenu && (
@@ -420,7 +420,12 @@ const MemoryCard = memo(function MemoryCard({
 
 const EmptyState = memo(function EmptyState({ darkMode }: { darkMode: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={SPRING_SMOOTH}
+      className="flex flex-col items-center justify-center py-24 px-4 text-center"
+    >
       <div className={`h-16 w-16 rounded-2xl flex items-center justify-center mb-6 ${
         darkMode ? 'bg-white/[0.03] border border-white/[0.06]' : 'bg-gray-100'
       }`}>
@@ -432,12 +437,76 @@ const EmptyState = memo(function EmptyState({ darkMode }: { darkMode: boolean })
       <p className={`text-sm max-w-xs leading-relaxed ${darkMode ? 'text-white/20' : 'text-gray-400'}`}>
         Type anything above — a thought, a link, an idea. Aether will take care of the rest.
       </p>
-    </div>
+    </motion.div>
   )
 })
 
 // ────────────────────────────────────────────────────────────
+// WEB SPEECH API HOOK — Real-time on-device transcription
+// ────────────────────────────────────────────────────────────
+
+function useWebSpeechRecognition() {
+  const [isListening, setIsListening] = useState(false)
+  const [transcript, setTranscript] = useState('')
+  const [isSupported] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition
+  })
+  const recognitionRef = useRef<any>(null)
+
+  const startListening = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) return false
+
+    const recognition = new SpeechRecognition()
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.lang = 'en-US'
+
+    let finalTranscript = ''
+
+    recognition.onresult = (event: any) => {
+      let interim = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript
+        } else {
+          interim += result[0].transcript
+        }
+      }
+      setTranscript(finalTranscript + interim)
+    }
+
+    recognition.onerror = () => {
+      setIsListening(false)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+    }
+
+    recognitionRef.current = recognition
+    recognition.start()
+    setIsListening(true)
+    setTranscript('')
+    return true
+  }, [])
+
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+      recognitionRef.current = null
+    }
+    setIsListening(false)
+  }, [])
+
+  return { isListening, transcript, isSupported, startListening, stopListening }
+}
+
+// ────────────────────────────────────────────────────────────
 // DOPAMINE CAPTURE BAR — Premium, glowing, addictive
+// Web Speech API for real-time voice transcription
 // ────────────────────────────────────────────────────────────
 
 function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
@@ -446,12 +515,30 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
 
   const [input, setInput] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [isTranscribing, setIsTranscribing] = useState(false)
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [isFocused, setIsFocused] = useState(false)
+  const [savePulse, setSavePulse] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Web Speech API for real-time voice transcription
+  const { isListening, transcript, isSupported: speechSupported, startListening, stopListening } = useWebSpeechRecognition()
+
+  // Update input as voice transcription comes in real-time
+  useEffect(() => {
+    if (isListening && transcript) {
+      setInput(transcript)
+    }
+  }, [transcript, isListening])
+
+  // When voice stops, auto-save
+  const voiceAutoSaveRef = useRef(false)
+  useEffect(() => {
+    if (!isListening && transcript && input === transcript && input.trim()) {
+      voiceAutoSaveRef.current = true
+    } else {
+      voiceAutoSaveRef.current = false
+    }
+  }, [isListening, transcript, input])
 
   const generateTags = useCallback(async (content: string, type: string): Promise<string[]> => {
     if (!content.trim()) return getSmartFallbackTags(content, type)
@@ -490,6 +577,7 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
     const fallbackTags = getSmartFallbackTags(content, type)
     const isOffline = !navigator.onLine
 
+    // ✨ OPTIMISTIC UI — Instantly add to feed
     addMemory({
       id: tempId,
       type,
@@ -498,15 +586,19 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
       tags: fallbackTags,
       createdAt: new Date().toISOString(),
       taggingStatus: isOffline ? 'complete' : 'pending',
-      syncStatus: isOffline ? 'pending' : 'synced',
+      syncStatus: isOffline ? 'pending' : 'syncing', // Show syncing indicator
       ...(type === 'link' ? { source: content, sourceUrl: content } : {}),
     })
+
+    // ✨ DOPAMINE HIT — Pulse the save button
+    setSavePulse(true)
+    setTimeout(() => setSavePulse(false), 600)
 
     setInput('')
     setIsSaving(false)
     onSaved(tempId)
 
-    // ✨ Dopamine hit: "Saved to your universe ✨"
+    // ✨ Dopamine toast — "Saved to your universe ✨"
     toast({
       title: 'Saved to your universe ✨',
       description: type === 'link' ? 'Link captured & enriching...' : 'Your thought is safe with Aether.',
@@ -520,7 +612,10 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
       clearTimeout(taggingTimeout)
       try {
         await createMemory({ type, title, content, tags: fallbackTags, ...(type === 'link' ? { sourceUrl: content } : {}) })
-      } catch {}
+        updateMemory(tempId, { syncStatus: 'synced' })
+      } catch {
+        // Already in store with pending status
+      }
       return
     }
 
@@ -529,7 +624,7 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
         const count = await getMemoryCount()
         if (count >= 50) {
           clearTimeout(taggingTimeout)
-          updateMemory(tempId, { taggingStatus: 'complete' })
+          updateMemory(tempId, { taggingStatus: 'complete', syncStatus: 'synced' })
           toast({ title: 'Free plan limit reached', description: 'Upgrade for unlimited memories.' })
           return
         }
@@ -578,6 +673,7 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
           content: enrichedContent,
           tags: aiTags,
           taggingStatus: 'complete',
+          syncStatus: 'synced',
           createdAt: savedMemory.createdAt,
           ...(savedMemory.syncStatus ? { syncStatus: savedMemory.syncStatus } : {}),
           ...(siteName ? { siteName } : {}),
@@ -603,6 +699,7 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
           id: savedMemory.id,
           tags: aiTags,
           taggingStatus: 'complete',
+          syncStatus: 'synced',
           createdAt: savedMemory.createdAt,
           ...(savedMemory.syncStatus ? { syncStatus: savedMemory.syncStatus } : {}),
           ...(savedMemory.aiSummary ? { aiSummary: savedMemory.aiSummary } : {}),
@@ -612,68 +709,26 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
       clearTimeout(taggingTimeout)
       try {
         const aiTags = await generateTags(content, type)
-        updateMemory(tempId, { tags: aiTags, taggingStatus: 'complete' })
+        updateMemory(tempId, { tags: aiTags, taggingStatus: 'complete', syncStatus: 'synced' })
       } catch {
-        updateMemory(tempId, { taggingStatus: 'complete' })
+        updateMemory(tempId, { taggingStatus: 'complete', syncStatus: 'synced' })
       }
     }
   }, [input, addMemory, updateMemory, autoTagging, user, generateTags, toast, onSaved])
 
-  const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mimeType = getSupportedMimeType()
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
-      const chunks: Blob[] = []
-
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
-      recorder.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop())
-        const blob = new Blob(chunks, { type: mimeType || 'audio/webm' })
-        setIsTranscribing(true)
-
-        const reader = new FileReader()
-        reader.onloadend = async () => {
-          const base64Audio = (reader.result as string).split(',')[1]
-          if (base64Audio) {
-            try {
-              const res = await fetch('/api/ai/transcribe', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ audio: base64Audio }),
-              })
-              const data = await res.json()
-              if (data.transcription?.trim()) {
-                setInput(data.transcription.trim())
-                setTimeout(() => inputRef.current?.focus(), 100)
-              }
-            } catch {
-            } finally {
-              setIsTranscribing(false)
-            }
-          }
-        }
-        reader.readAsDataURL(blob)
-      }
-
-      setMediaRecorder(recorder)
-      recorder.start()
-      setIsRecording(true)
-    } catch {
-      setIsRecording(false)
+  // Auto-save when voice stops (after handleSave is defined)
+  useEffect(() => {
+    if (voiceAutoSaveRef.current && transcript.trim()) {
+      const timer = setTimeout(() => {
+        handleSave(transcript)
+        voiceAutoSaveRef.current = false
+      }, 300)
+      return () => clearTimeout(timer)
     }
-  }, [])
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop()
-    }
-    setIsRecording(false)
-  }, [mediaRecorder])
+  }, [voiceAutoSaveRef.current, transcript, handleSave])
 
   const handleImageUpload = useCallback(async (file: File) => {
     const MAX_SIZE = 5 * 1024 * 1024
-    let fileToRead = file
     if (file.size > MAX_SIZE) {
       toast({ title: 'Image too large', description: 'Try a smaller image (max 5MB).', variant: 'destructive' })
       return
@@ -736,7 +791,7 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
         }
       }
     }
-    reader.readAsDataURL(fileToRead)
+    reader.readAsDataURL(file)
   }, [addMemory, autoTagging, onSaved, toast])
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
@@ -748,21 +803,45 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
     }
   }, [handleSave])
 
+  const handleMicClick = useCallback(() => {
+    if (isListening) {
+      stopListening()
+    } else {
+      const started = startListening()
+      if (!started) {
+        // Fallback: no Web Speech API support
+        toast({ title: 'Voice not available', description: 'Try typing instead.' })
+      }
+    }
+  }, [isListening, startListening, stopListening, toast])
+
   return (
     <div className={`shrink-0 px-4 md:px-6 pt-4 md:pt-5 pb-3 ${darkMode ? 'bg-[#0A0A14]' : 'bg-gray-50'}`}>
       <div className="md:max-w-3xl md:mx-auto">
         <div
           className={`relative flex items-center rounded-2xl transition-all duration-300 overflow-hidden ${
             darkMode
-              ? isFocused
+              ? isFocused || isListening
                 ? 'bg-white/[0.05] border border-[#c084fc]/25 shadow-[0_0_30px_rgba(192,132,252,0.08)]'
                 : 'bg-white/[0.03] border border-white/[0.06]'
-              : isFocused
+              : isFocused || isListening
                 ? 'bg-white border border-[#9D8BA7]/30 shadow-sm'
                 : 'bg-white border border-gray-200 shadow-sm'
           }`}
           style={darkMode ? { backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' } : undefined}
         >
+          {/* Voice recording indicator */}
+          {isListening && (
+            <div className="flex items-center gap-2 pl-4">
+              <motion.span
+                animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="size-2.5 rounded-full bg-red-500"
+              />
+              <span className="text-xs text-red-400 font-medium">Listening...</span>
+            </div>
+          )}
+
           {/* Main input */}
           <input
             ref={inputRef}
@@ -778,8 +857,8 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
               }
             }}
             onPaste={handlePaste}
-            placeholder="Dump a thought here..."
-            disabled={isSaving || isRecording || isTranscribing}
+            placeholder={isListening ? 'Speak your thought...' : 'Dump a thought here...'}
+            disabled={isSaving}
             autoComplete="off"
             aria-label="Capture a thought"
             className={`flex-1 h-12 px-4 text-sm bg-transparent focus:outline-none placeholder:transition-colors duration-300 ${
@@ -789,49 +868,32 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
             }`}
           />
 
-          {/* Transcribing indicator */}
-          {isTranscribing && (
-            <span className="flex items-center gap-1.5 text-xs pr-2" style={{ color: darkMode ? 'rgba(192,132,252,0.5)' : 'rgba(157,139,167,0.7)' }}>
-              <Loader2 size={14} className="animate-spin" />
-              <span className="hidden sm:inline">Transcribing…</span>
-            </span>
-          )}
-
-          {/* Recording indicator */}
-          {isRecording && (
-            <button
-              onClick={stopRecording}
-              className="flex items-center gap-1.5 text-xs pr-2 text-red-400 hover:text-red-300 transition-colors"
-              aria-label="Stop recording"
-            >
-              <span className="relative flex size-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full size-2 bg-red-500" />
-              </span>
-              <span className="hidden sm:inline">Stop</span>
-            </button>
-          )}
-
           {/* Action buttons */}
           <div className="flex items-center gap-0.5 pr-2">
-            {/* Mic button */}
-            {!isRecording && !isTranscribing && (
-              <button
-                onClick={startRecording}
-                className={`p-2 rounded-xl transition-all duration-200 ${
-                  darkMode
+            {/* Mic button — Web Speech API */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              transition={SPRING_BOUNCE}
+              onClick={handleMicClick}
+              className={`p-2 rounded-xl transition-all duration-200 ${
+                isListening
+                  ? 'bg-red-500/10 text-red-400'
+                  : darkMode
                     ? 'text-white/15 hover:text-[#c084fc] hover:bg-[#c084fc]/8 active:bg-[#c084fc]/12'
                     : 'text-gray-400 hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5 active:bg-[#9D8BA7]/10'
-                }`}
-                aria-label="Voice capture"
-              >
-                <Mic size={18} />
-              </button>
-            )}
+              }`}
+              aria-label={isListening ? 'Stop voice capture' : 'Start voice capture'}
+            >
+              <Mic size={18} />
+            </motion.button>
 
             {/* Image upload */}
-            {!isRecording && !isTranscribing && (
-              <button
+            {!isListening && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                transition={SPRING_BOUNCE}
                 onClick={() => fileInputRef.current?.click()}
                 className={`p-2 rounded-xl transition-all duration-200 ${
                   darkMode
@@ -841,21 +903,30 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
                 aria-label="Upload image"
               >
                 <ImagePlus size={18} />
-              </button>
+              </motion.button>
             )}
 
-            {/* Save button — dopamine pop */}
-            {input.trim() && !isRecording && !isTranscribing && (
+            {/* Save button — dopamine pulse */}
+            {input.trim() && !isListening && (
               <motion.button
                 initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
+                animate={{
+                  opacity: 1,
+                  scale: savePulse ? [1, 1.2, 1] : 1,
+                }}
                 exit={{ opacity: 0, scale: 0.8 }}
+                transition={savePulse ? { duration: 0.3 } : SPRING_BOUNCE}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => handleSave()}
                 className="p-2 rounded-xl transition-all duration-200"
                 style={{
                   background: 'linear-gradient(135deg, #9D8BA7, #7c3aed)',
                   color: 'white',
-                  boxShadow: '0 0 20px rgba(157, 139, 167, 0.3)',
+                  boxShadow: savePulse
+                    ? '0 0 30px rgba(192, 132, 252, 0.6), 0 0 60px rgba(157, 139, 167, 0.3)'
+                    : '0 0 20px rgba(157, 139, 167, 0.3)',
+                  transition: 'box-shadow 0.3s ease',
                 }}
                 aria-label="Save thought"
               >
@@ -863,7 +934,7 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
               </motion.button>
             )}
 
-            {isSaving && !isRecording && (
+            {isSaving && !isListening && (
               <div className="p-2">
                 <Loader2 size={16} className="animate-spin text-[#c084fc]" />
               </div>
@@ -889,7 +960,7 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
 }
 
 // ────────────────────────────────────────────────────────────
-// CALM DASHBOARD — Just CaptureBar + Feed, nothing else
+// CALM DASHBOARD — CaptureBar + Staggered Feed
 // ────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -937,7 +1008,7 @@ export default function Dashboard() {
         <CaptureBar onSaved={handleSaved} />
       </div>
 
-      {/* ═══ MEMORY FEED — Clean, breathable, reverse-chronological ═══ */}
+      {/* ═══ MEMORY FEED — Staggered animations, calm spacing ═══ */}
       <div className={`flex-1 min-h-0 overflow-y-auto ios-scroll px-4 md:px-6 pb-4 relative z-10 ${
         darkMode ? 'bg-[#0A0A14]' : 'bg-gray-50'
       }`}>
@@ -945,7 +1016,12 @@ export default function Dashboard() {
           {filteredMemories.length === 0 && !isLoadingMemories ? (
             <EmptyState darkMode={darkMode} />
           ) : (
-            <div className="flex flex-col gap-5 py-3 md:py-4">
+            <motion.div
+              className="flex flex-col gap-5 py-3 md:py-4"
+              variants={feedContainerVariants}
+              initial="hidden"
+              animate="show"
+            >
               <AnimatePresence mode="popLayout">
                 {filteredMemories.map((memory, index) => (
                   <MemoryCard
@@ -959,11 +1035,15 @@ export default function Dashboard() {
                   />
                 ))}
               </AnimatePresence>
-            </div>
+            </motion.div>
           )}
           {isLoadingMemories && filteredMemories.length === 0 && (
             <div className="flex items-center justify-center py-20">
-              <div className="h-5 w-5 rounded-full border-2 border-white/10 border-t-[#c084fc] animate-spin" />
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                className="h-5 w-5 rounded-full border-2 border-white/10 border-t-[#c084fc]"
+              />
             </div>
           )}
         </div>

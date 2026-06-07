@@ -4,11 +4,11 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 // Validate environment variables at startup
+// Use console.warn (not error) to avoid triggering Next.js error overlay in demo mode
 if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseAnonKey)) {
-  console.error(
-    '[Aether] CRITICAL: Missing Supabase environment variables. ' +
-    'Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env file. ' +
-    'The app cannot function without these.'
+  console.warn(
+    '[Aether] Supabase environment variables not set. Running in demo mode. ' +
+    'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY for full functionality.'
   )
 }
 
@@ -22,7 +22,7 @@ export function createClient() {
     // If env vars are genuinely missing, we cannot create a client.
     // This should never happen in production. Log the error and throw
     // so the caller knows auth is unavailable.
-    console.error('[Aether] Cannot create Supabase client — environment variables are missing.')
+    console.warn('[Aether] Cannot create Supabase client — environment variables are missing.')
     throw new Error('Supabase environment variables are not configured.')
   }
 
