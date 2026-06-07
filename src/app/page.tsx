@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
+import { createClientSafe } from '@/lib/supabase/client'
 import LandingPage from '@/components/aether/LandingPage'
 
 /* ═══════════════════════════════════════════════════════════════
    ROOT PAGE — Routing Bouncer (Bulletproof)
 
    Logic:
-   1. Show a loading spinner while checking the Supabase session.
+   1. Show a minimal loading spinner while checking the Supabase session.
    2. Validate session with BOTH getSession() AND getUser() before
       considering a user "authenticated".
    3. If authenticated: redirect to /dashboard.
@@ -28,33 +28,45 @@ function SimpleSpinner() {
   )
 }
 
+function ConfigError() {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-[#050505]">
+      <div className="max-w-md mx-4 text-center">
+        <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+        </div>
+        <h2 className="text-lg font-bold text-white mb-2">Configuration Error</h2>
+        <p className="text-sm text-white/50 leading-relaxed">
+          Supabase environment variables are missing. Please set{' '}
+          <code className="text-[#9D8BA7] bg-white/5 px-1.5 py-0.5 rounded text-xs">NEXT_PUBLIC_SUPABASE_URL</code>{' '}
+          and{' '}
+          <code className="text-[#9D8BA7] bg-white/5 px-1.5 py-0.5 rounded text-xs">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>{' '}
+          in your environment.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function Home() {
   const router = useRouter()
-  const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated'>('checking')
+  const [authState, setAuthState] = useState<'checking' | 'authenticated' | 'unauthenticated' | 'error'>('checking')
   const initializedRef = useRef(false)
-
-  // If Supabase isn't configured, we know immediately the user is unauthenticated
-  const supabaseConfigured = isSupabaseConfigured()
-
-  // For the case where Supabase isn't configured, bypass the async check
-  if (!supabaseConfigured && authState === 'checking') {
-    // Use initial state to avoid the lint warning about setState in effect
-  }
 
   useEffect(() => {
     // Prevent double-initialization (React strict mode / HMR)
     if (initializedRef.current) return
     initializedRef.current = true
 
-    // If Supabase isn't configured, skip auth check entirely
-    if (!isSupabaseConfigured()) {
-      console.info('[Aether] Supabase not configured — showing landing page.')
-      // Use queueMicrotask to avoid synchronous setState in effect
-      queueMicrotask(() => setAuthState('unauthenticated'))
+    const supabase = createClientSafe()
+    if (!supabase) {
+      // Supabase is not configured — schedule error state via microtask
+      // to avoid synchronous setState within the effect body
+      console.error('[Aether] Supabase client could not be created. Check environment variables.')
+      queueMicrotask(() => setAuthState('error'))
       return
     }
 
-    const supabase = createClient()
     let mounted = true
 
     const checkAuth = async () => {
@@ -110,9 +122,9 @@ export default function Home() {
     }
   }, [router])
 
-  // If Supabase isn't configured, show landing immediately (no spinner)
-  if (!supabaseConfigured) {
-    return <LandingPage />
+  // Show config error if Supabase isn't configured
+  if (authState === 'error') {
+    return <ConfigError />
   }
 
   // Show spinner while checking auth

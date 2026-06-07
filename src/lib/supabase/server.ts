@@ -1,17 +1,25 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+// Validate at module load time
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    '[Aether] CRITICAL: Missing Supabase environment variables on the server. ' +
+    'Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+  )
+}
 
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies()
 
-  // If env vars are missing, create a placeholder client
-  const url = SUPABASE_URL || 'https://placeholder.supabase.co'
-  const key = SUPABASE_ANON_KEY || 'placeholder-key'
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase environment variables are not configured.')
+  }
 
-  return createServerClient(url, key, {
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll()
@@ -28,10 +36,4 @@ export async function createServerSupabaseClient() {
       },
     },
   })
-}
-
-// Check if Supabase is properly configured on the server
-export function isSupabaseConfigured(): boolean {
-  return !!(SUPABASE_URL && SUPABASE_ANON_KEY &&
-    SUPABASE_URL !== 'https://placeholder.supabase.co')
 }

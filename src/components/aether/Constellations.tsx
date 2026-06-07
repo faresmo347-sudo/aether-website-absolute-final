@@ -191,6 +191,14 @@ interface CategorizedGroup {
   count: number
 }
 
+// Pre-build keyword → categoryId lookup for O(1) matching instead of O(n*m)
+const KEYWORD_TO_CATEGORY: Map<string, string> = new Map()
+for (const cat of FIXED_CATEGORIES) {
+  for (const kw of cat.keywords) {
+    KEYWORD_TO_CATEGORY.set(kw, cat.id)
+  }
+}
+
 function categorizeMemories(memories: Memory[]): CategorizedGroup[] {
   const categoryMap = new Map<string, Memory[]>()
 
@@ -202,18 +210,22 @@ function categorizeMemories(memories: Memory[]): CategorizedGroup[] {
   for (const mem of memories) {
     let assigned = false
 
-    // Check if any tag matches a category's keywords
+    // Fast path: exact keyword match via lookup map
     if (mem.tags && mem.tags.length > 0) {
       for (const tag of mem.tags) {
         const normalizedTag = tag.toLowerCase().replace(/^#/, '')
-
+        // Direct lookup first (O(1))
+        const directMatch = KEYWORD_TO_CATEGORY.get(normalizedTag)
+        if (directMatch) {
+          categoryMap.get(directMatch)!.push(mem)
+          assigned = true
+          break
+        }
+        // Fallback: substring matching (slower, but only for unmatched tags)
         for (const cat of FIXED_CATEGORIES) {
           if (cat.keywords.some(kw => normalizedTag.includes(kw) || kw.includes(normalizedTag))) {
-            // Avoid double-adding: only assign to first matching category
-            if (!assigned) {
-              categoryMap.get(cat.id)!.push(mem)
-              assigned = true
-            }
+            categoryMap.get(cat.id)!.push(mem)
+            assigned = true
             break
           }
         }
@@ -378,7 +390,7 @@ function StarfieldCanvas({ darkMode }: { darkMode: boolean }) {
     window.addEventListener('resize', resize)
 
     if (darkMode) {
-      const STAR_COUNT = isMobile ? 80 : 250
+      const STAR_COUNT = isMobile ? 50 : 150
       const rand = seededRandom(777)
       const stars = Array.from({ length: STAR_COUNT }, (_, i) => ({
         x: rand() * canvas.width,
@@ -833,23 +845,11 @@ interface ConstellationPanelProps {
 function ConstellationPanel({ group, darkMode, onClose }: ConstellationPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null)
 
-  // Recap — computed synchronously (instant, no fake delays)
-  const [recapState, setRecapState] = useState<{ recap: string | null; groupId: string }>({
-    recap: null,
-    groupId: '',
-  })
-
-  const currentGroupId = group?.id ?? ''
-  const needsNewRecap = currentGroupId !== recapState.groupId
-
-  if (needsNewRecap && group) {
-    const result = generateCategoryRecap(group.name, group.memories)
-    setRecapState({ recap: result, groupId: currentGroupId })
-  } else if (needsNewRecap && !group) {
-    setRecapState({ recap: null, groupId: '' })
-  }
-
-  const recap = recapState.recap
+  // Recap — computed via useMemo (instant, no fake delays, no render-time setState)
+  const recap = useMemo(() => {
+    if (!group) return null
+    return generateCategoryRecap(group.name, group.memories)
+  }, [group])
 
   // Close on Escape key
   useEffect(() => {
@@ -1003,7 +1003,7 @@ function ConstellationPanel({ group, darkMode, onClose }: ConstellationPanelProp
                     key={memory.id}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.35 + i * 0.05, duration: 0.3 }}
+                    transition={{ delay: Math.min(i * 0.03, 0.3), duration: 0.2 }}
                     className={`rounded-xl p-2.5 md:p-3.5 transition-all duration-200 ${
                       darkMode
                         ? 'bg-white/5 hover:bg-white/8 border border-white/5'

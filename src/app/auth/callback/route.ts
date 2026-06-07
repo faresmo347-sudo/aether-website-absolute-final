@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -11,7 +11,8 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '/'
 
   // If Supabase is not configured, redirect to home
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('[Aether] Auth callback failed — Supabase environment variables are missing.')
     return NextResponse.redirect(`${origin}`)
   }
 
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     // so the session is persisted in cookies with path=/
     const res = NextResponse.redirect(`${origin}${next}`)
 
-    const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll() {
           // Parse cookies from the request

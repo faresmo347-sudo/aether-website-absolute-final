@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { useAetherStore } from '@/store/aether-store'
-import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
+import { createClientSafe } from '@/lib/supabase/client'
 import { ensureProfile, fetchMemories, fetchCollections, getInitials } from '@/lib/supabase/data'
 import { initOfflineDB, getCachedMemories, getCachedCollections, getSyncQueueCount } from '@/lib/offline-db'
 import { onSyncStatus, onSyncComplete } from '@/lib/sync-engine'
@@ -137,19 +137,21 @@ export default function DashboardPage() {
         setUser(profile)
         setProfile(profile)
       } else {
-        const supabase = createClient()
-        const { data: { user: authUser } } = await supabase.auth.getUser()
-        const fallbackName = authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || ''
-        const fallbackEmail = authUser?.email || ''
-        const fallbackProfile = {
-          id: userId, name: fallbackName, email: fallbackEmail,
-          initials: getInitials(fallbackName || fallbackEmail), plan: 'free' as const,
+        const supabase = createClientSafe()
+        if (supabase) {
+          const { data: { user: authUser } } = await supabase.auth.getUser()
+          const fallbackName = authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || ''
+          const fallbackEmail = authUser?.email || ''
+          const fallbackProfile = {
+            id: userId, name: fallbackName, email: fallbackEmail,
+            initials: getInitials(fallbackName || fallbackEmail), plan: 'free' as const,
+          }
+          try {
+            await supabase.from('profiles').upsert({ id: userId, email: fallbackEmail, name: fallbackName, plan: 'free' }, { onConflict: 'id' })
+          } catch {}
+          setUser(fallbackProfile)
+          setProfile(fallbackProfile)
         }
-        try {
-          await supabase.from('profiles').upsert({ id: userId, email: fallbackEmail, name: fallbackName, plan: 'free' }, { onConflict: 'id' })
-        } catch {}
-        setUser(fallbackProfile)
-        setProfile(fallbackProfile)
       }
       try {
         const [memResult, collections] = await Promise.all([fetchMemories(0), fetchCollections()])
@@ -193,13 +195,14 @@ export default function DashboardPage() {
     if (authInitializedRef.current) return
     authInitializedRef.current = true
 
-    // If Supabase isn't configured, redirect to landing
-    if (!isSupabaseConfigured()) {
+    const supabase = createClientSafe()
+    if (!supabase) {
+      // Supabase not configured — cannot access dashboard
+      console.error('[Aether] Cannot access dashboard — Supabase not configured.')
       router.replace('/')
       return
     }
 
-    const supabase = createClient()
     let mounted = true
 
     const checkAuth = async () => {
@@ -297,7 +300,7 @@ export default function DashboardPage() {
       unsubComplete()
       window.removeEventListener('aether:memory-synced', handleMemorySynced)
     }
-  }, [clearAllStateAndRedirect, loadUserData, setCurrentView, setSelectedMemoryId, setIsSyncing, setPendingSyncCount, setLastSyncedAt, updateMemory])
+  }, [clearAllStateAndRedirect, loadUserData, setCurrentView, setSelectedMemoryId, setIsSyncing, setPendingSyncCount, setLastSyncedAt, updateMemory, router])
 
   // URL-based navigation: read the current URL path to determine which view to show
   useEffect(() => {

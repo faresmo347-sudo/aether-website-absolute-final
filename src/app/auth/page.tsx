@@ -8,7 +8,7 @@ import { AetherLogo } from '@/components/aether/AetherLogo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { createClient, isSupabaseConfigured } from '@/lib/supabase/client'
+import { createClientSafe } from '@/lib/supabase/client'
 import { useAetherStore } from '@/store/aether-store'
 import { getInitials } from '@/lib/supabase/data'
 
@@ -93,8 +93,8 @@ export default function AuthPage() {
 
   // If already authenticated, redirect to dashboard
   useEffect(() => {
-    if (!isSupabaseConfigured()) return
-    const supabase = createClient()
+    const supabase = createClientSafe()
+    if (!supabase) return // Not configured — stay on auth page
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         router.replace('/dashboard')
@@ -104,8 +104,8 @@ export default function AuthPage() {
 
   // Listen for auth state changes (handles email confirmation callbacks)
   useEffect(() => {
-    if (!isSupabaseConfigured()) return
-    const supabase = createClient()
+    const supabase = createClientSafe()
+    if (!supabase) return
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
@@ -122,21 +122,18 @@ export default function AuthPage() {
   }, [router, setUser, setProfile])
 
   const handleAuthSuccess = useCallback(async () => {
-    if (!isSupabaseConfigured()) {
-      // In demo mode, just redirect
-      router.replace('/dashboard')
-      return
-    }
     // Auth was successful — get user info and redirect
     try {
-      const supabase = createClient()
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (authUser) {
-        const email = authUser.email || ''
-        const name = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email.split('@')[0]
-        const initials = getInitials(name || email)
-        setUser({ id: authUser.id, name, email, initials, plan: 'free' })
-        setProfile({ id: authUser.id, name, email, initials, plan: 'free' })
+      const supabase = createClientSafe()
+      if (supabase) {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          const email = authUser.email || ''
+          const name = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email.split('@')[0]
+          const initials = getInitials(name || email)
+          setUser({ id: authUser.id, name, email, initials, plan: 'free' })
+          setProfile({ id: authUser.id, name, email, initials, plan: 'free' })
+        }
       }
     } catch {
       // Profile fetch failed — still redirect
@@ -207,12 +204,12 @@ function SignInForm({ onSwitch, onSuccess }: { onSwitch: (s: AuthScreen) => void
     setLoading(true)
 
     try {
-      if (!isSupabaseConfigured()) {
+      const supabase = createClientSafe()
+      if (!supabase) {
         setError('Supabase is not configured. Please set environment variables.')
         return
       }
 
-      const supabase = createClient()
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
       if (signInError) {
@@ -327,12 +324,12 @@ function SignUpForm({ onSwitch, onSuccess }: { onSwitch: (s: AuthScreen) => void
     setLoading(true)
 
     try {
-      if (!isSupabaseConfigured()) {
+      const supabase = createClientSafe()
+      if (!supabase) {
         setError('Supabase is not configured. Please set environment variables.')
         return
       }
 
-      const supabase = createClient()
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email, password, options: { data: { name } },
       })
@@ -487,11 +484,11 @@ function ForgotForm({ onSwitch }: { onSwitch: (s: AuthScreen) => void }) {
     setLoading(true)
 
     try {
-      if (!isSupabaseConfigured()) {
+      const supabase = createClientSafe()
+      if (!supabase) {
         setError('Supabase is not configured.')
         return
       }
-      const supabase = createClient()
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email)
       if (resetError) { setError(resetError.message); return }
       setSent(true)
