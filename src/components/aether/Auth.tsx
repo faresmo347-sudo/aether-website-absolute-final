@@ -70,7 +70,7 @@ function AuthBackground() {
   )[0]
 
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ background: '#07070f' }}>
+    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ background: '#0A0A14' }}>
       {/* Static background stars */}
       {stars.map((star) => (
         <div
@@ -295,7 +295,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setName(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#0A0A14] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -317,7 +317,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#0A0A14] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -340,7 +340,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   required
                   minLength={6}
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#0A0A14] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
 
@@ -522,7 +522,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#0A0A14] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -553,7 +553,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#0A0A14] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>
@@ -709,7 +709,7 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#07070f] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
+                  className="h-12 text-base pl-11 rounded-xl border-[rgba(157,139,167,0.15)] bg-[#0A0A14] text-[#f0f0f8] placeholder:text-[#9D8BA7]/60 focus-visible:border-[#c084fc] focus-visible:ring-[rgba(192,132,252,0.1)] transition-all duration-200"
                 />
               </div>
             </div>

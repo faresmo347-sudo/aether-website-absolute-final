@@ -141,14 +141,14 @@ const SidebarNavItem = memo(function SidebarNavItem({
         <span
           className="absolute inset-0 rounded-full transition-all duration-300"
           style={{
-            background: 'rgba(157, 139, 167, 0.15)',
-            boxShadow: '0 0 12px rgba(157, 139, 167, 0.25), 0 0 4px rgba(157, 139, 167, 0.15)',
+            background: 'rgba(192, 132, 252, 0.12)',
+            boxShadow: '0 0 12px rgba(192, 132, 252, 0.2), 0 0 4px rgba(192, 132, 252, 0.1)',
           }}
         />
       )}
       <span
         className="relative z-10 transition-all duration-200"
-        style={isActive ? { filter: 'drop-shadow(0 0 6px #9D8BA7)' } : undefined}
+        style={isActive ? { filter: 'drop-shadow(0 0 6px #c084fc)' } : undefined}
       >
         {svgIcon ? svgIcon(isActive) : <item.icon size={20} />}
       </span>
@@ -172,7 +172,7 @@ function OfflineBanner() {
 
   if (!isOnline) {
     return (
-      <div className={`border-b px-4 py-2 flex items-center justify-center gap-2 text-xs text-amber-500 ${darkMode ? 'bg-[#1e1c29] border-[#9D8BA7]/10' : 'bg-amber-50 border-amber-200'}`}>
+      <div className={`border-b px-4 py-2 flex items-center justify-center gap-2 text-xs text-amber-500 ${darkMode ? 'bg-[#0F0E17] border-white/[0.04]' : 'bg-amber-50 border-amber-200'}`}>
         <WifiOff size={14} className="shrink-0" />
         <span>You are offline — showing cached memories</span>
       </div>
@@ -181,7 +181,7 @@ function OfflineBanner() {
 
   if (isSyncing) {
     return (
-      <div className={`border-b px-4 py-2 flex items-center justify-center gap-2 text-xs text-[#9D8BA7] ${darkMode ? 'bg-[#9D8BA7]/5 border-[#9D8BA7]/10' : 'bg-[#9D8BA7]/5 border-[#9D8BA7]/10'}`}>
+      <div className={`border-b px-4 py-2 flex items-center justify-center gap-2 text-xs text-[#c084fc] ${darkMode ? 'bg-[#c084fc]/5 border-white/[0.04]' : 'bg-[#9D8BA7]/5 border-[#9D8BA7]/10'}`}>
         <Cloud size={14} className="shrink-0 animate-pulse" />
         <span>Syncing your memories...</span>
       </div>
@@ -190,7 +190,7 @@ function OfflineBanner() {
 
   if (pendingSyncCount > 0) {
     return (
-      <div className={`border-b px-4 py-2 flex items-center justify-center gap-2 text-xs text-emerald-600 ${darkMode ? 'bg-[#1e1c29] border-[#9D8BA7]/10 text-emerald-400' : 'bg-emerald-50 border-emerald-200'}`}>
+      <div className={`border-b px-4 py-2 flex items-center justify-center gap-2 text-xs text-emerald-600 ${darkMode ? 'bg-[#0F0E17] border-white/[0.04] text-emerald-400' : 'bg-emerald-50 border-emerald-200'}`}>
         <CheckCircle2 size={14} className="shrink-0" />
         <span>{pendingSyncCount} memories queued to sync</span>
       </div>
@@ -215,13 +215,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return currentView
   }, [currentView])
 
-  // Sidebar background based on theme
+  // Sidebar background — Midnight Oasis
   const sidebarBg = darkMode
-    ? 'rgba(10, 10, 15, 0.8)'
+    ? 'rgba(10, 10, 20, 0.85)'
     : 'rgba(255, 255, 255, 0.7)'
 
   const sidebarBorder = darkMode
-    ? 'rgba(157, 139, 167, 0.08)'
+    ? 'rgba(255, 255, 255, 0.04)'
     : 'rgba(157, 139, 167, 0.12)'
 
   return (
@@ -273,7 +273,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <header
           className="hidden md:flex shrink-0 z-30 items-center justify-center backdrop-blur-xl border-b"
           style={{
-            background: darkMode ? 'rgba(10, 10, 15, 0.6)' : 'rgba(255, 255, 255, 0.7)',
+            background: darkMode ? 'rgba(10, 10, 20, 0.7)' : 'rgba(255, 255, 255, 0.7)',
             borderColor: sidebarBorder,
             height: '60px',
           }}
@@ -318,8 +318,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
           onClick={() => setCurrentView('dashboard')}
           className="cursor-pointer hidden md:flex fixed z-40 bottom-8 right-8 h-12 w-12 rounded-full items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
           style={{
-            background: 'linear-gradient(135deg, #9D8BA7, #c084fc)',
-            boxShadow: '0 4px 24px rgba(157, 139, 167, 0.4)',
+            background: 'linear-gradient(135deg, #9D8BA7, #7c3aed)',
+            boxShadow: '0 4px 24px rgba(124, 58, 237, 0.35)',
           }}
           aria-label="Go to capture"
         >
@@ -334,8 +334,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <nav
         className={`md:hidden fixed bottom-0 left-0 right-0 z-50 border-t backdrop-blur-md transition-transform duration-200 ${isKeyboardOpen ? 'translate-y-full' : 'translate-y-0'}`}
         style={{
-          background: darkMode ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.85)',
-          borderColor: darkMode ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)',
+          background: darkMode ? 'rgba(10, 10, 20, 0.85)' : 'rgba(255,255,255,0.85)',
+          borderColor: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.08)',
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
       >
@@ -355,7 +355,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 >
                   <div
                     className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg"
-                    style={{ background: 'linear-gradient(135deg, #9D8BA7, #c084fc)', boxShadow: '0 4px 20px rgba(157, 139, 167, 0.5)' }}
+                    style={{ background: 'linear-gradient(135deg, #9D8BA7, #7c3aed)', boxShadow: '0 4px 20px rgba(124, 58, 237, 0.35)' }}
                   >
                     <Plus size={24} className="text-white" strokeWidth={2.5} />
                   </div>
@@ -365,8 +365,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
             // ─── Regular nav items ───
             const isActive = activeNavView === item.view
-            const activeColor = '#9D8BA7'
-            const inactiveColor = darkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
+            const activeColor = '#c084fc'
+            const inactiveColor = darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.3)'
             const iconColor = isActive ? activeColor : inactiveColor
             const svgIcon = navIconSvgs[item.view as string]
 

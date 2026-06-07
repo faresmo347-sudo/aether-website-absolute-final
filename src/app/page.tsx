@@ -19,9 +19,9 @@ import LandingPage from '@/components/aether/LandingPage'
 
 function SimpleSpinner() {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#050505]">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#0A0A14]">
       <div className="flex flex-col items-center gap-3">
-        <div className="h-6 w-6 rounded-full border-2 border-white/10 border-t-[#9D8BA7] animate-spin" />
+        <div className="h-6 w-6 rounded-full border-2 border-white/10 border-t-[#c084fc] animate-spin" />
         <p className="text-xs text-white/40">Checking session...</p>
       </div>
     </div>
@@ -30,7 +30,7 @@ function SimpleSpinner() {
 
 function ConfigError() {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#050505]">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#0A0A14]">
       <div className="max-w-md mx-4 text-center">
         <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>

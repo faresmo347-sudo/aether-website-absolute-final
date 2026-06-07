@@ -52,7 +52,7 @@ function LoadingSpinner() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-3">
-        <div className="h-6 w-6 rounded-full border-2 border-muted-foreground/20 border-t-[#9D8BA7] animate-spin" />
+        <div className="h-6 w-6 rounded-full border-2 border-muted-foreground/20 border-t-[#c084fc] animate-spin" />
         <p className="text-xs text-muted-foreground">Loading your memories...</p>
       </div>
     </div>

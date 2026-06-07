@@ -43,169 +43,179 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   
-  /* Aether Custom Colors — Deep Space Theme */
-  --color-aether-bg: #07070f;
-  --color-aether-text: #f0f0f8;
+  /* ═══ MIDNIGHT OASIS — Premium Deep Purple/Blue Theme ═══ */
+  --color-aether-bg: #0A0A14;
+  --color-aether-text: #EEEDF5;
   --color-aether-lavender: #9D8BA7;
   --color-aether-lavender-light: #B8A8C4;
   --color-aether-lavender-dark: #7A6B85;
-  --color-aether-teal: #67e8f9;
+  --color-aether-teal: #7DD3E8;
   --color-aether-teal-dark: #80CBC4;
-  --color-aether-surface: #0f0f1a;
-  --color-aether-muted: rgba(240, 240, 248, 0.45);
+  --color-aether-surface: #0F0E17;
+  --color-aether-muted: rgba(238, 237, 245, 0.4);
   --color-aether-bright-purple: #c084fc;
   --color-aether-deep-purple: #7c3aed;
   --color-aether-mint: #86efac;
+  --color-aether-deep-indigo: #1a1035;
+  --color-aether-midnight: #0A0A14;
+  --color-aether-oasis: #0F0E17;
 }
 
 :root {
   --radius: 0.625rem;
-  /* Deep space dark theme as DEFAULT */
-  --background: #07070f;
-  --foreground: #f0f0f8;
-  --card: #0f0f1a;
-  --card-foreground: #f0f0f8;
-  --popover: #0f0f1a;
-  --popover-foreground: #f0f0f8;
+  /* ═══ MIDNIGHT OASIS — Deep warm blues/purples ═══ */
+  --background: #0A0A14;
+  --foreground: #EEEDF5;
+  --card: #0F0E17;
+  --card-foreground: #EEEDF5;
+  --popover: #0F0E17;
+  --popover-foreground: #EEEDF5;
   --primary: #9D8BA7;
-  --primary-foreground: #f0f0f8;
-  --secondary: #1e1c29;
-  --secondary-foreground: #f0f0f8;
-  --muted: #1e1c29;
-  --muted-foreground: rgba(240, 240, 248, 0.45);
+  --primary-foreground: #EEEDF5;
+  --secondary: #1a1730;
+  --secondary-foreground: #EEEDF5;
+  --muted: #1a1730;
+  --muted-foreground: rgba(238, 237, 245, 0.4);
   --accent: rgba(157, 139, 167, 0.12);
-  --accent-foreground: #f0f0f8;
+  --accent-foreground: #EEEDF5;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(157, 139, 167, 0.12);
-  --input: rgba(157, 139, 167, 0.15);
+  --border: rgba(157, 139, 167, 0.08);
+  --input: rgba(157, 139, 167, 0.1);
   --ring: #9D8BA7;
   --chart-1: #9D8BA7;
-  --chart-2: #67e8f9;
+  --chart-2: #7DD3E8;
   --chart-3: #c084fc;
   --chart-4: #86efac;
   --chart-5: #f59e0b;
-  --sidebar: #07070f;
-  --sidebar-foreground: #f0f0f8;
+  --sidebar: #0A0A14;
+  --sidebar-foreground: #EEEDF5;
   --sidebar-primary: #9D8BA7;
-  --sidebar-primary-foreground: #f0f0f8;
+  --sidebar-primary-foreground: #EEEDF5;
   --sidebar-accent: rgba(157, 139, 167, 0.06);
-  --sidebar-accent-foreground: #f0f0f8;
-  --sidebar-border: rgba(157, 139, 167, 0.08);
+  --sidebar-accent-foreground: #EEEDF5;
+  --sidebar-border: rgba(157, 139, 167, 0.06);
   --sidebar-ring: #9D8BA7;
 
-  /* Aether Design Tokens */
-  --bg-main: #07070f;
-  --bg-surface: #0f0f1a;
-  --bg-elevated: #13131f;
-  --border-color: rgba(157, 139, 167, 0.12);
-  --border-hover: rgba(157, 139, 167, 0.25);
+  /* Aether Design Tokens — Midnight Oasis */
+  --bg-main: #0A0A14;
+  --bg-surface: #0F0E17;
+  --bg-elevated: #161428;
+  --border-color: rgba(157, 139, 167, 0.08);
+  --border-hover: rgba(157, 139, 167, 0.2);
   --accent: #9D8BA7;
   --accent-bright: #c084fc;
-  --text-primary: #f0f0f8;
-  --text-muted: rgba(240, 240, 248, 0.45);
-  --text-subtle: rgba(240, 240, 248, 0.25);
+  --text-primary: #EEEDF5;
+  --text-muted: rgba(238, 237, 245, 0.4);
+  --text-subtle: rgba(238, 237, 245, 0.2);
   --success: #00e676;
-  --cyan: #67e8f9;
+  --cyan: #7DD3E8;
 
-  /* Glassmorphism Tokens — Dark */
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-bg-hover: rgba(255, 255, 255, 0.08);
-  --glass-bg-active: rgba(255, 255, 255, 0.12);
+  /* Glassmorphism 2.0 — Midnight Oasis */
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-bg-hover: rgba(255, 255, 255, 0.05);
+  --glass-bg-active: rgba(255, 255, 255, 0.08);
   --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-border-subtle: rgba(255, 255, 255, 0.04);
-  --glass-border-hover: rgba(255, 255, 255, 0.15);
-  --glass-input-bg: rgba(255, 255, 255, 0.03);
-  --glass-tag-bg: rgba(255, 255, 255, 0.05);
-  --glass-tag-text: rgba(255, 255, 255, 0.4);
-  --main-bg: #050505;
+  --glass-border-subtle: rgba(255, 255, 255, 0.03);
+  --glass-border-hover: rgba(255, 255, 255, 0.12);
+  --glass-input-bg: rgba(255, 255, 255, 0.02);
+  --glass-tag-bg: rgba(255, 255, 255, 0.03);
+  --glass-tag-text: rgba(255, 255, 255, 0.25);
+  --main-bg: #0A0A14;
   --section-header: rgba(255, 255, 255, 0.5);
-  --card-glow: rgba(157, 139, 167, 0.3);
-  --card-shadow: 0 4px 24px rgba(157, 139, 167, 0.2);
+  --card-glow: rgba(157, 139, 167, 0.25);
+  --card-shadow: 0 4px 32px rgba(124, 58, 237, 0.12), 0 0 60px rgba(157, 139, 167, 0.08);
   --input-shadow: none;
-  --input-focus-ring: rgba(157, 139, 167, 0.3);
-  --modal-bg: #0A0A12;
-  --modal-overlay: rgba(0, 0, 0, 0.5);
+  --input-focus-ring: rgba(157, 139, 167, 0.25);
+  --modal-bg: #0D0C18;
+  --modal-overlay: rgba(5, 5, 10, 0.6);
 
-  /* Aurora Gradient Tokens — Dark */
-  --aurora-purple: rgba(157, 139, 167, 0.35);
-  --aurora-purple-edge: rgba(157, 139, 167, 0.08);
-  --aurora-blue: rgba(103, 232, 249, 0.25);
-  --aurora-blue-edge: rgba(103, 232, 249, 0.05);
-  --aurora-pink: rgba(192, 132, 252, 0.3);
-  --aurora-pink-edge: rgba(192, 132, 252, 0.05);
+  /* Aurora Gradient Tokens — Midnight Oasis (richer, deeper) */
+  --aurora-purple: rgba(157, 139, 167, 0.3);
+  --aurora-purple-edge: rgba(157, 139, 167, 0.05);
+  --aurora-blue: rgba(125, 211, 232, 0.15);
+  --aurora-blue-edge: rgba(125, 211, 232, 0.03);
+  --aurora-pink: rgba(192, 132, 252, 0.25);
+  --aurora-pink-edge: rgba(192, 132, 252, 0.04);
+  --aurora-indigo: rgba(99, 102, 241, 0.2);
+  --aurora-indigo-edge: rgba(99, 102, 241, 0.03);
+  --aurora-teal: rgba(94, 234, 212, 0.12);
+  --aurora-teal-edge: rgba(94, 234, 212, 0.02);
 }
 
 .dark {
-  --background: #07070f;
-  --foreground: #f0f0f8;
-  --card: #0f0f1a;
-  --card-foreground: #f0f0f8;
-  --popover: #0f0f1a;
-  --popover-foreground: #f0f0f8;
+  --background: #0A0A14;
+  --foreground: #EEEDF5;
+  --card: #0F0E17;
+  --card-foreground: #EEEDF5;
+  --popover: #0F0E17;
+  --popover-foreground: #EEEDF5;
   --primary: #9D8BA7;
-  --primary-foreground: #f0f0f8;
-  --secondary: #1e1c29;
-  --secondary-foreground: #f0f0f8;
-  --muted: #1e1c29;
-  --muted-foreground: rgba(240, 240, 248, 0.45);
+  --primary-foreground: #EEEDF5;
+  --secondary: #1a1730;
+  --secondary-foreground: #EEEDF5;
+  --muted: #1a1730;
+  --muted-foreground: rgba(238, 237, 245, 0.4);
   --accent: rgba(157, 139, 167, 0.12);
-  --accent-foreground: #f0f0f8;
+  --accent-foreground: #EEEDF5;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(157, 139, 167, 0.12);
-  --input: rgba(157, 139, 167, 0.15);
+  --border: rgba(157, 139, 167, 0.08);
+  --input: rgba(157, 139, 167, 0.1);
   --ring: #9D8BA7;
   --chart-1: #9D8BA7;
-  --chart-2: #67e8f9;
+  --chart-2: #7DD3E8;
   --chart-3: #c084fc;
   --chart-4: #86efac;
   --chart-5: #f59e0b;
-  --sidebar: #07070f;
-  --sidebar-foreground: #f0f0f8;
+  --sidebar: #0A0A14;
+  --sidebar-foreground: #EEEDF5;
   --sidebar-primary: #9D8BA7;
-  --sidebar-primary-foreground: #f0f0f8;
+  --sidebar-primary-foreground: #EEEDF5;
   --sidebar-accent: rgba(157, 139, 167, 0.06);
-  --sidebar-accent-foreground: #f0f0f8;
-  --sidebar-border: rgba(157, 139, 167, 0.08);
+  --sidebar-accent-foreground: #EEEDF5;
+  --sidebar-border: rgba(157, 139, 167, 0.06);
   --sidebar-ring: #9D8BA7;
 
-  /* Aether Design Tokens */
-  --bg-main: #07070f;
-  --bg-surface: #0f0f1a;
-  --bg-elevated: #13131f;
-  --border-color: rgba(157, 139, 167, 0.12);
-  --border-hover: rgba(157, 139, 167, 0.25);
+  /* Aether Design Tokens — Midnight Oasis */
+  --bg-main: #0A0A14;
+  --bg-surface: #0F0E17;
+  --bg-elevated: #161428;
+  --border-color: rgba(157, 139, 167, 0.08);
+  --border-hover: rgba(157, 139, 167, 0.2);
   --accent: #9D8BA7;
   --accent-bright: #c084fc;
-  --text-primary: #f0f0f8;
-  --text-muted: rgba(240, 240, 248, 0.45);
-  --text-subtle: rgba(240, 240, 248, 0.25);
+  --text-primary: #EEEDF5;
+  --text-muted: rgba(238, 237, 245, 0.4);
+  --text-subtle: rgba(238, 237, 245, 0.2);
   --success: #00e676;
-  --cyan: #67e8f9;
+  --cyan: #7DD3E8;
 
-  /* Glassmorphism Tokens — Dark (repeat for .dark selector) */
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-bg-hover: rgba(255, 255, 255, 0.08);
-  --glass-bg-active: rgba(255, 255, 255, 0.12);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-bg-hover: rgba(255, 255, 255, 0.05);
+  --glass-bg-active: rgba(255, 255, 255, 0.08);
   --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-border-subtle: rgba(255, 255, 255, 0.04);
-  --glass-border-hover: rgba(255, 255, 255, 0.15);
-  --glass-input-bg: rgba(255, 255, 255, 0.03);
-  --glass-tag-bg: rgba(255, 255, 255, 0.05);
-  --glass-tag-text: rgba(255, 255, 255, 0.4);
-  --main-bg: #050505;
+  --glass-border-subtle: rgba(255, 255, 255, 0.03);
+  --glass-border-hover: rgba(255, 255, 255, 0.12);
+  --glass-input-bg: rgba(255, 255, 255, 0.02);
+  --glass-tag-bg: rgba(255, 255, 255, 0.03);
+  --glass-tag-text: rgba(255, 255, 255, 0.25);
+  --main-bg: #0A0A14;
   --section-header: rgba(255, 255, 255, 0.5);
-  --card-glow: rgba(157, 139, 167, 0.3);
-  --card-shadow: 0 4px 24px rgba(157, 139, 167, 0.2);
+  --card-glow: rgba(157, 139, 167, 0.25);
+  --card-shadow: 0 4px 32px rgba(124, 58, 237, 0.12), 0 0 60px rgba(157, 139, 167, 0.08);
   --input-shadow: none;
-  --input-focus-ring: rgba(157, 139, 167, 0.3);
-  --modal-bg: #0A0A12;
-  --modal-overlay: rgba(0, 0, 0, 0.5);
-  --aurora-purple: rgba(157, 139, 167, 0.35);
-  --aurora-purple-edge: rgba(157, 139, 167, 0.08);
-  --aurora-blue: rgba(103, 232, 249, 0.25);
-  --aurora-blue-edge: rgba(103, 232, 249, 0.05);
-  --aurora-pink: rgba(192, 132, 252, 0.3);
-  --aurora-pink-edge: rgba(192, 132, 252, 0.05);
+  --input-focus-ring: rgba(157, 139, 167, 0.25);
+  --modal-bg: #0D0C18;
+  --modal-overlay: rgba(5, 5, 10, 0.6);
+  --aurora-purple: rgba(157, 139, 167, 0.3);
+  --aurora-purple-edge: rgba(157, 139, 167, 0.05);
+  --aurora-blue: rgba(125, 211, 232, 0.15);
+  --aurora-blue-edge: rgba(125, 211, 232, 0.03);
+  --aurora-pink: rgba(192, 132, 252, 0.25);
+  --aurora-pink-edge: rgba(192, 132, 252, 0.04);
+  --aurora-indigo: rgba(99, 102, 241, 0.2);
+  --aurora-indigo-edge: rgba(99, 102, 241, 0.03);
+  --aurora-teal: rgba(94, 234, 212, 0.12);
+  --aurora-teal-edge: rgba(94, 234, 212, 0.02);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -244,7 +254,6 @@
   --text-muted: #6b7280;
   --text-subtle: #9ca3af;
 
-  /* Glassmorphism Tokens — Light */
   --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-bg-hover: rgba(255, 255, 255, 0.85);
   --glass-bg-active: rgba(255, 255, 255, 0.9);
@@ -252,8 +261,8 @@
   --glass-border-subtle: rgba(0, 0, 0, 0.05);
   --glass-border-hover: rgba(0, 0, 0, 0.15);
   --glass-input-bg: rgba(255, 255, 255, 0.5);
-  --glass-tag-bg: rgba(157, 139, 167, 0.08);
-  --glass-tag-text: rgba(0, 0, 0, 0.45);
+  --glass-tag-bg: rgba(157, 139, 167, 0.06);
+  --glass-tag-text: rgba(0, 0, 0, 0.35);
   --main-bg: #F8F9FA;
   --section-header: rgba(0, 0, 0, 0.5);
   --card-glow: rgba(157, 139, 167, 0.12);
@@ -263,7 +272,6 @@
   --modal-bg: #ffffff;
   --modal-overlay: rgba(0, 0, 0, 0.3);
 
-  /* Aurora Gradient Tokens — Light (pastel, lowered opacity) */
   --aurora-purple: rgba(157, 139, 167, 0.12);
   --aurora-purple-edge: rgba(157, 139, 167, 0.03);
   --aurora-blue: rgba(103, 232, 249, 0.08);
@@ -290,8 +298,6 @@
 
 /* ═══════════════════════════════════════════════════════════════
    LIGHT MODE TAILWIND CLASS OVERRIDES
-   These override Tailwind utility classes that use hardcoded white/black
-   in dark mode so they work in light mode too.
    ═══════════════════════════════════════════════════════════════ */
 
 /* ─── Text Colors ─── */
@@ -340,7 +346,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─────────── Focus States — Replace browser default outline ─────────── */
+/* ─────────── Focus States ─────────── */
 button:focus-visible,
 a:focus-visible,
 [role="button"]:focus-visible {
@@ -349,7 +355,6 @@ a:focus-visible,
   border-radius: inherit;
 }
 
-/* Text inputs keep their own focus style */
 input:focus-visible,
 textarea:focus-visible {
   outline: none;
@@ -395,17 +400,13 @@ button:hover:not(:disabled) {
   }
 }
 
-/* ─────────── Mobile Safe Area Padding ─────────── */
+/* ─────────── Mobile Safe Area ─────────── */
 @media (max-width: 768px) {
   body {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
-/* ─────────── Mobile Overflow Prevention ─────────── */
-/* NOTE: Removed global padding on main/.flex-1 — components handle their own px-4.
-   Global padding here caused double-padding (16px + 16px per side) on 375px screens,
-   narrowing content and causing horizontal scroll. */
 @media (max-width: 767px) {
   * {
     max-width: 100vw;
@@ -425,15 +426,14 @@ button:hover:not(:disabled) {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #9D8BA740;
+  background: rgba(157, 139, 167, 0.2);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #9D8BA780;
+  background: rgba(157, 139, 167, 0.4);
 }
 
-/* ─────────── Light Mode Scrollbar ─────────── */
 [data-theme="light"] ::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.15);
 }
@@ -441,7 +441,6 @@ button:hover:not(:disabled) {
   background: rgba(0, 0, 0, 0.25);
 }
 
-/* ─────────── Smooth Scrolling ─────────── */
 html {
   scroll-behavior: smooth;
 }
@@ -452,23 +451,10 @@ html, body {
   width: 100%;
 }
 
-/* ─────────── Safe Area Support (iOS) ─────────── */
-.safe-area-top {
-  padding-top: env(safe-area-inset-top);
-}
-
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.safe-area-left {
-  padding-left: env(safe-area-inset-left);
-}
-
-.safe-area-right {
-  padding-right: env(safe-area-inset-right);
-}
-
+.safe-area-top { padding-top: env(safe-area-inset-top); }
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-area-left { padding-left: env(safe-area-inset-left); }
+.safe-area-right { padding-right: env(safe-area-inset-right); }
 .safe-area-all {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
@@ -476,16 +462,9 @@ html, body {
   padding-right: env(safe-area-inset-right);
 }
 
-/* ─────────── Hide Scrollbar but Keep Scroll ─────────── */
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
 
-/* ─────────── GPU-Accelerated Animations on Mobile ─────────── */
 @media (max-width: 768px) {
   .mobile-gpu {
     will-change: transform, opacity;
@@ -493,15 +472,10 @@ html, body {
   }
 }
 
-/* ─────────── Touch Feedback ─────────── */
-.tap-feedback {
-  transition: transform 0.1s ease;
-}
-.tap-feedback:active {
-  transform: scale(0.95);
-}
+.tap-feedback { transition: transform 0.1s ease; }
+.tap-feedback:active { transform: scale(0.95); }
 
-/* ─────────── REDUCE BLUR ON MOBILE (keep glassmorphism, less GPU) ─────────── */
+/* ─────────── Reduce blur on mobile ─────────── */
 @media (max-width: 767px) {
   .backdrop-blur-xl {
     backdrop-filter: blur(12px) !important;
@@ -511,8 +485,6 @@ html, body {
     backdrop-filter: blur(10px) !important;
     -webkit-backdrop-filter: blur(10px) !important;
   }
-  /* Keep backdrop-blur-md and backdrop-blur-sm as-is — they're light enough */
-  /* Reduce aurora animation intensity on mobile (slower, less movement) */
   .animate-aurora-1,
   .animate-aurora-2,
   .animate-aurora-3 {
@@ -532,29 +504,23 @@ html, body {
   }
 }
 
-/* ─────────── Performance: Content Visibility ─────────── */
 section {
   content-visibility: auto;
   contain-intrinsic-size: auto 500px;
 }
 
-.card-contain {
-  contain: content;
-}
+.card-contain { contain: content; }
 
 .ios-scroll {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
 }
 
-/* Smooth scrolling with GPU acceleration */
 .ios-scroll, [class*="overflow-y-auto"] {
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
 }
 
-/* ─────────── Mobile Bottom Nav Padding ─────────── */
-/* Matches the actual bottom nav height: h-16 (64px) + safe-area-inset-bottom */
 .mobile-bottom-pad {
   padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
 }
@@ -564,18 +530,14 @@ section {
   }
 }
 
-/* ─────────── MOBILE BACKGROUNDS (keep themed, not flat) ─────────── */
 @media (max-width: 767px) {
-  /* Use the CSS variable background so glassmorphism works properly */
   body {
     background-color: var(--main-bg) !important;
   }
 }
 
-/* ─────────── Dark Mode Lavender Color Adjustments ─────────── */
-:is(.dark [class*="bg-[#9D8BA7]"]) {
-  --tw-bg-opacity: 1;
-}
+/* ─────────── Dark Mode Lavender Adjustments ─────────── */
+:is(.dark [class*="bg-[#9D8BA7]"]) { --tw-bg-opacity: 1; }
 :is(.dark [class*="bg-[#9D8BA7]/10"]),
 :is(.dark [class*="bg-[#9D8BA7]/12"]) {
   background-color: rgba(157, 139, 167, 0.15) !important;
@@ -593,7 +555,6 @@ section {
   --tw-shadow-color: rgba(157, 139, 167, 0.12) !important;
 }
 
-/* ─────────── Light Mode Lavender Color Adjustments ─────────── */
 [data-theme="light"] [class*="bg-[#9D8BA7]/10"],
 [data-theme="light"] [class*="bg-[#9D8BA7]/12"] {
   background-color: rgba(157, 139, 167, 0.08) !important;
@@ -605,7 +566,6 @@ section {
   color: #7c6d8a !important;
 }
 
-/* ─────────── Reduce Animation Overhead on Mobile ─────────── */
 @media (max-width: 768px) {
   .animate-ping {
     animation-duration: 2s;
@@ -613,104 +573,52 @@ section {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   ANIMATION KEYFRAMES
+   ANIMATION KEYFRAMES — Midnight Oasis
    ═══════════════════════════════════════════════════════════════ */
 
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(-20px) scale(1.05);
-  }
+  0%, 100% { transform: translateY(0px) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
-    opacity: 0.4;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.1);
-  }
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.1); }
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 
 @keyframes gradient-shift {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-/* ─── Shooting Star Animation (Cinematic Intro) ─── */
 @keyframes shooting-star {
-  0% {
-    transform: translateX(0) translateY(0);
-    opacity: 1;
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(var(--star-dx)) translateY(var(--star-dy));
-    opacity: 0;
-  }
+  0% { transform: translateX(0) translateY(0); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translateX(var(--star-dx)) translateY(var(--star-dy)); opacity: 0; }
 }
 
 @keyframes shooting-star-particle {
-  0% {
-    transform: scale(0);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1);
-    opacity: 0.6;
-  }
-  100% {
-    transform: scale(0);
-    opacity: 0;
-  }
+  0% { transform: scale(0); opacity: 0.8; }
+  50% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(0); opacity: 0; }
 }
 
-/* ─── Logo Reveal Animation ─── */
 @keyframes logo-reveal {
-  0% {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 @keyframes tagline-reveal {
-  0% {
-    opacity: 0;
-    letter-spacing: 0.5em;
-  }
-  100% {
-    opacity: 1;
-    letter-spacing: 0.3em;
-  }
+  0% { opacity: 0; letter-spacing: 0.5em; }
+  100% { opacity: 1; letter-spacing: 0.3em; }
 }
 
-/* ─── Floating Background Orbs ─── */
 @keyframes orbFloat1 {
   0%, 100% { transform: translate(0, 0); }
   33% { transform: translate(-30px, 20px); }
@@ -728,7 +636,6 @@ section {
   50% { transform: translate(-25px, 25px); }
 }
 
-/* ─── Capture Button Pulse ─── */
 @keyframes captureButtonPulse {
   0% { box-shadow: 0 4px 24px rgba(157, 139, 167, 0.4), 0 0 0 0 rgba(157, 139, 167, 0.4); }
   70% { box-shadow: 0 4px 24px rgba(157, 139, 167, 0.4), 0 0 0 12px rgba(157, 139, 167, 0); }
@@ -736,144 +643,150 @@ section {
 }
 
 @keyframes capture-pulse {
-  0%, 100% {
-    box-shadow: 
-      0 4px 24px rgba(157, 139, 167, 0.4),
-      0 0 0 0 rgba(157, 139, 167, 0.4);
-  }
-  50% {
-    box-shadow: 
-      0 4px 24px rgba(157, 139, 167, 0.4),
-      0 0 0 12px rgba(157, 139, 167, 0);
-  }
+  0%, 100% { box-shadow: 0 4px 24px rgba(157, 139, 167, 0.4), 0 0 0 0 rgba(157, 139, 167, 0.4); }
+  50% { box-shadow: 0 4px 24px rgba(157, 139, 167, 0.4), 0 0 0 12px rgba(157, 139, 167, 0); }
 }
 
-/* ─── Grid Pattern Overlay for Chat ─── */
 @keyframes grid-scan {
-  0% {
-    background-position: 0 0;
-  }
-  100% {
-    background-position: 50px 50px;
-  }
+  0% { background-position: 0 0; }
+  100% { background-position: 50px 50px; }
 }
 
-/* ─── Memory Card Entrance ─── */
 @keyframes card-entrance {
-  0% {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
-/* ─── Star Pulse for Empty State ─── */
 @keyframes star-pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 1;
-  }
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 1; }
 }
 
-/* ─── Typing Cursor for Chat ─── */
 @keyframes blink-cursor {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
-/* ─── Breathing Gradient Border (Ask Aether Search Bar) ─── */
 @keyframes gradient-border-breathe {
-  0%, 100% {
-    background-position: 0% 50%;
-    opacity: 0.7;
-  }
-  50% {
-    background-position: 100% 50%;
-    opacity: 1;
-  }
+  0%, 100% { background-position: 0% 50%; opacity: 0.7; }
+  50% { background-position: 100% 50%; opacity: 1; }
 }
 
-/* ─── Aurora Background Mesh ─── */
 @keyframes aurora-shift {
   0%, 100% { opacity: 0.3; transform: translate(0, 0) scale(1); }
   33% { opacity: 0.5; transform: translate(30px, -20px) scale(1.1); }
   66% { opacity: 0.4; transform: translate(-20px, 20px) scale(0.9); }
 }
 
+/* ═══ MIDNIGHT OASIS — Premium Animations ═══ */
+
+/* Slow-pulsing CTA glow for Landing Page */
+@keyframes cta-pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(157, 139, 167, 0.3), 0 0 40px rgba(192, 132, 252, 0.15), 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(157, 139, 167, 0.5), 0 0 60px rgba(192, 132, 252, 0.25), 0 4px 30px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Dopamine "whoosh" save animation */
+@keyframes memory-whoosh {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateY(20px) scale(0.98);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+}
+
+/* Sparkle burst for save confirmation */
+@keyframes sparkle-burst {
+  0% {
+    opacity: 1;
+    transform: scale(0) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1) rotate(180deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5) rotate(360deg);
+  }
+}
+
+/* Glow pulse on new memory card border */
+@keyframes border-glow-pulse {
+  0% {
+    border-color: rgba(192, 132, 252, 0.5);
+    box-shadow: 0 0 20px rgba(192, 132, 252, 0.2), 0 0 40px rgba(157, 139, 167, 0.1);
+  }
+  100% {
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow: none;
+  }
+}
+
+/* Aurora mesh breathing */
+@keyframes aurora-breathe {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    opacity: 0.8;
+    transform: translate(15px, -10px) scale(1.05);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translate(-10px, 15px) scale(0.95);
+  }
+  75% {
+    opacity: 0.7;
+    transform: translate(5px, 5px) scale(1.02);
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    ANIMATION UTILITY CLASSES
    ═══════════════════════════════════════════════════════════════ */
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-float-delayed { animation: float 8s ease-in-out 2s infinite; }
+.animate-float-slow { animation: float 10s ease-in-out 4s infinite; }
+.animate-pulse-glow { animation: pulse-glow 4s ease-in-out infinite; }
+.animate-shimmer { background-size: 200% 100%; animation: shimmer 3s ease-in-out infinite; }
+.animate-gradient { background-size: 200% 200%; animation: gradient-shift 8s ease infinite; }
+.animate-capture-pulse { animation: capture-pulse 3s ease-in-out infinite; }
+.animate-capture-button-pulse { animation: captureButtonPulse 3s ease-in-out infinite; }
+.animate-card-entrance { animation: card-entrance 350ms cubic-bezier(0.4, 0, 0.2, 1) both; }
+.animate-star-pulse { animation: star-pulse 3s ease-in-out infinite; }
+.animate-blink-cursor { animation: blink-cursor 1s step-end infinite; }
 
-.animate-float-delayed {
-  animation: float 8s ease-in-out 2s infinite;
-}
-
-.animate-float-slow {
-  animation: float 10s ease-in-out 4s infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 4s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-.animate-gradient {
-  background-size: 200% 200%;
-  animation: gradient-shift 8s ease infinite;
-}
-
-.animate-capture-pulse {
-  animation: capture-pulse 3s ease-in-out infinite;
-}
-
-.animate-capture-button-pulse {
-  animation: captureButtonPulse 3s ease-in-out infinite;
-}
-
-.animate-card-entrance {
-  animation: card-entrance 350ms cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.animate-star-pulse {
-  animation: star-pulse 3s ease-in-out infinite;
-}
-
-.animate-blink-cursor {
-  animation: blink-cursor 1s step-end infinite;
-}
-
-/* ─── Breathing Gradient Border ─── */
 .animate-gradient-border {
-  background: linear-gradient(90deg, #9D8BA7, #c084fc, #67e8f9, #9D8BA7);
+  background: linear-gradient(90deg, #9D8BA7, #c084fc, #7DD3E8, #9D8BA7);
   background-size: 300% 100%;
   animation: gradient-border-breathe 4s ease infinite;
 }
 
-/* ─── Aurora Background Mesh ─── */
 .animate-aurora-1 { animation: aurora-shift 15s ease-in-out infinite; }
 .animate-aurora-2 { animation: aurora-shift 20s ease-in-out 3s infinite; }
 .animate-aurora-3 { animation: aurora-shift 18s ease-in-out 6s infinite; }
 
-/* ─── Bento Card Hover Parallax ─── */
+/* Midnight Oasis Premium Animations */
+.animate-cta-pulse { animation: cta-pulse-glow 3s ease-in-out infinite; }
+.animate-memory-whoosh { animation: memory-whoosh 400ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-sparkle-burst { animation: sparkle-burst 600ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.animate-border-glow { animation: border-glow-pulse 1.5s ease-out forwards; }
+.animate-aurora-breathe { animation: aurora-breathe 12s ease-in-out infinite; }
+
 .bento-card-hover {
   transition: transform 300ms ease, box-shadow 300ms ease;
 }
@@ -882,95 +795,35 @@ section {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 }
 
-/* ─── Floating Orbs ─── */
-.animate-orb-1 {
-  animation: orbFloat1 25s ease-in-out infinite;
-}
+.animate-orb-1 { animation: orbFloat1 25s ease-in-out infinite; }
+.animate-orb-2 { animation: orbFloat2 30s ease-in-out infinite; }
+.animate-orb-3 { animation: orbFloat3 20s ease-in-out infinite; }
 
-.animate-orb-2 {
-  animation: orbFloat2 30s ease-in-out infinite;
-}
+/* ─────────── Typography Scale ─────────── */
+.mobile-heading { font-size: 24px; font-weight: 700; line-height: 1.2; }
+@media (min-width: 768px) { .mobile-heading { font-size: 36px; } }
 
-.animate-orb-3 {
-  animation: orbFloat3 20s ease-in-out infinite;
-}
+.mobile-subheading { font-size: 16px; font-weight: 600; line-height: 1.3; }
+@media (min-width: 768px) { .mobile-subheading { font-size: 20px; } }
 
-/* ─────────── Mobile-First Typography Scale ─────────── */
-.mobile-heading {
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-@media (min-width: 768px) {
-  .mobile-heading {
-    font-size: 36px;
-  }
-}
+.mobile-body { font-size: 14px; font-weight: 400; line-height: 1.6; }
+@media (min-width: 768px) { .mobile-body { font-size: 16px; } }
 
-.mobile-subheading {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-@media (min-width: 768px) {
-  .mobile-subheading {
-    font-size: 20px;
-  }
-}
+.mobile-small { font-size: 12px; font-weight: 400; line-height: 1.4; }
+@media (min-width: 768px) { .mobile-small { font-size: 14px; } }
 
-.mobile-body {
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.6;
-}
-@media (min-width: 768px) {
-  .mobile-body {
-    font-size: 16px;
-  }
-}
+.mobile-tiny { font-size: 11px; font-weight: 400; line-height: 1.3; }
 
-.mobile-small {
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.4;
-}
-@media (min-width: 768px) {
-  .mobile-small {
-    font-size: 14px;
-  }
-}
+.touch-target { min-height: 44px; min-width: 44px; }
 
-.mobile-tiny {
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.3;
-}
-
-/* ─────────── Minimum Touch Target Size ─────────── */
-.touch-target {
-  min-height: 44px;
-  min-width: 44px;
-}
-
-/* ─────────── Bottom Sheet Modal ─────────── */
 @keyframes sheet-slide-up {
-  0% {
-    transform: translateY(100%);
-  }
-  100% {
-    transform: translateY(0);
-  }
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(0); }
 }
 
-.sheet-modal {
-  animation: sheet-slide-up 300ms cubic-bezier(0.32, 0.72, 0, 1);
-}
+.sheet-modal { animation: sheet-slide-up 300ms cubic-bezier(0.32, 0.72, 0, 1); }
+.sheet-modal-closing { animation: sheet-slide-up 300ms cubic-bezier(0.32, 0.72, 0, 1) reverse; }
 
-.sheet-modal-closing {
-  animation: sheet-slide-up 300ms cubic-bezier(0.32, 0.72, 0, 1) reverse;
-}
-
-/* ─────────── Mobile Container Padding ─────────── */
 @media (max-width: 767px) {
   .mobile-container {
     padding-left: 16px;
@@ -978,7 +831,6 @@ section {
   }
 }
 
-/* ─────────── Active Press Feedback ─────────── */
 @media (max-width: 767px) {
   .press-feedback:active {
     transform: scale(0.97);
@@ -986,23 +838,13 @@ section {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   REDUCED MOTION — Skip all animations for accessibility
-   ═══════════════════════════════════════════════════════════════ */
-/* ─── Gradient Border Spin (Legacy Keyframe) ─── */
+/* ─────────── Legacy gradient border spin ─────────── */
 @keyframes gradient-border-spin {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
-/* ─── Search Focus Ring ─── */
 .search-focus-ring:focus {
   border-color: rgba(192, 132, 252, 0.4) !important;
   box-shadow: 0 0 0 3px rgba(192, 132, 252, 0.1) !important;
