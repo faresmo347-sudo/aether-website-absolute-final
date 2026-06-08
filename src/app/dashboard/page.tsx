@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import { useAetherStore } from '@/store/aether-store'
 import { createClientSafe } from '@/lib/supabase/client'
 import { ensureProfile, fetchMemories, fetchCollections, getInitials } from '@/lib/supabase/data'
@@ -12,7 +11,6 @@ import AppShell from '@/components/aether/AppShell'
 import Dashboard from '@/components/aether/Dashboard'
 import { MemoryDetail } from '@/components/aether/MemoryDetail'
 import { AskAether } from '@/components/aether/AskAether'
-import { Recaps } from '@/components/aether/Recaps'
 import { Settings } from '@/components/aether/Settings'
 import type { AppView } from '@/components/aether/types'
 
@@ -34,15 +32,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<[result: T | n
   ]).finally(() => clearTimeout(timer))
 }
 
-const Constellations = dynamic(() => import('@/components/aether/Constellations'), {
-  ssr: false,
-  loading: () => (
-    <div className="h-full w-full flex items-center justify-center bg-background">
-      <p className="text-[11px] text-muted-foreground">Loading constellation...</p>
-    </div>
-  ),
-})
-
 /* ─────────── App Content Router ─────────── */
 function AppContent() {
   const { currentView } = useAetherStore()
@@ -54,10 +43,6 @@ function AppContent() {
       return <MemoryDetail />
     case 'ask-aether':
       return <AskAether />
-    case 'constellations':
-      return <Constellations />
-    case 'recaps':
-      return <Recaps />
     case 'settings':
       return <Settings />
     default:
@@ -387,9 +372,6 @@ export default function DashboardPage() {
     const urlToViewMap: Record<string, AppView> = {
       '/dashboard': 'dashboard',
       '/ask': 'ask-aether',
-      '/collections': 'constellations',
-      '/constellations': 'constellations',
-      '/recaps': 'recaps',
       '/settings': 'settings',
     }
 

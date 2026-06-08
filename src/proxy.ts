@@ -17,9 +17,6 @@ const IGNORED_PREFIXES = [
 const PROTECTED_PATHS = [
   '/dashboard',
   '/ask',
-  '/constellations',
-  '/collections',
-  '/recaps',
   '/settings',
   '/memory',
 ]
