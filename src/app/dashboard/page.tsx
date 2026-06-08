@@ -200,6 +200,28 @@ export default function DashboardPage() {
     if (authInitializedRef.current) return
     authInitializedRef.current = true
 
+    // DEMO MODE: Allow UI preview without auth
+    // Use ?demo=true URL parameter to bypass auth for UI testing
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    const isDemoMode = urlParams?.get('demo') === 'true'
+    if (isDemoMode) {
+      console.warn('[Aether] Demo mode — skipping auth')
+      setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+      setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+      setAuthConfirmed(true)
+      return
+    }
+
+    const supabase = createClientSafe()
+    if (!supabase) {
+      // Supabase not configured — check if user explicitly signed out
+      console.warn('[Aether] Demo mode forced — skipping auth')
+      setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+      setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
+      setAuthConfirmed(true)
+      return
+    }
+
     const supabase = createClientSafe()
     if (!supabase) {
       // Supabase not configured — check if user explicitly signed out
@@ -246,7 +268,7 @@ export default function DashboardPage() {
         const { data: { session } } = sessionResult
 
         if (!session?.user) {
-          // No local session — redirect immediately
+          // No local session — redirect to landing page
           router.replace('/')
           return
         }
@@ -330,8 +352,11 @@ export default function DashboardPage() {
           console.warn('[Aether] Background data load failed:', err)
         )
       } else if (event === 'SIGNED_OUT') {
-        // ── SIGN OUT: Clear everything and redirect ──
-        clearAllStateAndRedirect()
+        // ── SIGN OUT: Only redirect if we had a confirmed session before.
+        // Prevents Supabase's initial "no session" SIGNED_OUT from redirecting demo users.
+        if (authConfirmed) {
+          clearAllStateAndRedirect()
+        }
       }
     })
 

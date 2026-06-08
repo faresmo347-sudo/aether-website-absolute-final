@@ -901,3 +901,156 @@ section {
   0% { transform: translate(0, 0) scale(1); }
   100% { transform: translate(20px, -20px) scale(1.05); }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ADHD-OPTIMIZED ANIMATIONS — Dopamine Hit & Object Permanence
+   ═══════════════════════════════════════════════════════════════ */
+
+/* UPGRADE 1: Magic Processing Shimmer — flows downward from input */
+@keyframes magic-shimmer {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+    background-position: -200% center;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(30px);
+    background-position: 200% center;
+  }
+}
+
+/* The shimmer overlay on the capture bar during "processing" */
+.magic-processing-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.magic-processing-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(192, 132, 252, 0.08) 25%,
+    rgba(99, 102, 241, 0.12) 50%,
+    rgba(192, 132, 252, 0.08) 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: magic-shimmer 1.2s ease-out forwards;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* UPGRADE 1: Auto-tag badge entrance */
+@keyframes tag-badge-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Auto-tag badge exit — fade out */
+@keyframes tag-badge-exit {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+  }
+}
+
+.tag-badge-enter { animation: tag-badge-enter 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.tag-badge-exit { animation: tag-badge-exit 300ms ease-out forwards; }
+
+/* UPGRADE 3: Daily Spark card — subtle pulsing border glow */
+@keyframes spark-glow {
+  0%, 100% {
+    border-color: rgba(192, 132, 252, 0.08);
+    box-shadow: 0 0 15px rgba(192, 132, 252, 0.03), 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+  50% {
+    border-color: rgba(192, 132, 252, 0.15);
+    box-shadow: 0 0 25px rgba(192, 132, 252, 0.06), 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.daily-spark-card {
+  animation: spark-glow 4s ease-in-out infinite;
+}
+
+[data-theme="light"] .daily-spark-card {
+  animation: none;
+  box-shadow: 0 2px 12px rgba(157, 139, 167, 0.08);
+}
+
+/* UPGRADE 4: Floating memory cards — subtle hover float */
+@keyframes memory-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
+
+.floating-memory {
+  transition: transform 300ms ease, box-shadow 300ms ease;
+}
+
+.floating-memory:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 12px 40px rgba(192, 132, 252, 0.08), 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* UPGRADE 5: Haptic press feedback — 100ms scale-down on ALL interactive elements */
+.haptic-press {
+  transition: transform 100ms ease;
+}
+
+.haptic-press:active {
+  transform: scale(0.95);
+}
+
+/* Deep space background override for dashboard */
+.bg-deep-space {
+  background-color: #050510;
+}
+
+[data-theme="light"] .bg-deep-space {
+  background-color: #F8F9FA;
+}
+
+/* Shimmer loading for processing state */
+@keyframes processing-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.processing-shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(192, 132, 252, 0.04) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: processing-shimmer 1.5s ease-in-out infinite;
+}

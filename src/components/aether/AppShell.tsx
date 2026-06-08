@@ -123,12 +123,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const initials = profile?.initials || user?.initials || '?'
 
   return (
-    <div className="h-[100dvh] md:h-screen bg-background text-foreground flex flex-col overflow-hidden max-w-screen overflow-x-hidden">
+    <div className="h-[100dvh] md:h-screen bg-deep-space text-foreground flex flex-col overflow-hidden max-w-screen overflow-x-hidden">
       {/* ─── Minimal Top Bar — Logo left, Settings + Avatar right ─── */}
       <header
         className="shrink-0 flex items-center justify-between px-4 md:px-6 h-12 z-30 border-b"
         style={{
-          background: darkMode ? 'rgba(10, 10, 20, 0.6)' : 'rgba(255, 255, 255, 0.6)',
+          background: darkMode ? 'rgba(5, 5, 16, 0.7)' : 'rgba(255, 255, 255, 0.7)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           borderColor: darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)',
@@ -155,7 +155,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           {/* Settings */}
           <button
             onClick={() => setCurrentView('settings')}
-            className={`cursor-pointer p-2 rounded-lg transition-all duration-200 ${
+            className={`cursor-pointer p-2 rounded-lg transition-all duration-200 haptic-press ${
               darkMode
                 ? 'text-white/25 hover:text-white/50 hover:bg-white/5'
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
@@ -168,7 +168,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           {/* Avatar */}
           <button
             onClick={() => setCurrentView('settings')}
-            className="cursor-pointer h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-200 hover:opacity-80"
+            className="cursor-pointer h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-200 hover:opacity-80 haptic-press"
             style={{
               background: 'linear-gradient(135deg, #9D8BA7, #7c3aed)',
               color: 'white',
