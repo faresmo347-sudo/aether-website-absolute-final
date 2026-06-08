@@ -3,11 +3,27 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@supabase/supabase-js'
 import { Mail, Lock, User, ArrowLeft, Check, Loader2, Eye, EyeOff } from 'lucide-react'
-import { AetherLogo } from '@/components/aether/AetherLogo'
-import { createClientSafe } from '@/lib/supabase/client'
 import { useAetherStore } from '@/store/aether-store'
 import { getInitials } from '@/lib/supabase/data'
+
+// ═══════════════════════════════════════════════════════════════
+// HARDCODED SUPABASE CREDENTIALS
+// These are embedded directly to prevent "Failed to fetch" errors
+// when environment variables fail to load.
+// ═══════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://yxtlhqtyhnholgvldmjj.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4dGxocXR5aG5ob2xndmxkbWpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDY4NzMsImV4cCI6MjA5NjUyMjg3M30.flt0Sp_K9pSjkdwa7xG7aFIZW72oj7FsJrk5c8GB9oo'
+
+// Singleton Supabase client for the Auth page with hardcoded credentials.
+// Prevents "Multiple GoTrueClient instances" warnings from Supabase.
+let _authClient: ReturnType<typeof createClient> | undefined
+function getAuthSupabaseClient() {
+  if (_authClient) return _authClient
+  _authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  return _authClient
+}
 
 // Timeout for Supabase auth calls when the project may be paused/unreachable.
 const AUTH_TIMEOUT_MS = 12000
@@ -24,7 +40,7 @@ function seededRandom(seed: number): () => number {
 // Pre-computed star positions using a fixed seed — no hydration mismatch
 const STAR_DATA = (() => {
   const rand = seededRandom(42)
-  return Array.from({ length: 30 }, (_, i) => ({
+  return Array.from({ length: 25 }, (_, i) => ({
     id: i,
     left: `${rand() * 100}%`,
     top: `${rand() * 100}%`,
@@ -50,6 +66,9 @@ function friendlyAuthError(msg: string): string {
   }
   if (msg.includes('Password should be')) {
     return 'Password is too weak. Please use at least 6 characters.'
+  }
+  if (msg.includes('Email not confirmed')) {
+    return 'Please check your email and confirm your account before signing in.'
   }
   return msg
 }
@@ -176,8 +195,7 @@ export default function AuthPage() {
 
   // If already authenticated, redirect to dashboard
   useEffect(() => {
-    const supabase = createClientSafe()
-    if (!supabase) return
+    const supabase = getAuthSupabaseClient()
     withTimeout(supabase.auth.getSession(), AUTH_TIMEOUT_MS).then(([result, timedOut]) => {
       if (timedOut) return
       if (result?.data?.session?.user) {
@@ -188,8 +206,7 @@ export default function AuthPage() {
 
   // Listen for auth state changes
   useEffect(() => {
-    const supabase = createClientSafe()
-    if (!supabase) return
+    const supabase = getAuthSupabaseClient()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
@@ -207,16 +224,14 @@ export default function AuthPage() {
 
   const handleAuthSuccess = useCallback(async () => {
     try {
-      const supabase = createClientSafe()
-      if (supabase) {
-        const { data: { user: authUser } } = await supabase.auth.getUser()
-        if (authUser) {
-          const email = authUser.email || ''
-          const name = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email.split('@')[0]
-          const initials = getInitials(name || email)
-          setUser({ id: authUser.id, name, email, initials, plan: 'free' })
-          setProfile({ id: authUser.id, name, email, initials, plan: 'free' })
-        }
+      const supabase = getAuthSupabaseClient()
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        const email = authUser.email || ''
+        const name = authUser.user_metadata?.full_name || authUser.user_metadata?.name || email.split('@')[0]
+        const initials = getInitials(name || email)
+        setUser({ id: authUser.id, name, email, initials, plan: 'free' })
+        setProfile({ id: authUser.id, name, email, initials, plan: 'free' })
       }
     } catch {
       // Profile fetch failed — still redirect
@@ -245,7 +260,13 @@ export default function AuthPage() {
         >
           {/* Logo */}
           <div className="flex flex-col items-center gap-3 mb-8">
-            <AetherLogo size={56} />
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
+            </div>
             <span className="font-serif text-2xl font-bold text-white tracking-tight">Aether</span>
           </div>
 
@@ -291,11 +312,7 @@ function SignInForm({ onSwitch, onSuccess }: { onSwitch: (s: AuthScreen) => void
     setLoading(true)
 
     try {
-      const supabase = createClientSafe()
-      if (!supabase) {
-        setError('Supabase is not configured. Please set environment variables.')
-        return
-      }
+      const supabase = getAuthSupabaseClient()
 
       const [signInResult, signInTimedOut] = await withTimeout(
         supabase.auth.signInWithPassword({ email, password }),
@@ -325,8 +342,8 @@ function SignInForm({ onSwitch, onSuccess }: { onSwitch: (s: AuthScreen) => void
       } catch {}
 
       onSuccess()
-    } catch {
-      setError('Unable to connect to authentication service. Please try again later.')
+    } catch (err: any) {
+      setError(friendlyAuthError(err?.message || 'An unexpected error occurred.'))
     } finally {
       setLoading(false)
     }
@@ -455,11 +472,7 @@ function SignUpForm({ onSwitch, onSuccess }: { onSwitch: (s: AuthScreen) => void
     setLoading(true)
 
     try {
-      const supabase = createClientSafe()
-      if (!supabase) {
-        setError('Supabase is not configured. Please set environment variables.')
-        return
-      }
+      const supabase = getAuthSupabaseClient()
 
       const [signUpResult, signUpTimedOut] = await withTimeout(
         supabase.auth.signUp({
@@ -496,8 +509,8 @@ function SignUpForm({ onSwitch, onSuccess }: { onSwitch: (s: AuthScreen) => void
 
       // Email confirmation required — show confirmation screen
       setConfirmationSent(true)
-    } catch {
-      setError('Unable to connect to authentication service. Please try again later.')
+    } catch (err: any) {
+      setError(friendlyAuthError(err?.message || 'An unexpected error occurred.'))
     } finally {
       setLoading(false)
     }
@@ -678,11 +691,7 @@ function ForgotForm({ onSwitch }: { onSwitch: (s: AuthScreen) => void }) {
     setLoading(true)
 
     try {
-      const supabase = createClientSafe()
-      if (!supabase) {
-        setError('Supabase is not configured.')
-        return
-      }
+      const supabase = getAuthSupabaseClient()
       const [resetResult, resetTimedOut] = await withTimeout(
         supabase.auth.resetPasswordForEmail(email),
         AUTH_TIMEOUT_MS
@@ -693,8 +702,8 @@ function ForgotForm({ onSwitch }: { onSwitch: (s: AuthScreen) => void }) {
       }
       if (resetResult.error) { setError(friendlyAuthError(resetResult.error.message)); return }
       setSent(true)
-    } catch {
-      setError('Unable to connect to authentication service. Please try again later.')
+    } catch (err: any) {
+      setError(friendlyAuthError(err?.message || 'An unexpected error occurred.'))
     } finally {
       setLoading(false)
     }

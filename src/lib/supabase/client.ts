@@ -2,8 +2,8 @@ import { createBrowserClient } from '@supabase/ssr'
 
 // Hardcoded fallback credentials — ensures the app works even if
 // environment variables fail to load (common in some deployment scenarios).
-const SUPABASE_URL_FALLBACK = 'https://tbompcwyijpnzwlttkq.supabase.co'
-const SUPABASE_ANON_KEY_FALLBACK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRib21wY3d5aWpwbnZ3bHR0a3EiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc3OTc4ODU2MSwiZXhwIjoyMDk1MzY0NTYxfQ.xVA7xccb34Uqd8fhR9HopF6KpSYYrKoX-nrpnvMl-88'
+const SUPABASE_URL_FALLBACK = 'https://yxtlhqtyhnholgvldmjj.supabase.co'
+const SUPABASE_ANON_KEY_FALLBACK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4dGxocXR5aG5ob2xndmxkbWpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDY4NzMsImV4cCI6MjA5NjUyMjg3M30.flt0Sp_K9pSjkdwa7xG7aFIZW72oj7FsJrk5c8GB9oo'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || SUPABASE_URL_FALLBACK
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY_FALLBACK
