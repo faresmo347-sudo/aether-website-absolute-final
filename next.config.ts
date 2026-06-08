@@ -8,6 +8,14 @@ const nextConfig: NextConfig = {
 
   reactStrictMode: false,
 
+  // Allow cross-origin requests from the Caddy gateway
+  allowedDevOrigins: [
+    'http://21.0.10.66:81',
+    'http://21.0.10.66',
+    'http://localhost:81',
+    'http://127.0.0.1:81',
+  ],
+
   // Ensure all env vars are available at build time and runtime
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
