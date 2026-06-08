@@ -16,6 +16,19 @@ if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseAnonKey)) {
   )
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   OFFICIAL SUPABASE SSR BROWSER CLIENT
+
+   Uses createBrowserClient from @supabase/ssr with NO custom
+   cookies configuration. The library handles cookie reading/writing
+   automatically via document.cookie — this is the official, 
+   bulletproof way for Next.js App Router.
+
+   Do NOT add a custom `cookies` config here. The library's built-in
+   cookie handling is specifically designed for the browser and works
+   correctly with onAuthStateChange, signInWithPassword, etc.
+   ═══════════════════════════════════════════════════════════════ */
+
 // Singleton pattern — ensures only one Supabase client instance exists.
 let client: ReturnType<typeof createBrowserClient> | undefined
 
@@ -27,32 +40,9 @@ export function createClient() {
 
   if (client) return client
 
-  client = createBrowserClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        if (typeof document === 'undefined') return []
-        return document.cookie.split(';').map((c) => {
-          const [name, ...rest] = c.trim().split('=')
-          return { name, value: rest.join('=') }
-        })
-      },
-      setAll(cookiesToSet) {
-        if (typeof document === 'undefined') return
-        cookiesToSet.forEach(({ name, value, options }) => {
-          let cookieString = `${name}=${value}; path=${options.path ?? '/'}`
-          if (options.maxAge !== undefined) cookieString += `; max-age=${options.maxAge}`
-          if (options.domain) cookieString += `; domain=${options.domain}`
-          if (options.sameSite) cookieString += `; samesite=${options.sameSite}`
-          if (options.secure) cookieString += '; secure'
-          document.cookie = cookieString
-        })
-      },
-    },
-    // Disable realtime — we don't use any realtime subscriptions
-    realtime: {
-      transport: undefined as any,
-    },
-  })
+  // Official @supabase/ssr browser client — no custom cookies config needed!
+  // The library handles document.cookie reads/writes automatically.
+  client = createBrowserClient(supabaseUrl, supabaseAnonKey)
 
   return client
 }

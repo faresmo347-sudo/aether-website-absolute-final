@@ -1,428 +1,355 @@
 'use client'
 
-import { useEffect, useRef, useCallback, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAetherStore } from '@/store/aether-store'
-import { createClientSafe } from '@/lib/supabase/client'
-import { ensureProfile, fetchMemories, fetchCollections, getInitials } from '@/lib/supabase/data'
-import { initOfflineDB, getCachedMemories, getCachedCollections, getSyncQueueCount } from '@/lib/offline-db'
-import { onSyncStatus, onSyncComplete } from '@/lib/sync-engine'
-import AppShell from '@/components/aether/AppShell'
-import Dashboard from '@/components/aether/Dashboard'
-import { MemoryDetail } from '@/components/aether/MemoryDetail'
-import { AskAether } from '@/components/aether/AskAether'
-import { Settings } from '@/components/aether/Settings'
-import type { AppView } from '@/components/aether/types'
+import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Send, Sparkles, Loader2, MoreVertical } from 'lucide-react'
 
-// Timeout for Supabase auth calls when the project may be paused/unreachable.
-const AUTH_TIMEOUT_MS = 5000
+// ═══════════════════════════════════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════════════════════════════════
+const supabase = createClient(
+  'https://yxtlhqtyhnholgvldmjj.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4dGxocXR5aG5ob2xndmxkbWpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDY4NzMsImV4cCI6MjA5NjUyMjg3M30.flt0Sp_K9pSjkdwa7xG7aFIZW72oj7FsJrk5c8GB9oo'
+)
 
-/**
- * Wraps a promise with a timeout. Returns a tuple of [result, timedOut].
- * If the promise doesn't settle within the timeout, returns [null, true].
- */
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<[result: T | null, timedOut: boolean]> {
-  let timer: ReturnType<typeof setTimeout>
-  const timeout = new Promise<[null, true]>((resolve) => {
-    timer = setTimeout(() => resolve([null, true]), ms)
-  })
-  return Promise.race([
-    promise.then((r) => [r, false] as [T, false]),
-    timeout,
-  ]).finally(() => clearTimeout(timer))
+// ═══════════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════════
+interface MemoryRow {
+  id: string
+  content: string
+  created_at: string
+  title?: string
+  type?: string
+  tags?: string[]
 }
 
-/* ─────────── App Content Router ─────────── */
-function AppContent() {
-  const { currentView } = useAetherStore()
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function formatRelativeDate(dateStr: string): string {
+  const now = new Date()
+  const date = new Date(dateStr)
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
 
-  switch (currentView) {
-    case 'dashboard':
-      return <Dashboard />
-    case 'memory-detail':
-      return <MemoryDetail />
-    case 'ask-aether':
-      return <AskAether />
-    case 'settings':
-      return <Settings />
-    default:
-      return <Dashboard />
-  }
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays === 1) return 'Yesterday'
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-/* ─────────── Loading Spinner ─────────── */
-function LoadingSpinner() {
+// ═══════════════════════════════════════════════════════════════
+// MEMORY CARD — outside parent, no remounting
+// ═══════════════════════════════════════════════════════════════
+function MemoryCard({
+  memory,
+  onDelete,
+}: {
+  memory: MemoryRow
+  onDelete: (id: string) => void
+}) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-6 w-6 rounded-full border-2 border-muted-foreground/20 border-t-[#c084fc] animate-spin" />
-        <p className="text-xs text-muted-foreground">Loading your memories...</p>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="bg-white/[0.02] backdrop-blur-lg border border-white/[0.05] rounded-2xl p-5 hover:bg-white/[0.04] transition-all group relative"
+    >
+      <p className="text-white/90 text-base leading-relaxed pr-8">
+        {memory.title || memory.content}
+      </p>
+      <span className="text-white/30 text-xs mt-2 block">
+        {formatRelativeDate(memory.created_at)}
+      </span>
+
+      <div ref={menuRef} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          className="text-white/30 hover:text-white/60 transition-colors p-1"
+          aria-label="More options"
+        >
+          <MoreVertical size={16} />
+        </button>
+
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.1 }}
+              className="absolute right-0 top-7 bg-white/10 backdrop-blur-xl border border-white/10 rounded-lg p-1 min-w-[100px] z-20"
+            >
+              <button
+                onClick={() => { onDelete(memory.id); setMenuOpen(false) }}
+                className="w-full text-left px-3 py-1.5 text-sm text-red-400/80 hover:bg-red-500/10 hover:text-red-400 rounded-md transition-colors"
+              >
+                Delete
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   DASHBOARD PAGE — Protected route for authenticated users
-
-   CRITICAL: The auth gate is BULLETPROOF.
-   - We NEVER set authConfirmed=true based on getSession() alone.
-   - getUser() MUST validate the session with the Supabase server.
-   - Stale/expired sessions are immediately rejected → redirect to /.
-   - SIGNED_OUT events clear all state and redirect to /.
-   ═══════════════════════════════════════════════════════════════ */
-
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD — renders INSTANTLY, no loading state
+// ═══════════════════════════════════════════════════════════════
 export default function DashboardPage() {
-  const router = useRouter()
-  const {
-    currentView,
-    setCurrentView,
-    setUser,
-    setProfile,
-    setMemories,
-    setCollections,
-    setIsLoadingMemories,
-    setIsSyncing,
-    setPendingSyncCount,
-    setLastSyncedAt,
-    updateMemory,
-    setSelectedMemoryId,
-    darkMode,
-  } = useAetherStore()
+  const [memories, setMemories] = useState<MemoryRow[]>([])
+  const [inputText, setInputText] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [showTagPill, setShowTagPill] = useState(false)
+  const [dailySpark, setDailySpark] = useState<MemoryRow | null>(null)
 
-  const [authConfirmed, setAuthConfirmed] = useState(false)
-  const dataLoadedRef = useRef(false)
-  const authInitializedRef = useRef(false)
+  const userRef = useRef<{ id: string } | null>(null)
 
-  // Sync dark mode class
+  // ─── SINGLE useEffect — runs once on mount ───
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark')
-      document.documentElement.setAttribute('data-theme', 'dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-      document.documentElement.setAttribute('data-theme', 'light')
-    }
-    try {
-      localStorage.setItem('aether-theme', darkMode ? 'dark' : 'light')
-      localStorage.setItem('aether-dark-mode', String(darkMode))
-    } catch {}
-  }, [darkMode])
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession()
 
-  // Load user data from Supabase
-  const loadUserData = useCallback(async (userId: string) => {
-    if (dataLoadedRef.current) return
-    dataLoadedRef.current = true
-
-    // Load from localStorage cache for instant display
-    try {
-      const cachedMemories = localStorage.getItem('aether-memories')
-      const cachedCollections = localStorage.getItem('aether-collections')
-      const cachedProfile = localStorage.getItem('aether-profile')
-      if (cachedMemories) {
-        const parsed = JSON.parse(cachedMemories)
-        if (Array.isArray(parsed) && parsed.length > 0) setMemories(parsed)
-      }
-      if (cachedCollections) {
-        const parsed = JSON.parse(cachedCollections)
-        if (Array.isArray(parsed) && parsed.length > 0) setCollections(parsed)
-      }
-      if (cachedProfile) {
-        const parsed = JSON.parse(cachedProfile)
-        if (parsed && parsed.name) setProfile(parsed)
-      }
-    } catch {}
-
-    setIsLoadingMemories(true)
-    try {
-      const profile = await ensureProfile(userId)
-      if (profile) {
-        setUser(profile)
-        setProfile(profile)
-      } else {
-        const supabase = createClientSafe()
-        if (supabase) {
-          const { data: { user: authUser } } = await supabase.auth.getUser()
-          const fallbackName = authUser?.user_metadata?.full_name || authUser?.user_metadata?.name || authUser?.email?.split('@')[0] || ''
-          const fallbackEmail = authUser?.email || ''
-          const fallbackProfile = {
-            id: userId, name: fallbackName, email: fallbackEmail,
-            initials: getInitials(fallbackName || fallbackEmail), plan: 'free' as const,
-          }
-          try {
-            await supabase.from('profiles').upsert({ id: userId, email: fallbackEmail, name: fallbackName, plan: 'free' }, { onConflict: 'id' })
-          } catch {}
-          setUser(fallbackProfile)
-          setProfile(fallbackProfile)
-        }
-      }
-      try {
-        const [memResult, collections] = await Promise.all([fetchMemories(0), fetchCollections()])
-        setMemories(memResult.memories)
-        setCollections(collections)
-      } catch (err) {
-        console.warn('Failed to fetch from Supabase, loading from cache:', err)
-        try {
-          const [cachedMems, cachedCols] = await Promise.all([getCachedMemories(), getCachedCollections()])
-          if (cachedMems.length > 0) setMemories(cachedMems)
-          if (cachedCols.length > 0) setCollections(cachedCols)
-        } catch {}
-      }
-    } catch (err) {
-      console.error('Failed to load user data:', err)
-    } finally {
-      setIsLoadingMemories(false)
-    }
-  }, [setUser, setProfile, setMemories, setCollections, setIsLoadingMemories])
-
-  // ── FULL STATE CLEAR on sign-out ──
-  const clearAllStateAndRedirect = useCallback(() => {
-    dataLoadedRef.current = false
-    setAuthConfirmed(false)
-    setUser(null)
-    setProfile({ name: '', email: '', initials: '' })
-    setMemories([])
-    setCollections([])
-    // Mark as signed out so demo mode doesn't re-create the user
-    useAetherStore.getState().setSignedOut(true)
-    // Clear localStorage to prevent stale data on next login
-    try {
-      localStorage.removeItem('aether-memories')
-      localStorage.removeItem('aether-collections')
-      localStorage.removeItem('aether-profile')
-      localStorage.removeItem('aether-view')
-    } catch {}
-    router.replace('/')
-  }, [router, setUser, setProfile, setMemories, setCollections])
-
-  // Auth check + data loading — runs once on mount
-  useEffect(() => {
-    if (authInitializedRef.current) return
-    authInitializedRef.current = true
-
-    // DEMO MODE: Allow UI preview without auth
-    // Use ?demo=true URL parameter to bypass auth for UI testing
-    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-    const isDemoMode = urlParams?.get('demo') === 'true'
-    if (isDemoMode) {
-      console.warn('[Aether] Demo mode — skipping auth')
-      setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-      setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-      setAuthConfirmed(true)
-      return
-    }
-
-    const supabase = createClientSafe()
-    if (!supabase) {
-      // Supabase not configured — check if user explicitly signed out
-      console.warn('[Aether] Demo mode forced — skipping auth')
-      setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-      setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-      setAuthConfirmed(true)
-      return
-    }
-
-    const supabase = createClientSafe()
-    if (!supabase) {
-      // Supabase not configured — check if user explicitly signed out
-      const currentSignedOut = useAetherStore.getState().signedOut
-      if (currentSignedOut) {
-        // User explicitly signed out — redirect to landing page
-        clearAllStateAndRedirect()
+      if (!session?.user) {
+        window.location.href = '/'
         return
       }
-      // Supabase not configured — allow demo mode with a mock user
-      // This lets users preview the dashboard UI before configuring Supabase
-      console.warn('[Aether] Supabase not configured — running in demo mode.')
-      setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-      setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-      setAuthConfirmed(true)
-      return
-    }
 
-    let mounted = true
+      userRef.current = { id: session.user.id }
 
-    const checkAuth = async () => {
-      try {
-        // Step 1: Fast local check — with timeout for unreachable Supabase
-        const [sessionResult, sessionTimedOut] = await withTimeout(
-          supabase.auth.getSession(),
-          AUTH_TIMEOUT_MS
-        )
-        if (!mounted) return
+      // Fetch memories in the background
+      const { data, error } = await supabase
+        .from('memories')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
 
-        if (sessionTimedOut) {
-          // Supabase is unreachable — fall back to demo mode
-          console.warn('[Aether] Supabase getSession() timed out in dashboard — Supabase may be paused/unreachable. Falling back to demo mode.')
-          const currentSignedOut = useAetherStore.getState().signedOut
-          if (currentSignedOut) {
-            clearAllStateAndRedirect()
-            return
-          }
-          setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-          setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-          setAuthConfirmed(true)
-          return
-        }
-
-        const { data: { session } } = sessionResult
-
-        if (!session?.user) {
-          // No local session — redirect to landing page
-          router.replace('/')
-          return
-        }
-
-        // Step 2: CRITICAL — Validate with Supabase server.
-        // This is the ONLY place we set authConfirmed=true.
-        // A stale session cookie will return null from getUser().
-        // Add timeout for unreachable Supabase.
-        const [userResult, userTimedOut] = await withTimeout(
-          supabase.auth.getUser(),
-          AUTH_TIMEOUT_MS
-        )
-        if (!mounted) return
-
-        if (userTimedOut) {
-          // Supabase is unreachable — fall back to demo mode
-          console.warn('[Aether] Supabase getUser() timed out in dashboard — cannot validate session. Falling back to demo mode.')
-          const currentSignedOut = useAetherStore.getState().signedOut
-          if (currentSignedOut) {
-            clearAllStateAndRedirect()
-            return
-          }
-          setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-          setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-          setAuthConfirmed(true)
-          return
-        }
-
-        const { data: { user: validatedUser } } = userResult
-
-        if (!validatedUser) {
-          // Stale/expired session — clear and redirect
-          try { await supabase.auth.signOut() } catch {}
-          clearAllStateAndRedirect()
-          return
-        }
-
-        // ── SESSION IS VALIDATED ──
-        const email = validatedUser.email || ''
-        const name = validatedUser.user_metadata?.full_name || validatedUser.user_metadata?.name || email.split('@')[0]
-        const initials = getInitials(name || email)
-        setUser({ id: validatedUser.id, name, email, initials, plan: 'free' })
-        setAuthConfirmed(true)
-
-        // Load user data in the background
-        loadUserData(validatedUser.id).catch((err) =>
-          console.warn('[Aether] Background data load failed:', err)
-        )
-      } catch {
-        if (mounted) {
-          // Network error or other unexpected failure — fall back to demo mode
-          console.warn('[Aether] Auth check failed in dashboard — Supabase may be unreachable. Falling back to demo mode.')
-          const currentSignedOut = useAetherStore.getState().signedOut
-          if (currentSignedOut) {
-            clearAllStateAndRedirect()
-            return
-          }
-          setUser({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-          setProfile({ id: 'demo-user', name: 'Demo User', email: 'demo@aether.app', initials: 'DU', plan: 'free' })
-          setAuthConfirmed(true)
+      if (!error && data && data.length > 0) {
+        setMemories(data)
+        // Pick daily spark
+        if (data.length > 1) {
+          const olderSlice = data.slice(1)
+          const randomIdx = Math.floor(Math.random() * Math.min(olderSlice.length, 20))
+          setDailySpark(olderSlice[randomIdx])
         }
       }
     }
+    init()
+  }, []) // ← EMPTY — runs once
 
-    checkAuth()
-
-    // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return
-      if (event === 'INITIAL_SESSION') return // Already handled in checkAuth
-
-      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-        // Fresh sign-in or token refresh
-        dataLoadedRef.current = false
-        const email = session.user.email || ''
-        const name = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0]
-        const initials = getInitials(name || email)
-        setUser({ id: session.user.id, name, email, initials, plan: 'free' })
-        setAuthConfirmed(true)
-        loadUserData(session.user.id).catch((err) =>
-          console.warn('[Aether] Background data load failed:', err)
-        )
-      } else if (event === 'SIGNED_OUT') {
-        // ── SIGN OUT: Only redirect if we had a confirmed session before.
-        // Prevents Supabase's initial "no session" SIGNED_OUT from redirecting demo users.
-        if (authConfirmed) {
-          clearAllStateAndRedirect()
-        }
-      }
-    })
-
-    // Initialize offline DB
-    initOfflineDB().catch((err) => console.warn('Failed to init offline DB:', err))
-
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {})
-    }
-
-    // Listen for sync events
-    const unsubStatus = onSyncStatus((status) => setIsSyncing(status === 'syncing'))
-    const unsubComplete = onSyncComplete((result) => {
-      getSyncQueueCount().then(setPendingSyncCount)
-      if (result.synced > 0) setLastSyncedAt(new Date().toISOString())
-    })
-
-    const handleMemorySynced = ((e: CustomEvent) => {
-      const { tempId, realId, memory } = e.detail
-      updateMemory(tempId, { id: realId, syncStatus: 'synced', ...memory })
-    }) as EventListener
-    window.addEventListener('aether:memory-synced', handleMemorySynced)
-
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-      unsubStatus()
-      unsubComplete()
-      window.removeEventListener('aether:memory-synced', handleMemorySynced)
-    }
-  }, [clearAllStateAndRedirect, loadUserData, setCurrentView, setSelectedMemoryId, setIsSyncing, setPendingSyncCount, setLastSyncedAt, updateMemory, router])
-
-  // URL-based navigation: read the current URL path to determine which view to show
+  // ─── Listen for sign out ───
   useEffect(() => {
-    const path = window.location.pathname.replace(/\/$/, '')
-
-    const urlToViewMap: Record<string, AppView> = {
-      '/dashboard': 'dashboard',
-      '/ask': 'ask-aether',
-      '/settings': 'settings',
-    }
-
-    const view = urlToViewMap[path]
-    if (view) {
-      setCurrentView(view)
-      return
-    }
-
-    if (path.startsWith('/memory/')) {
-      const memoryId = path.replace('/memory/', '')
-      if (memoryId) {
-        setSelectedMemoryId(memoryId)
-        setCurrentView('memory-detail')
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        window.location.href = '/'
       }
-    }
-  }, [setCurrentView, setSelectedMemoryId])
+    })
+    return () => subscription.unsubscribe()
+  }, [])
 
-  // If auth hasn't been confirmed yet, show loading
-  if (!authConfirmed) {
-    return <LoadingSpinner />
+  // ─── Save — no re-fetch, add to state directly ───
+  async function handleSave() {
+    const content = inputText.trim()
+    if (!content || isSaving || !userRef.current) return
+
+    setIsSaving(true)
+    setShowTagPill(false)
+
+    const { data, error } = await supabase
+      .from('memories')
+      .insert({ user_id: userRef.current.id, content })
+      .select()
+      .single()
+
+    if (!error && data) {
+      setMemories(prev => [data as MemoryRow, ...prev])
+      setInputText('')
+      setShowTagPill(true)
+      setTimeout(() => setShowTagPill(false), 2000)
+    } else {
+      console.error('[Aether] Save failed:', error?.message)
+    }
+
+    setIsSaving(false)
   }
 
+  // ─── Delete — optimistic, no re-fetch ───
+  async function handleDelete(memoryId: string) {
+    setMemories(prev => prev.filter(m => m.id !== memoryId))
+
+    const { error } = await supabase
+      .from('memories')
+      .delete()
+      .eq('id', memoryId)
+
+    if (error) {
+      console.error('[Aether] Delete failed:', error.message)
+      // Re-fetch on error only
+      if (userRef.current) {
+        const { data } = await supabase
+          .from('memories')
+          .select('*')
+          .eq('user_id', userRef.current.id)
+          .order('created_at', { ascending: false })
+        if (data) setMemories(data)
+      }
+    }
+  }
+
+  // ─── Logout ───
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    window.location.href = '/'
+  }
+
+  // ─── Enter to save ───
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSave()
+    }
+  }
+
+  // ─── RENDER — INSTANTLY, no loading gate ───
   return (
-    <AppShell>
-      <AppContent />
-    </AppShell>
+    <div className="min-h-screen bg-[#020206] text-white relative overflow-hidden flex flex-col items-center pt-20 px-4">
+      {/* Background Glows */}
+      <div
+        className="w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] absolute top-[-10%] left-[-10%] z-0"
+        aria-hidden="true"
+      />
+      <div
+        className="w-[600px] h-[600px] bg-blue-600/15 rounded-full blur-[150px] absolute bottom-[-10%] right-[-10%] z-0"
+        aria-hidden="true"
+      />
+
+      {/* Top Right — Log Out */}
+      <div className="absolute top-6 right-6 z-50">
+        <button
+          onClick={handleLogout}
+          className="text-gray-400 hover:text-white text-sm transition-colors"
+        >
+          Log Out
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-2xl mx-auto">
+
+        {/* Capture Area */}
+        <div className="mb-8">
+          <div className="relative bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-2 shadow-[0_0_40px_rgba(139,92,246,0.2)] focus-within:shadow-[0_0_60px_rgba(139,92,246,0.4)] focus-within:border-purple-500/40 transition-all">
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="What's on your mind?"
+              disabled={isSaving}
+              className="w-full bg-transparent text-white text-lg placeholder:text-gray-500 focus:outline-none px-4 py-3"
+            />
+            <button
+              onClick={handleSave}
+              disabled={!inputText.trim() || isSaving}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded-full transition-all disabled:opacity-30"
+              aria-label="Send"
+            >
+              {isSaving ? (
+                <Loader2 size={18} className="animate-spin text-purple-400" />
+              ) : (
+                <Send size={18} />
+              )}
+            </button>
+          </div>
+
+          {/* Dopamine Tag Pill */}
+          <div className="mt-3 min-h-[28px]">
+            <AnimatePresence>
+              {showTagPill && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="text-sm text-purple-300 bg-purple-500/20 px-3 py-1 rounded-full inline-block"
+                >
+                  Captured & Organized ✨
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Daily Spark */}
+        {dailySpark && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4 mb-8"
+          >
+            <p className="text-purple-300 text-sm">
+              ✨ Rediscover: {dailySpark.title || dailySpark.content?.slice(0, 120)}
+            </p>
+            <span className="text-purple-400/40 text-xs mt-1 block">
+              {formatRelativeDate(dailySpark.created_at)}
+            </span>
+          </motion.div>
+        )}
+
+        {/* Memories Feed — empty space if no memories yet */}
+        <div className="space-y-4 w-full">
+          {memories.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+              className="flex flex-col items-center justify-center py-20"
+            >
+              <motion.div
+                animate={{
+                  scale: [1, 1.15, 1],
+                  opacity: [0.4, 0.8, 0.4],
+                }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                className="h-24 w-24 rounded-full flex items-center justify-center mb-6 bg-purple-500/5"
+              >
+                <Sparkles size={32} className="text-purple-500/40" />
+              </motion.div>
+              <p className="text-lg font-medium text-white/30">
+                A quiet space for your thoughts
+              </p>
+              <p className="text-sm mt-2 text-white/20">
+                Type anything above to start capturing
+              </p>
+            </motion.div>
+          ) : (
+            memories.map((memory) => (
+              <MemoryCard key={memory.id} memory={memory} onDelete={handleDelete} />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

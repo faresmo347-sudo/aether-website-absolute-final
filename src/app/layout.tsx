@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/lib/auth-context";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -106,9 +107,11 @@ export default function RootLayout({
         `}} />
       </head>
       <body
-        className={`${inter.variable} ${playfair.variable} ${dmMono.variable} antialiased overflow-x-hidden max-w-screen h-[100dvh] md:h-screen`}
+        className={`${inter.variable} ${playfair.variable} ${dmMono.variable} font-sans antialiased overflow-x-hidden max-w-screen h-[100dvh] md:h-screen`}
       >
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <Toaster />
       </body>
     </html>
