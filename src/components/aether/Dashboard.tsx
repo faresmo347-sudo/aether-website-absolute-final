@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, memo, useRef, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Mic, FileText, Link2, ImageIcon, Brain, Loader2, Send, ImagePlus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { Mic, FileText, Link2, ImageIcon, Brain, Loader2, Send, ImagePlus, MoreHorizontal, Pencil, Trash2, Sparkles } from 'lucide-react'
 import { useAetherStore } from '@/store/aether-store'
 import { createMemory, getMemoryCount, updateMemoryById, deleteMemoryById } from '@/lib/supabase/data'
 import { getCachedTags, setCachedTags } from '@/lib/tag-cache'
@@ -18,56 +18,8 @@ const SPRING_SMOOTH = { type: 'spring' as const, stiffness: 260, damping: 22 }
 const SPRING_GENTLE = { type: 'spring' as const, stiffness: 180, damping: 20 }
 
 // ────────────────────────────────────────────────────────────
-// STAGGER CONTAINERS
-// ────────────────────────────────────────────────────────────
-
-const feedContainerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
-    },
-  },
-}
-
-const feedItemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: SPRING_SMOOTH,
-  },
-}
-
-// ────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────
-
-const TYPE_ACCENT_COLORS_DARK: Record<MemoryType, { border: string; bg: string; text: string; glow: string }> = {
-  text: { border: 'rgba(157,139,167,0.4)', bg: 'rgba(157,139,167,0.06)', text: '#9D8BA7', glow: 'rgba(157,139,167,0.2)' },
-  voice: { border: 'rgba(192,132,252,0.4)', bg: 'rgba(192,132,252,0.06)', text: '#c084fc', glow: 'rgba(192,132,252,0.2)' },
-  link: { border: 'rgba(125,211,232,0.4)', bg: 'rgba(125,211,232,0.06)', text: '#7DD3E8', glow: 'rgba(125,211,232,0.2)' },
-  image: { border: 'rgba(134,239,172,0.4)', bg: 'rgba(134,239,172,0.06)', text: '#86efac', glow: 'rgba(134,239,172,0.2)' },
-}
-
-const TYPE_ACCENT_COLORS_LIGHT: Record<MemoryType, { border: string; bg: string; text: string; glow: string }> = {
-  text: { border: 'rgba(157,139,167,0.2)', bg: 'rgba(157,139,167,0.06)', text: '#7c6d8a', glow: 'rgba(157,139,167,0.1)' },
-  voice: { border: 'rgba(192,132,252,0.2)', bg: 'rgba(192,132,252,0.06)', text: '#9333ea', glow: 'rgba(192,132,252,0.1)' },
-  link: { border: 'rgba(125,211,232,0.2)', bg: 'rgba(125,211,232,0.06)', text: '#0891b2', glow: 'rgba(125,211,232,0.1)' },
-  image: { border: 'rgba(134,239,172,0.2)', bg: 'rgba(134,239,172,0.06)', text: '#16a34a', glow: 'rgba(134,239,172,0.1)' },
-}
-
-function typeIcon(type: MemoryType, size = 'size-4') {
-  const accent = TYPE_ACCENT_COLORS_DARK[type]
-  switch (type) {
-    case 'voice': return <Mic className={size} style={{ color: accent.text }} />
-    case 'link': return <Link2 className={size} style={{ color: accent.text }} />
-    case 'image': return <ImageIcon className={size} style={{ color: accent.text }} />
-    default: return <FileText className={size} style={{ color: accent.text }} />
-  }
-}
 
 function formatRelativeDate(iso: string): string {
   const now = new Date()
@@ -117,7 +69,7 @@ function isUrl(text: string): boolean {
 }
 
 // ────────────────────────────────────────────────────────────
-// Aurora Background — Midnight Oasis
+// Aurora Background — Deep Space
 // ────────────────────────────────────────────────────────────
 
 function AuroraBackground() {
@@ -151,7 +103,7 @@ function AuroraBackground() {
 }
 
 // ────────────────────────────────────────────────────────────
-// MEMORY CARD — Calm, no tags visible, spring physics
+// MEMORY CARD — Ultra-calm, flat glassmorphism, no tags
 // ────────────────────────────────────────────────────────────
 
 const MemoryCard = memo(function MemoryCard({
@@ -168,134 +120,99 @@ const MemoryCard = memo(function MemoryCard({
   darkMode?: boolean
   isNew?: boolean
 }) {
-  const isSyncing = memory.syncStatus === 'pending' || memory.syncStatus === 'syncing'
   const [showMenu, setShowMenu] = useState(false)
 
   const previewContent = memory.type === 'link'
     ? memory.content.replace(/^\[From\s+.+?\]\s*\n*/, '').trim() || memory.content
     : memory.content
 
-  const accent = darkMode ? TYPE_ACCENT_COLORS_DARK[memory.type] : TYPE_ACCENT_COLORS_LIGHT[memory.type]
-
-  const displayTitle = memory.title.includes('http')
-    ? (() => { try { return new URL(memory.title).hostname } catch { return memory.title } })()
-    : memory.title
+  // Simplify title display
+  const displayText = memory.content || memory.title
 
   return (
     <motion.div
-      variants={feedItemVariants}
+      initial={isNew ? { opacity: 0, y: -20 } : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={isNew ? { type: 'spring', stiffness: 300, damping: 20 } : SPRING_SMOOTH}
       className="relative w-full group"
     >
-      {isNew && (
-        <motion.div
-          initial={{ opacity: 0.8 }}
-          animate={{ opacity: 0 }}
-          transition={{ duration: 2, ease: 'easeOut' }}
-          className="absolute -inset-px rounded-2xl pointer-events-none"
-          style={{
-            boxShadow: `0 0 20px ${accent.glow}, 0 0 40px ${accent.glow}`,
-            border: `1px solid ${accent.border}`,
-          }}
-        />
-      )}
-
       <motion.div
         onClick={onClick}
-        whileHover={{ y: -1 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={darkMode ? { y: -2, boxShadow: '0 4px 20px rgba(192, 132, 252, 0.08)' } : { y: -1 }}
+        whileTap={{ scale: 0.95 }}
         transition={SPRING_GENTLE}
-        className="relative w-full text-left p-4 cursor-pointer rounded-2xl"
-        style={darkMode
-          ? {
-              background: 'rgba(255,255,255,0.025)',
-              border: isNew ? `1px solid rgba(192,132,252,0.4)` : '1px solid rgba(255,255,255,0.04)',
-              transition: 'border-color 1.5s ease-out',
-            }
-          : {
-              background: 'rgba(255,255,255,0.8)',
-              border: '1px solid rgba(0,0,0,0.04)',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-            }
-        }
+        className={`relative w-full text-left p-4 cursor-pointer rounded-2xl transition-colors duration-200 ${
+          darkMode
+            ? 'bg-white/[0.02] border border-white/[0.05] hover:border-purple-500/10'
+            : 'bg-white border border-black/[0.04] hover:border-gray-200 hover:shadow-sm'
+        }`}
       >
-        <div className="flex items-start gap-3">
-          {/* Type icon */}
-          <div
-            className="flex items-center justify-center size-7 rounded-lg shrink-0 mt-0.5"
-            style={{ background: accent.bg }}
-          >
-            {typeIcon(memory.type, 'size-3.5')}
-          </div>
+        {/* Memory text — calm, no tags */}
+        <p className={`text-sm leading-relaxed ${darkMode ? 'text-white/90' : 'text-gray-800'}`} style={{ wordBreak: 'break-word' }}>
+          {displayText}
+        </p>
 
-          <div className="min-w-0 flex-1">
-            {/* Title + time row */}
-            <div className="flex items-start justify-between gap-3">
-              <h3 className={`font-medium text-sm leading-snug truncate ${darkMode ? 'text-white/70' : 'text-gray-800'}`}>
-                {displayTitle}
-              </h3>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {isSyncing && (
-                  <span className="relative flex size-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400/20 opacity-75" />
-                    <span className="relative inline-flex rounded-full size-1.5 bg-amber-500/30" />
-                  </span>
-                )}
-                <span className={`text-[10px] whitespace-nowrap ${darkMode ? 'text-white/12' : 'text-gray-300'}`}>
-                  {formatRelativeDate(memory.createdAt)}
-                </span>
-                {/* 3-dot menu */}
-                <div className="relative">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
-                    className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 rounded-lg ${
-                      darkMode ? 'hover:bg-white/5 text-white/15 hover:text-white/40' : 'hover:bg-black/5 text-gray-300 hover:text-gray-500'
+        {/* Date + actions row */}
+        <div className="flex items-center justify-between mt-2.5">
+          <span className={`text-xs ${darkMode ? 'text-white/30' : 'text-gray-400'}`}>
+            {formatRelativeDate(memory.createdAt)}
+          </span>
+
+          <div className="flex items-center gap-1">
+            {/* Sync indicator */}
+            {(memory.syncStatus === 'pending' || memory.syncStatus === 'syncing') && (
+              <span className="relative flex size-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400/20 opacity-75" />
+                <span className="relative inline-flex rounded-full size-1.5 bg-amber-500/30" />
+              </span>
+            )}
+
+            {/* 3-dot menu */}
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+                className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full ${
+                  darkMode
+                    ? 'hover:bg-white/10 text-white/20 hover:text-white/50'
+                    : 'hover:bg-black/5 text-gray-300 hover:text-gray-500'
+                }`}
+                aria-label="More actions"
+              >
+                <MoreHorizontal size={14} />
+              </button>
+              <AnimatePresence>
+                {showMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={SPRING_BOUNCE}
+                    className={`absolute right-0 top-8 z-50 rounded-xl shadow-xl border py-1 min-w-[130px] ${
+                      darkMode ? 'bg-[#161428] border-white/10' : 'bg-white border-gray-200'
                     }`}
-                    aria-label="More actions"
                   >
-                    <MoreHorizontal size={13} />
-                  </button>
-                  <AnimatePresence>
-                    {showMenu && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                        transition={SPRING_BOUNCE}
-                        className={`absolute right-0 top-7 z-50 rounded-xl shadow-xl border py-1 min-w-[130px] ${
-                          darkMode ? 'bg-[#161428] border-white/10' : 'bg-white border-gray-200'
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onClick(); setShowMenu(false) }}
+                      className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${
+                        darkMode ? 'text-white/60 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Pencil size={11} /> View & Edit
+                    </button>
+                    {onDelete && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(); setShowMenu(false) }}
+                        className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${
+                          darkMode ? 'text-red-400/70 hover:bg-red-500/10' : 'text-red-500 hover:bg-red-50'
                         }`}
                       >
-                        <button
-                          onClick={(e) => { e.stopPropagation(); onClick(); setShowMenu(false) }}
-                          className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${
-                            darkMode ? 'text-white/60 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          <Pencil size={11} /> View & Edit
-                        </button>
-                        {onDelete && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onDelete(); setShowMenu(false) }}
-                            className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${
-                              darkMode ? 'text-red-400/70 hover:bg-red-500/10' : 'text-red-500 hover:bg-red-50'
-                            }`}
-                          >
-                            <Trash2 size={11} /> Delete
-                          </button>
-                        )}
-                      </motion.div>
+                        <Trash2 size={11} /> Delete
+                      </button>
                     )}
-                  </AnimatePresence>
-                </div>
-              </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-
-            {/* Content preview — calm, no tags */}
-            {previewContent && previewContent !== displayTitle && (
-              <p className={`text-xs mt-1 line-clamp-2 leading-[1.6] ${darkMode ? 'text-white/15' : 'text-gray-400'}`} style={{ wordBreak: 'break-word' }}>
-                {previewContent}
-              </p>
-            )}
           </div>
         </div>
       </motion.div>
@@ -308,7 +225,7 @@ const MemoryCard = memo(function MemoryCard({
 })
 
 // ────────────────────────────────────────────────────────────
-// CALM EMPTY STATE
+// MAGICAL EMPTY STATE — Animated orb + sparkles
 // ────────────────────────────────────────────────────────────
 
 const EmptyState = memo(function EmptyState({ darkMode }: { darkMode: boolean }) {
@@ -319,15 +236,47 @@ const EmptyState = memo(function EmptyState({ darkMode }: { darkMode: boolean })
       transition={SPRING_SMOOTH}
       className="flex flex-col items-center justify-center py-32 px-4 text-center"
     >
-      <div className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-5 ${
-        darkMode ? 'bg-white/[0.02] border border-white/[0.04]' : 'bg-gray-50'
-      }`}>
-        <Brain className={`size-7 ${darkMode ? 'text-white/8' : 'text-gray-200'}`} />
+      {/* Animated gradient orb */}
+      <div className="relative mb-8">
+        <div
+          className="w-20 h-20 rounded-full animate-aurora-breathe"
+          style={{
+            background: darkMode
+              ? 'radial-gradient(circle at 30% 30%, rgba(192, 132, 252, 0.15), rgba(99, 102, 241, 0.08) 50%, transparent 70%)'
+              : 'radial-gradient(circle at 30% 30%, rgba(157, 139, 167, 0.12), rgba(99, 102, 241, 0.06) 50%, transparent 70%)',
+            filter: 'blur(1px)',
+          }}
+        />
+        <div
+          className="absolute inset-0 w-20 h-20 rounded-full"
+          style={{
+            background: darkMode
+              ? 'radial-gradient(circle at 60% 60%, rgba(125, 211, 232, 0.08), transparent 60%)'
+              : 'radial-gradient(circle at 60% 60%, rgba(125, 211, 232, 0.06), transparent 60%)',
+            animation: 'aurora-breathe 10s ease-in-out 3s infinite',
+          }}
+        />
+        {/* Sparkles icon */}
+        <motion.div
+          className="absolute inset-0 flex items-center justify-center"
+          animate={{ 
+            scale: [1, 1.15, 1],
+            opacity: [0.5, 0.8, 0.5],
+          }}
+          transition={{ 
+            duration: 3,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        >
+          <Sparkles className={`size-7 ${darkMode ? 'text-purple-400/30' : 'text-purple-300/50'}`} />
+        </motion.div>
       </div>
+
       <h3 className={`text-base font-medium mb-1.5 ${darkMode ? 'text-white/30' : 'text-gray-500'}`}>
         A quiet space for your thoughts
       </h3>
-      <p className={`text-xs max-w-xs leading-relaxed ${darkMode ? 'text-white/12' : 'text-gray-400'}`}>
+      <p className={`text-xs max-w-xs leading-relaxed ${darkMode ? 'text-white/15' : 'text-gray-400'}`}>
         Type anything above — a thought, a link, an idea. Aether will take care of the rest.
       </p>
     </motion.div>
@@ -393,7 +342,7 @@ function useWebSpeechRecognition() {
 }
 
 // ────────────────────────────────────────────────────────────
-// HERO CAPTURE ZONE — Massive, glowing, the undisputed king
+// HERO CAPTURE BAR — Breathing glow, premium feel
 // ────────────────────────────────────────────────────────────
 
 function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
@@ -667,19 +616,32 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
     }
   }, [isListening, startListening, stopListening, toast])
 
+  // Determine glow state
+  const isEmpty = !input.trim()
+  const showBreathingGlow = darkMode && isEmpty && !isFocused && !isListening
+
   return (
     <div className="w-full px-4 md:px-0">
       <div
-        className={`relative flex items-center rounded-2xl transition-all duration-300 overflow-hidden ${
-          darkMode
-            ? isFocused || isListening
-              ? 'bg-white/[0.05] border border-[#c084fc]/20 shadow-[0_0_40px_rgba(192,132,252,0.06)]'
-              : 'bg-white/[0.025] border border-white/[0.05]'
-            : isFocused || isListening
-              ? 'bg-white border border-[#9D8BA7]/25 shadow-md'
-              : 'bg-white border border-gray-200 shadow-sm'
+        className={`relative flex items-center rounded-2xl transition-all duration-500 overflow-hidden ${
+          showBreathingGlow
+            ? 'capture-breathe'
+            : darkMode
+              ? isFocused || isListening
+                ? 'bg-white/[0.04] border border-purple-500/20'
+                : 'bg-white/[0.025] border border-white/[0.05]'
+              : isFocused || isListening
+                ? 'bg-white border border-[#9D8BA7]/25 shadow-md'
+                : 'bg-white border border-gray-200 shadow-sm'
         }`}
-        style={darkMode ? { backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' } : undefined}
+        style={darkMode ? {
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: isFocused || isListening
+            ? '0 0 40px rgba(192,132,252,0.06), 0 0 80px rgba(99,102,241,0.03)'
+            : undefined,
+          transition: 'box-shadow 0.5s ease, border-color 0.5s ease, background-color 0.5s ease',
+        } : undefined}
       >
         {/* Voice recording indicator */}
         {isListening && (
@@ -693,7 +655,7 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
           </div>
         )}
 
-        {/* Main input */}
+        {/* Main input — large, inviting typography */}
         <input
           ref={inputRef}
           type="text"
@@ -712,27 +674,26 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
           disabled={isSaving}
           autoComplete="off"
           aria-label="Capture a thought"
-          className={`flex-1 h-14 px-5 text-base bg-transparent focus:outline-none placeholder:transition-colors duration-300 ${
+          className={`flex-1 h-14 px-5 bg-transparent focus:outline-none placeholder:transition-colors duration-300 text-lg md:text-xl ${
             darkMode
-              ? 'text-white/85 placeholder:text-white/12'
+              ? 'text-white placeholder:text-gray-500'
               : 'text-gray-900 placeholder:text-gray-300'
           }`}
         />
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1 pr-3">
+        {/* Action buttons — soft rounded hover states */}
+        <div className="flex items-center gap-0.5 pr-2">
           {/* Mic */}
           <motion.button
-            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             transition={SPRING_BOUNCE}
             onClick={handleMicClick}
-            className={`p-2.5 rounded-xl transition-all duration-200 ${
+            className={`p-2.5 rounded-full transition-colors duration-200 ${
               isListening
                 ? 'bg-red-500/10 text-red-400'
                 : darkMode
-                  ? 'text-white/12 hover:text-[#c084fc] hover:bg-[#c084fc]/8'
-                  : 'text-gray-300 hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5'
+                  ? 'text-white/20 hover:text-purple-400 hover:bg-white/10'
+                  : 'text-gray-300 hover:text-[#9D8BA7] hover:bg-gray-100'
             }`}
             aria-label={isListening ? 'Stop voice capture' : 'Start voice capture'}
           >
@@ -742,14 +703,13 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
           {/* Image upload */}
           {!isListening && (
             <motion.button
-              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               transition={SPRING_BOUNCE}
               onClick={() => fileInputRef.current?.click()}
-              className={`p-2.5 rounded-xl transition-all duration-200 ${
+              className={`p-2.5 rounded-full transition-colors duration-200 ${
                 darkMode
-                  ? 'text-white/12 hover:text-[#c084fc] hover:bg-[#c084fc]/8'
-                  : 'text-gray-300 hover:text-[#9D8BA7] hover:bg-[#9D8BA7]/5'
+                  ? 'text-white/20 hover:text-purple-400 hover:bg-white/10'
+                  : 'text-gray-300 hover:text-[#9D8BA7] hover:bg-gray-100'
               }`}
               aria-label="Upload image"
             >
@@ -757,7 +717,7 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
             </motion.button>
           )}
 
-          {/* Send button */}
+          {/* Send button — appears when there's text */}
           {input.trim() && !isListening && (
             <motion.button
               initial={{ opacity: 0, scale: 0.8 }}
@@ -767,10 +727,9 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
               }}
               exit={{ opacity: 0, scale: 0.8 }}
               transition={savePulse ? { duration: 0.3 } : SPRING_BOUNCE}
-              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleSave()}
-              className="p-2.5 rounded-xl transition-all duration-200"
+              className="p-2.5 rounded-full transition-all duration-200"
               style={{
                 background: 'linear-gradient(135deg, #9D8BA7, #7c3aed)',
                 color: 'white',
@@ -810,7 +769,7 @@ function CaptureBar({ onSaved }: { onSaved: (id: string) => void }) {
 }
 
 // ────────────────────────────────────────────────────────────
-// SINGLE-SCREEN DASHBOARD — Hero Capture + Calm Feed
+// SINGLE-SCREEN DASHBOARD — Ultra-premium, calm, centered
 // ────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -850,7 +809,7 @@ export default function Dashboard() {
             <CaptureBar onSaved={(id) => setNewMemoryId(id)} />
           </div>
 
-          {/* Calm Feed — no header, just flow */}
+          {/* Calm Feed — generous spacing, no header */}
           <div className="px-4 md:px-0 pb-24 md:pb-32">
             <AnimatePresence mode="wait">
               {sortedMemories.length === 0 ? (
@@ -858,18 +817,16 @@ export default function Dashboard() {
               ) : (
                 <motion.div
                   key="feed"
-                  variants={feedContainerVariants}
-                  initial="hidden"
-                  animate="show"
-                  className="flex flex-col gap-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col space-y-4"
                 >
-                  {sortedMemories.map((memory, index) => (
+                  {sortedMemories.map((memory) => (
                     <MemoryCard
                       key={memory.id}
                       memory={memory}
                       onClick={() => handleMemoryClick(memory.id)}
                       onDelete={() => handleDelete(memory.id)}
-                      index={index}
                       darkMode={darkMode}
                       isNew={memory.id === newMemoryId}
                     />

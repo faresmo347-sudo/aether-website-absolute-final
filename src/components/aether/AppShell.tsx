@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, memo, useEffect, useCallback } from 'react'
-import { Settings, WifiOff, Cloud, CheckCircle2, Sun, Moon, Search, LogOut } from 'lucide-react'
+import { Settings, WifiOff, Cloud, CheckCircle2, Sun, Moon, LogOut } from 'lucide-react'
 import { useAetherStore } from '@/store/aether-store'
 import { useOnlineStatus } from '@/hooks/use-online-status'
 import { signOut } from '@/lib/supabase/data'
@@ -124,7 +124,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="h-[100dvh] md:h-screen bg-background text-foreground flex flex-col overflow-hidden max-w-screen overflow-x-hidden">
-      {/* ─── Minimal Top Bar ─── */}
+      {/* ─── Minimal Top Bar — Logo left, Settings + Avatar right ─── */}
       <header
         className="shrink-0 flex items-center justify-between px-4 md:px-6 h-12 z-30 border-b"
         style={{
@@ -148,21 +148,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </span>
         </div>
 
-        {/* Right: Search + Theme + Settings + Avatar */}
+        {/* Right: Theme + Settings + Avatar — NO search bar */}
         <div className="flex items-center gap-2">
-          {/* Search / Ask Aether */}
-          <button
-            onClick={() => setCurrentView('ask-aether')}
-            className={`cursor-pointer p-2 rounded-lg transition-all duration-200 ${
-              darkMode
-                ? 'text-white/25 hover:text-white/50 hover:bg-white/5'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            }`}
-            aria-label="Search memories"
-          >
-            <Search size={16} />
-          </button>
-
           <ThemeToggle />
 
           {/* Settings */}
