@@ -386,14 +386,7 @@ function FeaturesSection() {
               <div className="absolute -inset-[1px] rounded-2xl animate-gradient-border opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-[1px]" />
               {/* Vibrant outer glow on hover */}
               <div className="absolute -inset-3 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(192,132,252,0.08) 0%, transparent 70%)', filter: 'blur(20px)' }} />
-              <div className="relative bg-white/[0.03] backdrop-blur-xl rounded-2xl p-5 sm:p-7 border border-white/[0.06] group-hover:border-[#c084fc]/20 transition-all duration-500 hover:-translate-y-1.5 overflow-hidden"
-                style={{ boxShadow: '0 0 40px rgba(0, 0, 0, 0.2)' }}
-              >
-                {/* Shimmer overlay on hover */}
-                <div
-                  className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none animate-shimmer"
-                  style={{ background: 'linear-gradient(90deg, transparent, rgba(192,132,252,0.04), rgba(125,211,232,0.03), transparent)', backgroundSize: '200% 100%' }}
-                />
+              <div className="relative bg-white/[0.02] rounded-2xl p-5 sm:p-7 border border-white/[0.05] group-hover:border-[#c084fc]/20 transition-all duration-500 hover:-translate-y-1.5 overflow-hidden">
                 {/* Number badge */}
                 <span className="absolute top-4 right-4 text-xs font-mono text-white/[0.07] group-hover:text-white/[0.15] transition-colors duration-500">{String(i + 1).padStart(2, '0')}</span>
                 <div className="relative z-10">
@@ -401,7 +394,7 @@ function FeaturesSection() {
                     {feature.icon}
                   </div>
                   <h3 className="text-base font-semibold text-white/90 mb-2" style={{ fontFamily: 'var(--font-inter)' }}>{feature.title}</h3>
-                  <p className="text-sm text-white/30 leading-relaxed">{feature.description}</p>
+                  <p className="text-sm text-gray-300 leading-relaxed">{feature.description}</p>
                 </div>
               </div>
             </motion.div>
@@ -478,15 +471,14 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-100px', amount: 0.2 }}
             transition={{ duration: 0.8 }}
-            className="relative text-center bg-white/[0.03] backdrop-blur-xl rounded-3xl p-8 sm:p-16 border border-white/[0.06] animate-breathe-border overflow-hidden"
-            style={{ boxShadow: '0 0 80px rgba(124, 58, 237, 0.08)' }}
+            className="relative text-center bg-white/[0.02] rounded-3xl p-8 sm:p-16 border border-white/[0.05] animate-breathe-border overflow-hidden"
           >
             {/* Inner glow accent line */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[1px] bg-gradient-to-r from-transparent via-[#c084fc]/40 to-transparent" />
             <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight" style={{ fontFamily: 'var(--font-inter)' }}>
               Ready to never forget again?
             </h2>
-            <p className="text-white/30 text-base sm:text-lg max-w-lg mx-auto mb-8">
+            <p className="text-gray-300 text-base sm:text-lg max-w-lg mx-auto mb-8">
               Join thousands of thinkers who trust Aether as their second brain.
             </p>
             <Link
