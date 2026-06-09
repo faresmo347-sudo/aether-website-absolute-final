@@ -125,37 +125,37 @@ export default function DashboardPage() {
 
   const userRef = useRef<{ id: string } | null>(null)
 
-  // ─── BULLETPROOF useEffect — runs ONCE on mount, empty [] deps ───
+  // ─── Load data ONCE on mount — empty deps, never re-triggers ───
   useEffect(() => {
-    const fetchMemories = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+    const loadData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
       if (!session) {
-        window.location.href = '/' // Hard redirect if no session
-        return
+        window.location.href = '/';
+        return;
       }
 
       userRef.current = { id: session.user.id }
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('memories')
         .select('*')
         .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (data) {
-        setMemories(data) // Set memories or empty array
+        setMemories(data);
         // Pick daily spark
         if (data.length > 1) {
           const olderSlice = data.slice(1)
           const randomIdx = Math.floor(Math.random() * Math.min(olderSlice.length, 20))
           setDailySpark(olderSlice[randomIdx])
         }
-      } else {
-        setMemories([]) // Default to empty so UI doesn't hang
       }
-    }
-    fetchMemories()
-  }, []) // ← EMPTY — runs once, never re-triggers
+    };
+
+    loadData();
+  }, []); // EMPTY ARRAY - RUNS ONLY ONCE
 
   // ─── Listen for sign out ───
   useEffect(() => {
