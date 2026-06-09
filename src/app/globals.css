@@ -1250,6 +1250,36 @@ section {
   animation: new-memory-glow 2s ease-out forwards;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   $10M DASHBOARD — Premium Micro-interactions
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Logo shimmer — sweeping light across the logo icon */
+@keyframes logo-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-logo-shimmer {
+  animation: logo-shimmer 3s ease-in-out infinite;
+}
+
+/* Sparkle twinkle for CTA section */
+@keyframes sparkle-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.8); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+/* Breathe border animation for CTA card */
+@keyframes breathe-border {
+  0%, 100% { border-color: rgba(192, 132, 252, 0.05); }
+  50% { border-color: rgba(192, 132, 252, 0.15); }
+}
+
+.animate-breathe-border {
+  animation: breathe-border 4s ease-in-out infinite;
+}
+
 /* UPGRADE: Capture focus breathe — pulsing focus ring in dark mode */
 @keyframes capture-focus-breathe {
   0%, 100% {
