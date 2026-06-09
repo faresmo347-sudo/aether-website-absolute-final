@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, MoreVertical } from 'lucide-react'
+import { Send, MoreVertical, Home, Search, Sparkles, Settings, LogOut } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════
 // SUPABASE
@@ -114,6 +114,51 @@ function MemoryCard({
 }
 
 // ═══════════════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════════════
+function Sidebar({ onLogout }: { onLogout: () => void }) {
+  return (
+    <aside className="w-64 h-screen bg-[#050510] border-r border-white/[0.05] flex flex-col p-6 fixed left-0 top-0 z-50">
+      {/* Logo */}
+      <div className="mb-10">
+        <h1 className="text-xl font-bold text-white/80">Aether</h1>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex flex-col gap-2 flex-1">
+        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-purple-400 bg-purple-500/10 transition-colors text-sm font-medium">
+          <Home size={18} />
+          Home
+        </button>
+        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors text-sm">
+          <Search size={18} />
+          Ask Aether
+        </button>
+        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors text-sm">
+          <Sparkles size={18} />
+          Daily Recap
+        </button>
+      </nav>
+
+      {/* Bottom */}
+      <div className="flex flex-col gap-2 pt-4 border-t border-white/[0.05]">
+        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors text-sm">
+          <Settings size={18} />
+          Settings
+        </button>
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors text-sm"
+        >
+          <LogOut size={18} />
+          Log Out
+        </button>
+      </div>
+    </aside>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════
 // DASHBOARD — renders INSTANTLY, ZERO loading states, ZERO redirects
 // ═══════════════════════════════════════════════════════════════
 export default function DashboardPage() {
@@ -213,83 +258,98 @@ export default function DashboardPage() {
     }
   }
 
-  // ─── RENDER — INSTANTLY, no loading gate, no spinner, no redirect ───
+  // ─── RENDER — Full Aether V2 Layout ───
   return (
-    <div className="min-h-screen bg-[#020206] text-white relative overflow-hidden flex flex-col items-center pt-20 px-4">
-      {/* Background Glows */}
-      <div
-        className="w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] absolute top-[-10%] left-[-10%] z-0"
-        aria-hidden="true"
-      />
-      <div
-        className="w-[600px] h-[600px] bg-blue-600/15 rounded-full blur-[150px] absolute bottom-[-10%] right-[-10%] z-0"
-        aria-hidden="true"
-      />
+    <div className="min-h-screen bg-[#020206] text-white flex">
+      {/* Left Sidebar */}
+      <Sidebar onLogout={handleLogout} />
 
-      {/* Top Right — Log Out */}
-      <div className="absolute top-6 right-6 z-50">
-        <button
-          onClick={handleLogout}
-          className="text-gray-400 hover:text-white text-sm transition-colors"
-        >
-          Log Out
-        </button>
-      </div>
+      {/* Main Content — shifted right for sidebar */}
+      <main className="ml-64 flex-1 min-h-screen relative overflow-hidden">
+        {/* Background Glows */}
+        <div
+          className="w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] absolute top-[-10%] right-[-10%] z-0"
+          aria-hidden="true"
+        />
+        <div
+          className="w-[600px] h-[600px] bg-blue-600/15 rounded-full blur-[150px] absolute bottom-[-10%] left-[-5%] z-0"
+          aria-hidden="true"
+        />
 
-      {/* Content */}
-      <div className="relative z-10 w-full max-w-2xl mx-auto">
+        {/* Content Area */}
+        <div className="relative z-10 w-full max-w-2xl mx-auto pt-10 px-6 pb-20">
 
-        {/* Capture Area */}
-        <div className="mb-8">
-          <div className="relative bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-2 shadow-[0_0_40px_rgba(139,92,246,0.2)] focus-within:shadow-[0_0_60px_rgba(139,92,246,0.4)] focus-within:border-purple-500/40 transition-all">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="What's on your mind?"
-              disabled={isSaving}
-              className="w-full bg-transparent text-white text-lg placeholder:text-gray-500 focus:outline-none px-4 py-3"
-            />
-            <button
-              onClick={handleSave}
-              disabled={!inputText.trim() || isSaving}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded-full transition-all disabled:opacity-30"
-              aria-label="Send"
-            >
-              <Send size={18} />
-            </button>
+          {/* Ask Aether Search Bar */}
+          <input
+            type="text"
+            placeholder="Ask Aether anything... (e.g., What was that link I saved?)"
+            className="w-full bg-white/[0.03] border border-white/[0.05] rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/30 mb-8 text-sm"
+          />
+
+          {/* Capture Area */}
+          <div className="mb-8">
+            <div className="relative bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-2 shadow-[0_0_40px_rgba(139,92,246,0.2)] focus-within:shadow-[0_0_60px_rgba(139,92,246,0.4)] focus-within:border-purple-500/40 transition-all">
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="What's on your mind?"
+                disabled={isSaving}
+                className="w-full bg-transparent text-white text-lg placeholder:text-gray-500 focus:outline-none px-4 py-3"
+              />
+              <button
+                onClick={handleSave}
+                disabled={!inputText.trim() || isSaving}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded-full transition-all disabled:opacity-30"
+                aria-label="Send"
+              >
+                <Send size={18} />
+              </button>
+            </div>
+
+            {/* Dopamine Tag Pill */}
+            <div className="mt-3 min-h-[28px]">
+              <AnimatePresence>
+                {showTagPill && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-sm text-purple-300 bg-purple-500/20 px-3 py-1 rounded-full inline-block"
+                  >
+                    Captured & Organized ✨
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
-          {/* Dopamine Tag Pill */}
-          <div className="mt-3 min-h-[28px]">
-            <AnimatePresence>
-              {showTagPill && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-sm text-purple-300 bg-purple-500/20 px-3 py-1 rounded-full inline-block"
-                >
-                  Captured & Organized ✨
-                </motion.div>
-              )}
-            </AnimatePresence>
+          {/* Daily Recap Section */}
+          <div className="w-full max-w-2xl mx-auto mb-8">
+            <h2 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-4">
+              Daily Recap
+            </h2>
+            <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-5">
+              <p className="text-purple-300/70 text-sm">
+                ✨ No recap yet. Save some thoughts and check back tomorrow!
+              </p>
+            </div>
+          </div>
+
+          {/* Memories Feed */}
+          <div className="space-y-4 w-full">
+            {memories.length === 0 ? (
+              <p className="text-gray-600 text-center mt-20">Your mind is clear. Dump a thought above.</p>
+            ) : (
+              memories.map((memory) => (
+                <MemoryCard key={memory.id} memory={memory} onDelete={handleDelete} />
+              ))
+            )}
           </div>
         </div>
-
-        {/* Memories Feed — empty state if no memories yet */}
-        <div className="space-y-4 w-full">
-          {memories.length === 0 ? (
-            <p className="text-gray-600 text-center mt-20">Your mind is clear. Dump a thought above.</p>
-          ) : (
-            memories.map((memory) => (
-              <MemoryCard key={memory.id} memory={memory} onDelete={handleDelete} />
-            ))
-          )}
-        </div>
-      </div>
+      </main>
     </div>
   )
 }
