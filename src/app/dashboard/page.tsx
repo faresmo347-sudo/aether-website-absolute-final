@@ -45,7 +45,7 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// MEMORY CARD — outside parent, no remounting
+// MEMORY CARD
 // ═══════════════════════════════════════════════════════════════
 function MemoryCard({
   memory,
@@ -114,18 +114,17 @@ function MemoryCard({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// DASHBOARD — renders INSTANTLY, no loading state
+// DASHBOARD — renders INSTANTLY, NO loading state, ONE useEffect
 // ═══════════════════════════════════════════════════════════════
 export default function DashboardPage() {
   const [memories, setMemories] = useState<MemoryRow[]>([])
   const [inputText, setInputText] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [showTagPill, setShowTagPill] = useState(false)
-  const [dailySpark, setDailySpark] = useState<MemoryRow | null>(null)
 
   const userRef = useRef<{ id: string } | null>(null)
 
-  // ─── Load data ONCE on mount — empty deps, never re-triggers ───
+  // ─── THE ONLY useEffect — loads data ONCE, empty deps ───
   useEffect(() => {
     const loadData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -135,8 +134,6 @@ export default function DashboardPage() {
         return;
       }
 
-      userRef.current = { id: session.user.id }
-
       const { data } = await supabase
         .from('memories')
         .select('*')
@@ -145,27 +142,11 @@ export default function DashboardPage() {
 
       if (data) {
         setMemories(data);
-        // Pick daily spark
-        if (data.length > 1) {
-          const olderSlice = data.slice(1)
-          const randomIdx = Math.floor(Math.random() * Math.min(olderSlice.length, 20))
-          setDailySpark(olderSlice[randomIdx])
-        }
       }
     };
 
     loadData();
   }, []); // EMPTY ARRAY - RUNS ONLY ONCE
-
-  // ─── Listen for sign out ───
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        window.location.href = '/'
-      }
-    })
-    return () => subscription.unsubscribe()
-  }, [])
 
   // ─── Save — no re-fetch, add to state directly ───
   async function handleSave() {
@@ -204,7 +185,6 @@ export default function DashboardPage() {
 
     if (error) {
       console.error('[Aether] Delete failed:', error.message)
-      // Re-fetch on error only
       if (userRef.current) {
         const { data } = await supabase
           .from('memories')
@@ -230,7 +210,7 @@ export default function DashboardPage() {
     }
   }
 
-  // ─── RENDER — INSTANTLY, no loading gate ───
+  // ─── RENDER — INSTANTLY, no loading gate, no spinner ───
   return (
     <div className="min-h-screen bg-[#020206] text-white relative overflow-hidden flex flex-col items-center pt-20 px-4">
       {/* Background Glows */}
@@ -300,24 +280,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Daily Spark */}
-        {dailySpark && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-4 mb-8"
-          >
-            <p className="text-purple-300 text-sm">
-              ✨ Rediscover: {dailySpark.title || dailySpark.content?.slice(0, 120)}
-            </p>
-            <span className="text-purple-400/40 text-xs mt-1 block">
-              {formatRelativeDate(dailySpark.created_at)}
-            </span>
-          </motion.div>
-        )}
-
-        {/* Memories Feed — empty space if no memories yet */}
+        {/* Memories Feed — empty state if no memories yet */}
         <div className="space-y-4 w-full">
           {memories.length === 0 ? (
             <motion.div
