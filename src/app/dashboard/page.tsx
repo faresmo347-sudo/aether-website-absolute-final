@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Sparkles, Loader2, MoreVertical } from 'lucide-react'
+import { Send, MoreVertical } from 'lucide-react'
 
 // ═══════════════════════════════════════════════════════════════
 // SUPABASE
@@ -114,7 +114,7 @@ function MemoryCard({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// DASHBOARD — renders INSTANTLY, NO loading state, ONE useEffect
+// DASHBOARD — renders INSTANTLY, ZERO loading states, ZERO redirects
 // ═══════════════════════════════════════════════════════════════
 export default function DashboardPage() {
   const [memories, setMemories] = useState<MemoryRow[]>([])
@@ -125,14 +125,19 @@ export default function DashboardPage() {
   const userRef = useRef<{ id: string } | null>(null)
 
   // ─── THE ONLY useEffect — loads data ONCE, empty deps ───
+  // NO redirect on missing session. If no session, memories just
+  // stays empty and the user sees the empty state. Client-side
+  // auth context handles all redirects.
   useEffect(() => {
     const loadData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        window.location.href = '/';
+        // Don't redirect — just show empty state. Auth context handles redirect.
         return;
       }
+
+      userRef.current = { id: session.user.id }
 
       const { data } = await supabase
         .from('memories')
@@ -140,9 +145,7 @@ export default function DashboardPage() {
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false });
 
-      if (data) {
-        setMemories(data);
-      }
+      setMemories(data || []);
     };
 
     loadData();
@@ -210,7 +213,7 @@ export default function DashboardPage() {
     }
   }
 
-  // ─── RENDER — INSTANTLY, no loading gate, no spinner ───
+  // ─── RENDER — INSTANTLY, no loading gate, no spinner, no redirect ───
   return (
     <div className="min-h-screen bg-[#020206] text-white relative overflow-hidden flex flex-col items-center pt-20 px-4">
       {/* Background Glows */}
@@ -254,11 +257,7 @@ export default function DashboardPage() {
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded-full transition-all disabled:opacity-30"
               aria-label="Send"
             >
-              {isSaving ? (
-                <Loader2 size={18} className="animate-spin text-purple-400" />
-              ) : (
-                <Send size={18} />
-              )}
+              <Send size={18} />
             </button>
           </div>
 
@@ -283,29 +282,7 @@ export default function DashboardPage() {
         {/* Memories Feed — empty state if no memories yet */}
         <div className="space-y-4 w-full">
           {memories.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-              className="flex flex-col items-center justify-center py-20"
-            >
-              <motion.div
-                animate={{
-                  scale: [1, 1.15, 1],
-                  opacity: [0.4, 0.8, 0.4],
-                }}
-                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                className="h-24 w-24 rounded-full flex items-center justify-center mb-6 bg-purple-500/5"
-              >
-                <Sparkles size={32} className="text-purple-500/40" />
-              </motion.div>
-              <p className="text-lg font-medium text-white/30">
-                A quiet space for your thoughts
-              </p>
-              <p className="text-sm mt-2 text-white/20">
-                Type anything above to start capturing
-              </p>
-            </motion.div>
+            <p className="text-gray-600 text-center mt-20">Your mind is clear. Dump a thought above.</p>
           ) : (
             memories.map((memory) => (
               <MemoryCard key={memory.id} memory={memory} onDelete={handleDelete} />
