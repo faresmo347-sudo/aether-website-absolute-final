@@ -182,7 +182,7 @@ function Navbar() {
               <path d="M2 12l10 5 10-5" />
             </svg>
           </div>
-          <span className="text-lg font-bold text-white tracking-tight" style={{ fontFamily: 'var(--font-inter)' }}>Aether</span>
+          <h1 className="text-2xl font-bold text-white/80 tracking-widest uppercase" style={{ fontFamily: 'var(--font-inter)' }}>AETHER</h1>
         </div>
 
         <div className="flex items-center gap-3">
@@ -394,7 +394,7 @@ function FeaturesSection() {
                     {feature.icon}
                   </div>
                   <h3 className="text-base font-semibold text-white/80 mb-2" style={{ fontFamily: 'var(--font-inter)' }}>{feature.title}</h3>
-                  <p className="text-sm text-gray-500 leading-relaxed">{feature.description}</p>
+                  <p className="text-sm text-gray-400 leading-relaxed">{feature.description}</p>
                 </div>
               </div>
             </motion.div>
@@ -419,7 +419,7 @@ function Footer() {
             <div className="h-6 w-6 rounded-md bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>
             </div>
-            <span className="text-sm font-bold text-white/60" style={{ fontFamily: 'var(--font-inter)' }}>Aether</span>
+            <span className="text-sm font-bold text-white/60 tracking-widest uppercase" style={{ fontFamily: 'var(--font-inter)' }}>AETHER</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-white/20">
             <Link href="/privacy" className="hover:text-[#c084fc] transition-colors duration-300">Privacy</Link>

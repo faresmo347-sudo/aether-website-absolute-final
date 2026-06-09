@@ -257,9 +257,9 @@ export default function AuthPage() {
                 </div>
               </div>
             </motion.div>
-            <span className="text-2xl font-bold text-white tracking-tight" style={{ fontFamily: 'var(--font-inter)' }}>
-              Aether
-            </span>
+            <h1 className="text-2xl font-bold text-white/80 tracking-widest uppercase mb-8" style={{ fontFamily: 'var(--font-inter)' }}>
+              AETHER
+            </h1>
           </div>
 
           {/* Screen Title */}
@@ -412,7 +412,7 @@ function SignInForm({ onSwitch, onSignInSuccess }: { onSwitch: (s: AuthScreen) =
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
-              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.25)] transition-all duration-300"
             />
           </div>
         </div>
@@ -441,7 +441,7 @@ function SignInForm({ onSwitch, onSignInSuccess }: { onSwitch: (s: AuthScreen) =
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
-              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 pr-11 text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 pr-11 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.25)] transition-all duration-300"
             />
             <button
               type="button"
@@ -598,7 +598,7 @@ function SignUpForm({ onSwitch, onSignUpSuccess }: { onSwitch: (s: AuthScreen) =
               onChange={(e) => setName(e.target.value)}
               required
               disabled={loading}
-              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.25)] transition-all duration-300"
             />
           </div>
         </div>
@@ -616,7 +616,7 @@ function SignUpForm({ onSwitch, onSignUpSuccess }: { onSwitch: (s: AuthScreen) =
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
-              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.25)] transition-all duration-300"
             />
           </div>
         </div>
@@ -635,7 +635,7 @@ function SignUpForm({ onSwitch, onSignUpSuccess }: { onSwitch: (s: AuthScreen) =
               required
               minLength={6}
               disabled={loading}
-              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 pr-11 text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 pr-11 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.25)] transition-all duration-300"
             />
             <button
               type="button"
@@ -777,7 +777,7 @@ function ForgotForm({ onSwitch }: { onSwitch: (s: AuthScreen) => void }) {
               onChange={(e) => setEmail(e.target.value)}
               required
               disabled={loading}
-              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
+              className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 pl-11 text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.25)] transition-all duration-300"
             />
           </div>
         </div>

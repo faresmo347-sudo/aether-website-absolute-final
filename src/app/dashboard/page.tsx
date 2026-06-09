@@ -175,9 +175,9 @@ function Sidebar({ onLogout }: { onLogout: () => void }) {
             </svg>
           </div>
           {/* Logo text — hidden on small sidebar */}
-          <span className="hidden lg:block text-sm font-bold text-white/70 tracking-wider uppercase" style={{ fontFamily: 'var(--font-inter)' }}>
-            Aether
-          </span>
+          <h1 className="hidden lg:block text-2xl font-bold text-white/80 tracking-widest uppercase" style={{ fontFamily: 'var(--font-inter)' }}>
+            AETHER
+          </h1>
         </div>
       </div>
 
@@ -516,7 +516,7 @@ export default function DashboardPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
                   placeholder="Ask Aether anything..."
-                  className="w-full bg-white/[0.025] border border-white/[0.06] rounded-2xl pl-11 pr-4 py-4 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-purple-500/25 focus:bg-white/[0.035] focus:shadow-[0_0_30px_-10px_rgba(139,92,246,0.2)] transition-all duration-400"
+                  className="w-full bg-white/[0.03] border border-white/[0.06] rounded-2xl pl-11 pr-4 py-4 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.25)] transition-all duration-300"
                 />
               </div>
             </div>
@@ -568,7 +568,7 @@ export default function DashboardPage() {
                   onKeyDown={handleKeyDown}
                   placeholder="What's on your mind?"
                   disabled={isSaving}
-                  className="w-full bg-transparent text-white text-base placeholder:text-white/20 focus:outline-none px-4 py-3"
+                  className="w-full bg-transparent text-white text-base placeholder:text-gray-500 focus:outline-none px-4 py-3 transition-all duration-300"
                 />
                 <button
                   onClick={handleSave}
