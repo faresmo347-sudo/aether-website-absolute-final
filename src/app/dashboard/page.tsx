@@ -281,6 +281,13 @@ export default function DashboardPage() {
   const [showTagPill, setShowTagPill] = useState(false)
   const [captureShimmer, setCaptureShimmer] = useState(false)
 
+  // ─── AI States ───
+  const [searchQuery, setSearchQuery] = useState('')
+  const [aiResponse, setAiResponse] = useState('')
+  const [isAsking, setIsAsking] = useState(false)
+  const [dailyRecap, setDailyRecap] = useState('')
+  const [isRecapLoading, setIsRecapLoading] = useState(false)
+
   const userRef = useRef<{ id: string } | null>(null)
   const captureRef = useRef<HTMLDivElement>(null)
 
@@ -302,6 +309,26 @@ export default function DashboardPage() {
         .order('created_at', { ascending: false });
 
       setMemories(data || []);
+
+      // ─── Fetch Daily Recap after memories load ───
+      if (data && data.length > 0) {
+        setIsRecapLoading(true)
+        try {
+          const res = await fetch('/api/ask-aether', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ memories: data }),
+          })
+          const json = await res.json()
+          if (json.response) {
+            setDailyRecap(json.response)
+          }
+        } catch (err) {
+          console.error('[Aether] Daily recap failed:', err)
+        } finally {
+          setIsRecapLoading(false)
+        }
+      }
     };
 
     loadData();
@@ -378,6 +405,74 @@ export default function DashboardPage() {
     }
   }
 
+  // ─── Question Detection ───
+  function isQuestion(text: string): boolean {
+    const lower = text.toLowerCase().trim()
+    const questionStarters = ['what', 'who', 'where', 'when', 'how', 'why', 'did i', 'do i', 'have i', 'is there', 'was there', 'can you', 'remind']
+    return questionStarters.some(starter => lower.startsWith(starter)) || lower.endsWith('?')
+  }
+
+  // ─── Ask Aether Search Handler ───
+  async function handleSearch() {
+    const query = searchQuery.trim()
+    if (!query || isAsking) return
+
+    // If it's a question, ask AI
+    if (isQuestion(query)) {
+      setIsAsking(true)
+      setAiResponse('')
+      try {
+        const res = await fetch('/api/ask-aether', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: query, memories }),
+        })
+        const json = await res.json()
+        if (json.response) {
+          setAiResponse(json.response)
+        }
+      } catch (err) {
+        console.error('[Aether] Ask failed:', err)
+        setAiResponse('Something went wrong — try again? 💙')
+      } finally {
+        setIsAsking(false)
+      }
+    } else {
+      // Not a question — save as a memory
+      setSearchQuery('')
+      if (!userRef.current) return
+      setIsSaving(true)
+      setShowTagPill(false)
+      setCaptureShimmer(true)
+      const { data, error } = await supabase
+        .from('memories')
+        .insert({ user_id: userRef.current.id, content: query })
+        .select()
+        .single()
+      if (!error && data) {
+        setMemories(prev => [data as MemoryRow, ...prev])
+        setShowTagPill(true)
+        setTimeout(() => setShowTagPill(false), 2500)
+        if (captureRef.current) {
+          captureRef.current.classList.add('animate-capture-thump')
+          setTimeout(() => captureRef.current?.classList.remove('animate-capture-thump'), 400)
+        }
+      } else {
+        console.error('[Aether] Save failed:', error?.message)
+      }
+      setTimeout(() => setCaptureShimmer(false), 1200)
+      setIsSaving(false)
+    }
+  }
+
+  // ─── Search Enter handler ───
+  function handleSearchKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSearch()
+    }
+  }
+
   // ─── RENDER — $10M Premium Aesthetic ───
   return (
     <div className="min-h-screen bg-[#06060e] text-white relative overflow-hidden">
@@ -417,11 +512,36 @@ export default function DashboardPage() {
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-purple-400/50 transition-colors duration-300" />
                 <input
                   type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
                   placeholder="Ask Aether anything..."
                   className="w-full bg-white/[0.025] border border-white/[0.06] rounded-2xl pl-11 pr-4 py-4 text-white text-sm placeholder:text-white/20 focus:outline-none focus:border-purple-500/25 focus:bg-white/[0.035] focus:shadow-[0_0_30px_-10px_rgba(139,92,246,0.2)] transition-all duration-400"
                 />
               </div>
             </div>
+
+            {/* AI Response Bubble */}
+            <AnimatePresence>
+              {(aiResponse || isAsking) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+                  className="bg-white/[0.03] border border-purple-500/20 rounded-xl p-4 text-white/80 text-sm mb-8 max-w-2xl w-full"
+                >
+                  {isAsking ? (
+                    <span className="flex items-center gap-2 text-white/50">
+                      <div className="h-3 w-3 rounded-full border-2 border-purple-400/30 border-t-purple-400 animate-spin" />
+                      Thinking...
+                    </span>
+                  ) : (
+                    <span>{aiResponse}</span>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
 
           {/* ═══ Capture Bar — Premium Gravity Input ═══ */}
@@ -517,17 +637,39 @@ export default function DashboardPage() {
             <div className="daily-spark-card backdrop-blur-sm bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 relative overflow-hidden">
               {/* Inner top accent line */}
               <div className="absolute top-0 left-[20%] right-[20%] h-[1px] bg-gradient-to-r from-transparent via-purple-400/20 to-transparent" />
-              <div className="flex items-center gap-3">
+              <div className="flex items-start gap-3">
                 <div className="h-10 w-10 rounded-xl bg-purple-500/[0.08] border border-purple-500/[0.06] flex items-center justify-center flex-shrink-0">
                   <Sparkles size={18} className="text-purple-400/40" />
                 </div>
-                <div>
-                  <p className="text-white/30 text-sm font-medium">
-                    No recap yet
-                  </p>
-                  <p className="text-white/15 text-xs mt-0.5">
-                    Save some thoughts and check back tomorrow
-                  </p>
+                <div className="flex-1 min-w-0">
+                  {isRecapLoading ? (
+                    <>
+                      <p className="text-white/50 text-sm font-medium">
+                        Generating your recap...
+                      </p>
+                      <p className="text-white/15 text-xs mt-0.5">
+                        Aether is looking through your memories ✨
+                      </p>
+                    </>
+                  ) : dailyRecap ? (
+                    <>
+                      <p className="text-white/70 text-sm leading-relaxed">
+                        {dailyRecap}
+                      </p>
+                      <p className="text-white/15 text-xs mt-2">
+                        Powered by Aether AI ✨
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-white/30 text-sm font-medium">
+                        No recap yet
+                      </p>
+                      <p className="text-white/15 text-xs mt-0.5">
+                        Save some thoughts and check back tomorrow
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
