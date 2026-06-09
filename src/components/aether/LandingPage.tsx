@@ -14,7 +14,7 @@ function AuroraMeshBackground() {
       <div
         className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[900px] h-[600px] rounded-full"
         style={{
-          background: 'radial-gradient(ellipse, rgba(99, 102, 241, 0.20) 0%, rgba(157, 139, 167, 0.10) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse, rgba(99, 102, 241, 0.10) 0%, rgba(157, 139, 167, 0.05) 40%, transparent 70%)',
           filter: 'blur(100px)',
           animation: 'aurora-breathe 16s ease-in-out infinite',
         }}
@@ -22,7 +22,7 @@ function AuroraMeshBackground() {
       <div
         className="absolute top-1/3 -left-20 w-[600px] h-[400px] rounded-full"
         style={{
-          background: 'radial-gradient(ellipse, rgba(125, 211, 232, 0.10) 0%, rgba(94, 234, 212, 0.05) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse, rgba(125, 211, 232, 0.05) 0%, rgba(94, 234, 212, 0.03) 40%, transparent 70%)',
           filter: 'blur(120px)',
           animation: 'aurora-breathe 22s ease-in-out 4s infinite',
         }}
@@ -30,7 +30,7 @@ function AuroraMeshBackground() {
       <div
         className="absolute top-1/4 -right-20 w-[500px] h-[350px] rounded-full"
         style={{
-          background: 'radial-gradient(ellipse, rgba(192, 132, 252, 0.16) 0%, rgba(157, 139, 167, 0.05) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse, rgba(192, 132, 252, 0.08) 0%, rgba(157, 139, 167, 0.03) 40%, transparent 70%)',
           filter: 'blur(100px)',
           animation: 'aurora-breathe 20s ease-in-out 8s infinite',
         }}
@@ -38,7 +38,7 @@ function AuroraMeshBackground() {
       <div
         className="absolute -bottom-20 -right-20 w-[500px] h-[400px] rounded-full"
         style={{
-          background: 'radial-gradient(ellipse, rgba(251, 146, 60, 0.06) 0%, rgba(251, 146, 60, 0.02) 40%, transparent 70%)',
+          background: 'radial-gradient(ellipse, rgba(251, 146, 60, 0.03) 0%, rgba(251, 146, 60, 0.01) 40%, transparent 70%)',
           filter: 'blur(120px)',
           animation: 'aurora-drift-warm 20s ease-in-out infinite alternate',
         }}
@@ -261,11 +261,11 @@ function HeroSection() {
           className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white leading-[1.0] tracking-tight mb-4 sm:mb-8"
           style={{
             fontFamily: 'var(--font-inter)',
-            textShadow: '0 0 40px rgba(192,132,252,0.15), 0 0 80px rgba(99,102,241,0.08)',
+            textShadow: '0 0 20px rgba(192,132,252,0.08), 0 0 40px rgba(99,102,241,0.04)',
           }}
         >
-          <motion.span initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.8 }} className="inline-block">Forget</motion.span>{' '}
-          <motion.span initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.8 }} className="inline-block bg-gradient-to-r from-[#9D8BA7] via-[#c084fc] to-[#7DD3E8] bg-clip-text text-transparent animate-gradient">forgetting</motion.span>
+          <motion.span initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.8 }} className="inline-block text-gray-100">Forget</motion.span>{' '}
+          <motion.span initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.8 }} className="inline-block text-purple-400">forgetting</motion.span>
           <motion.span initial={{ opacity: 0, y: 30, scale: 0.5 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ delay: 0.95, duration: 0.6, type: 'spring' }} className="inline-block">.</motion.span>
         </motion.h1>
 
@@ -294,7 +294,7 @@ function HeroSection() {
                 background: 'linear-gradient(135deg, #9D8BA7, #7c3aed, #9D8BA7)',
                 backgroundSize: '200% 200%',
                 animation: 'cta-pulse-glow 3s ease-in-out infinite, gradient-shift 6s ease infinite',
-                boxShadow: '0 0 30px rgba(124, 58, 237, 0.3), 0 0 60px rgba(192, 132, 252, 0.15)',
+                boxShadow: '0 0 20px rgba(139,92,246,0.3)',
               }}
             >
               Enter Aether
@@ -488,7 +488,7 @@ export default function LandingPage() {
                 background: 'linear-gradient(135deg, #9D8BA7, #7c3aed, #9D8BA7)',
                 backgroundSize: '200% 200%',
                 animation: 'cta-pulse-glow 3s ease-in-out infinite, gradient-shift 6s ease infinite',
-                boxShadow: '0 0 30px rgba(124, 58, 237, 0.3), 0 0 60px rgba(192, 132, 252, 0.15)',
+                boxShadow: '0 0 20px rgba(139,92,246,0.3)',
               }}
             >
               Enter Aether
