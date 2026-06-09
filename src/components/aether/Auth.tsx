@@ -295,7 +295,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setName(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.3)] focus:outline-none transition-all"
+                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -317,7 +317,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.3)] focus:outline-none transition-all"
+                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -340,7 +340,7 @@ export function SignUp({ onSwitch, onSuccess }: AuthProps) {
                   required
                   minLength={6}
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.3)] focus:outline-none transition-all"
+                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
                 />
               </div>
 
@@ -522,7 +522,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.3)] focus:outline-none transition-all"
+                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -553,7 +553,7 @@ export function SignIn({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.3)] focus:outline-none transition-all"
+                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -709,7 +709,7 @@ export function ForgotPassword({ onSwitch, onSuccess }: AuthProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
-                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.08] text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:shadow-[0_0_20px_rgba(139,92,246,0.3)] focus:outline-none transition-all"
+                  className="h-12 text-base pl-11 rounded-xl bg-white/[0.03] border border-white/[0.06] text-white placeholder:text-gray-500 focus:border-purple-500/40 focus:shadow-[0_0_20px_rgba(139,92,246,0.2)] focus:outline-none transition-all"
                 />
               </div>
             </div>

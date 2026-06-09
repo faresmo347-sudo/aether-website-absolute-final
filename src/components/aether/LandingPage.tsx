@@ -367,7 +367,7 @@ function FeaturesSection() {
           <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight" style={{ fontFamily: 'var(--font-inter)' }}>
             Everything your brain needs
           </h2>
-          <p className="text-white/25 text-base sm:text-lg max-w-lg mx-auto">
+          <p className="text-gray-400 text-base sm:text-lg max-w-lg mx-auto">
             Capture, connect, and retrieve — Aether handles the rest.
           </p>
         </motion.div>
@@ -386,15 +386,15 @@ function FeaturesSection() {
               <div className="absolute -inset-[1px] rounded-2xl animate-gradient-border opacity-0 group-hover:opacity-100 transition-opacity duration-700 blur-[1px]" />
               {/* Vibrant outer glow on hover */}
               <div className="absolute -inset-3 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, rgba(192,132,252,0.08) 0%, transparent 70%)', filter: 'blur(20px)' }} />
-              <div className="relative bg-white/[0.02] rounded-2xl p-5 sm:p-7 border border-white/[0.05] group-hover:border-[#c084fc]/20 transition-all duration-500 hover:-translate-y-1.5 overflow-hidden">
+              <div className="relative bg-white/[0.02] rounded-2xl p-6 border border-white/[0.05] shadow-[0_0_15px_-5px_rgba(139,92,246,0.1)] group-hover:border-[#c084fc]/20 transition-all duration-500 hover:-translate-y-1.5 overflow-hidden">
                 {/* Number badge */}
                 <span className="absolute top-4 right-4 text-xs font-mono text-white/[0.07] group-hover:text-white/[0.15] transition-colors duration-500">{String(i + 1).padStart(2, '0')}</span>
                 <div className="relative z-10">
                   <div className="h-10 w-10 rounded-xl bg-[#c084fc]/10 flex items-center justify-center text-[#c084fc] mb-4 group-hover:bg-[#c084fc]/20 group-hover:scale-110 transition-all duration-500">
                     {feature.icon}
                   </div>
-                  <h3 className="text-base font-semibold text-white/90 mb-2" style={{ fontFamily: 'var(--font-inter)' }}>{feature.title}</h3>
-                  <p className="text-sm text-gray-300 leading-relaxed">{feature.description}</p>
+                  <h3 className="text-base font-semibold text-white/80 mb-2" style={{ fontFamily: 'var(--font-inter)' }}>{feature.title}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{feature.description}</p>
                 </div>
               </div>
             </motion.div>
