@@ -45,7 +45,7 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// MEMORY CARD
+// MEMORY CARD — Frosted Glass (Linear Style)
 // ═══════════════════════════════════════════════════════════════
 function MemoryCard({
   memory,
@@ -72,22 +72,34 @@ function MemoryCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="bg-white/[0.02] backdrop-blur-lg border border-white/[0.05] rounded-2xl p-5 hover:bg-white/[0.04] transition-all group relative"
+      className="bg-white/[0.015] border border-white/[0.04] rounded-xl p-4 hover:bg-white/[0.03] hover:border-white/[0.08] transition-all duration-200 group relative"
     >
-      <p className="text-white/90 text-base leading-relaxed pr-8">
+      <p className="text-white/80 text-sm leading-relaxed pr-8 group-hover:text-white transition-colors">
         {memory.title || memory.content}
       </p>
-      <span className="text-white/30 text-xs mt-2 block">
+
+      {/* Tags */}
+      {memory.tags && memory.tags.length > 0 && (
+        <div className="mt-2">
+          {memory.tags.map((tag, i) => (
+            <span key={i} className="inline-block bg-purple-500/10 text-purple-400 text-[10px] font-medium px-2 py-0.5 rounded-md mr-1.5 uppercase tracking-wider">
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <span className="text-white/20 text-[11px] mt-2 block">
         {formatRelativeDate(memory.created_at)}
       </span>
 
-      <div ref={menuRef} className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div ref={menuRef} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="text-white/30 hover:text-white/60 transition-colors p-1"
+          className="text-white/20 hover:text-white/60 transition-colors p-1"
           aria-label="More options"
         >
-          <MoreVertical size={16} />
+          <MoreVertical size={14} />
         </button>
 
         <AnimatePresence>
@@ -97,11 +109,11 @@ function MemoryCard({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.1 }}
-              className="absolute right-0 top-7 bg-white/10 backdrop-blur-xl border border-white/10 rounded-lg p-1 min-w-[100px] z-20"
+              className="absolute right-0 top-6 bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] rounded-lg p-1 min-w-[90px] z-20"
             >
               <button
                 onClick={() => { onDelete(memory.id); setMenuOpen(false) }}
-                className="w-full text-left px-3 py-1.5 text-sm text-red-400/80 hover:bg-red-500/10 hover:text-red-400 rounded-md transition-colors"
+                className="w-full text-left px-2.5 py-1.5 text-xs text-red-400/70 hover:bg-red-500/10 hover:text-red-400 rounded-md transition-colors"
               >
                 Delete
               </button>
@@ -114,43 +126,43 @@ function MemoryCard({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SIDEBAR
+// SIDEBAR — Linear Minimal
 // ═══════════════════════════════════════════════════════════════
 function Sidebar({ onLogout }: { onLogout: () => void }) {
   return (
-    <aside className="w-64 h-screen bg-[#050510] border-r border-white/[0.05] flex flex-col p-6 fixed left-0 top-0 z-50">
+    <aside className="w-64 h-screen bg-[#08070b] border-r border-white/[0.04] flex flex-col p-5 fixed left-0 top-0 z-50">
       {/* Logo */}
-      <div className="mb-10">
-        <h1 className="text-xl font-bold text-white/80">Aether</h1>
+      <div className="mb-10 px-2">
+        <h1 className="text-sm font-semibold text-white/50 tracking-wider uppercase">Aether</h1>
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-col gap-2 flex-1">
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-purple-400 bg-purple-500/10 transition-colors text-sm font-medium">
-          <Home size={18} />
+      <nav className="flex flex-col gap-1 flex-1">
+        <button className="flex items-center gap-3 px-3 py-2 rounded-lg text-purple-400 bg-purple-500/10 transition-colors text-sm font-medium">
+          <Home size={16} />
           Home
         </button>
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors text-sm">
-          <Search size={18} />
+        <button className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/[0.03] transition-colors text-sm">
+          <Search size={16} />
           Ask Aether
         </button>
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors text-sm">
-          <Sparkles size={18} />
+        <button className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/[0.03] transition-colors text-sm">
+          <Sparkles size={16} />
           Daily Recap
         </button>
       </nav>
 
       {/* Bottom */}
-      <div className="flex flex-col gap-2 pt-4 border-t border-white/[0.05]">
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors text-sm">
-          <Settings size={18} />
+      <div className="flex flex-col gap-1 pt-4 border-t border-white/[0.04]">
+        <button className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/30 hover:text-white/70 hover:bg-white/[0.03] transition-colors text-sm">
+          <Settings size={16} />
           Settings
         </button>
         <button
           onClick={onLogout}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors text-sm"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/20 hover:text-white/60 hover:bg-white/[0.03] transition-colors text-xs"
         >
-          <LogOut size={18} />
+          <LogOut size={16} />
           Log Out
         </button>
       </div>
@@ -258,37 +270,49 @@ export default function DashboardPage() {
     }
   }
 
-  // ─── RENDER — Full Aether V2 Layout ───
+  // ─── RENDER — Linear.app Premium Style ───
   return (
-    <div className="min-h-screen bg-[#020206] text-white flex">
+    <div className="min-h-screen bg-[#08070b] text-white relative overflow-hidden flex flex-col items-center pt-20 pb-10 px-4">
+      {/* Deep Space Ambient Orbs */}
+      <div
+        className="absolute top-[-20%] left-[20%] w-[800px] h-[800px] bg-purple-800/10 rounded-full blur-[200px] pointer-events-none z-0"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute bottom-[-20%] right-[10%] w-[600px] h-[600px] bg-blue-800/10 rounded-full blur-[180px] pointer-events-none z-0"
+        aria-hidden="true"
+      />
+
       {/* Left Sidebar */}
       <Sidebar onLogout={handleLogout} />
 
       {/* Main Content — shifted right for sidebar */}
-      <main className="ml-64 flex-1 min-h-screen relative overflow-hidden">
-        {/* Background Glows */}
-        <div
-          className="w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] absolute top-[-10%] right-[-10%] z-0"
-          aria-hidden="true"
-        />
-        <div
-          className="w-[600px] h-[600px] bg-blue-600/15 rounded-full blur-[150px] absolute bottom-[-10%] left-[-5%] z-0"
-          aria-hidden="true"
-        />
+      <main className="ml-64 flex-1 w-full relative z-10">
+        <div className="max-w-2xl mx-auto px-6">
 
-        {/* Content Area */}
-        <div className="relative z-10 w-full max-w-2xl mx-auto pt-10 px-6 pb-20">
+          {/* Header */}
+          <div className="w-full max-w-2xl mx-auto flex justify-between items-center mb-12">
+            <h2 className="text-sm font-semibold text-white/50 tracking-wider uppercase">Memories</h2>
+            <button
+              onClick={handleLogout}
+              className="text-white/20 hover:text-white/60 text-xs bg-white/[0.02] hover:bg-white/[0.05] px-3 py-1.5 rounded-md border border-white/[0.04] transition-all duration-200 active:scale-95"
+            >
+              Log Out
+            </button>
+          </div>
 
           {/* Ask Aether Search Bar */}
-          <input
-            type="text"
-            placeholder="Ask Aether anything... (e.g., What was that link I saved?)"
-            className="w-full bg-white/[0.03] border border-white/[0.05] rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/30 mb-8 text-sm"
-          />
+          <div className="w-full max-w-2xl mx-auto mb-12">
+            <input
+              type="text"
+              placeholder="Ask Aether anything... (e.g., What was that link I saved?)"
+              className="w-full bg-white/[0.02] border border-white/[0.06] rounded-xl px-4 py-3 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-purple-500/30 focus:shadow-[0_0_0_1px_rgba(139,92,246,0.2),0_0_30px_-10px_rgba(139,92,246,0.3)] transition-all duration-300"
+            />
+          </div>
 
-          {/* Capture Area */}
-          <div className="mb-8">
-            <div className="relative bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-2 shadow-[0_0_40px_rgba(139,92,246,0.2)] focus-within:shadow-[0_0_60px_rgba(139,92,246,0.4)] focus-within:border-purple-500/40 transition-all">
+          {/* Gravity Capture Bar — Linear Glow Style */}
+          <div className="w-full max-w-2xl mx-auto mb-12">
+            <div className="relative bg-white/[0.02] border border-white/[0.06] rounded-xl p-1.5 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_0_40px_-10px_rgba(139,92,246,0.15)] transition-all duration-300 focus-within:shadow-[0_0_0_1px_rgba(139,92,246,0.3),0_0_60px_-10px_rgba(139,92,246,0.4)] focus-within:border-purple-500/30">
               <input
                 type="text"
                 value={inputText}
@@ -296,28 +320,27 @@ export default function DashboardPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="What's on your mind?"
                 disabled={isSaving}
-                className="w-full bg-transparent text-white text-lg placeholder:text-gray-500 focus:outline-none px-4 py-3"
+                className="w-full bg-transparent text-white text-base placeholder:text-white/30 focus:outline-none px-4 py-3"
               />
               <button
                 onClick={handleSave}
                 disabled={!inputText.trim() || isSaving}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded-full transition-all disabled:opacity-30"
-                aria-label="Send"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium px-4 py-1.5 rounded-lg shadow-[0_0_15px_-3px_rgba(139,92,246,0.6)] hover:shadow-[0_0_25px_-3px_rgba(139,92,246,0.8)] transition-all duration-200 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <Send size={18} />
+                Save
               </button>
             </div>
 
             {/* Dopamine Tag Pill */}
-            <div className="mt-3 min-h-[28px]">
+            <div className="mt-3 min-h-[24px]">
               <AnimatePresence>
                 {showTagPill && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
+                    exit={{ opacity: 0, y: -6 }}
                     transition={{ duration: 0.3 }}
-                    className="text-sm text-purple-300 bg-purple-500/20 px-3 py-1 rounded-full inline-block"
+                    className="text-xs text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-md inline-block font-medium"
                   >
                     Captured & Organized ✨
                   </motion.div>
@@ -327,21 +350,21 @@ export default function DashboardPage() {
           </div>
 
           {/* Daily Recap Section */}
-          <div className="w-full max-w-2xl mx-auto mb-8">
+          <div className="w-full max-w-2xl mx-auto mb-12">
             <h2 className="text-sm font-semibold text-white/50 uppercase tracking-wider mb-4">
               Daily Recap
             </h2>
-            <div className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-5">
-              <p className="text-purple-300/70 text-sm">
+            <div className="bg-purple-500/[0.06] border border-purple-500/10 rounded-xl p-4">
+              <p className="text-purple-300/50 text-sm">
                 ✨ No recap yet. Save some thoughts and check back tomorrow!
               </p>
             </div>
           </div>
 
-          {/* Memories Feed */}
-          <div className="space-y-4 w-full">
+          {/* Memories Feed — Frosted Glass Cards */}
+          <div className="w-full max-w-2xl mx-auto space-y-3">
             {memories.length === 0 ? (
-              <p className="text-gray-600 text-center mt-20">Your mind is clear. Dump a thought above.</p>
+              <p className="text-white/20 text-sm text-center mt-20">Your mind is clear. Dump a thought above.</p>
             ) : (
               memories.map((memory) => (
                 <MemoryCard key={memory.id} memory={memory} onDelete={handleDelete} />
